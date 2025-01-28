@@ -20,6 +20,7 @@ import {
 } from "@/lib/interfaces/TaskManager/task.interface";
 import SprintTaskCard from "../Cards/SprintTaskCard";
 import StandardTaskCard from "../Cards/StandardTaskCard";
+import NewTaskModal from "./NewTaskModal";
 
 // interface Task {
 //   id: string;
@@ -178,57 +179,31 @@ const TaskManagerOverview = () => {
             <h1 className="text-2xl font-bold">Task Manager</h1>
           </div>
           <div className="flex-grow" />
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                New Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Task</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <Input
-                  placeholder="Task Title"
-                  value={newTask.title}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, title: e.target.value })
-                  }
-                />
-                <Textarea
-                  placeholder="Task Description"
-                  value={newTask.description}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, description: e.target.value })
-                  }
-                />
-                <Input
-                  placeholder="Tags (comma separated)"
-                  value={newTask.tags}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, tags: e.target.value })
-                  }
-                />
-                <Button onClick={addNewTask}>Create Task</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <NewTaskModal
+            activeTab={activeTab}
+            newTask={newTask}
+            setNewTask={setNewTask}
+            addNewTask={addNewTask}
+          />
         </div>
 
         <div className="flex gap-4 mb-6">
-          {["View All", "Sprints", "Marketing", "Sales", "Development"].map(
-            (tab) => (
-              <Button
-                key={tab}
-                variant={tab === "View All" ? "default" : "ghost"}
-                className="px-4"
-              >
-                {tab}
-              </Button>
-            )
-          )}
+          {[
+            { id: "viewAll", label: "View All" },
+            { id: "sprints", label: "Sprints" },
+            { id: "marketing", label: "Marketing" },
+            { id: "sales", label: "Sales" },
+            { id: "development", label: "Development" },
+          ].map((tab) => (
+            <Button
+              key={tab.id}
+              variant={activeTab === tab.id ? "default" : "ghost"}
+              className="px-4"
+              onClick={() => setActiveTab(tab.id as TabType)}
+            >
+              {tab.label}
+            </Button>
+          ))}
         </div>
       </div>
 

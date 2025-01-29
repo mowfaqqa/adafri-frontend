@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useState } from "react";
-import { Card, CardContent } from "../ui/card";
-import { ArrowLeft, MoreVertical, Plus } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -12,7 +11,6 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { Textarea } from "../ui/textarea";
 import {
   Column,
   TabType,
@@ -79,7 +77,7 @@ const TaskManagerOverview = () => {
   const [newColumn, setNewColumn] = useState("");
   const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
 
-  const fiteredTasks = tasks.filter((task) =>
+  const filteredTasks = tasks.filter((task) =>
     activeTab === "viewAll" ? true : task.category === activeTab
   );
 
@@ -209,7 +207,7 @@ const TaskManagerOverview = () => {
 
       <div className="flex gap-6">
         {columns.map((column) => (
-          <TaskColumn key={column.id} column={column} tasks={tasks} />
+          <TaskColumn key={column.id} column={column} tasks={filteredTasks} />
         ))}
 
         <Dialog

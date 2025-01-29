@@ -1,6 +1,7 @@
 import { Clock } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { Task } from "@/lib/interfaces/TaskManager/task.interface";
+import { Progress } from "../ui/progress";
 
 const SprintTaskCard = ({ task }: { task: Task }) => (
   <Card className="mb-4 cursor-move">

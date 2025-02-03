@@ -63,6 +63,39 @@ const TaskManagerOverview = () => {
       assignees: ["/assets/Image-4.png"],
       category: "sprints",
     },
+    {
+      id: "3",
+      title: "Orders",
+      description:
+        "Sales and marketing are two business functions within an organization.",
+      status: "todo",
+      date: "25 Sep, 2022",
+      tags: ["marketing", "sales"],
+      assignees: ["/assets/Image-4.png"],
+      category: "sprints",
+    },
+    {
+      id: "4",
+      title: "Marketing",
+      description:
+        "Sales and marketing are two business functions within an organization.",
+      status: "todo",
+      date: "25 Sep, 2022",
+      tags: ["marketing", "sales"],
+      assignees: ["/assets/Image-4.png"],
+      category: "development",
+    },
+    {
+      id: "5",
+      title: "Development",
+      description:
+        "Sales and marketing are two business functions within an organization.",
+      status: "todo",
+      date: "25 Sep, 2022",
+      tags: ["marketing", "sales"],
+      assignees: ["/assets/Image-4.png"],
+      category: "development",
+    },
   ]);
 
   const [newTask, setNewTask] = useState({

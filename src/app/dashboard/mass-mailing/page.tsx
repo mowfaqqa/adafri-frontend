@@ -10,14 +10,19 @@ import { MoreVertical, Bell, Settings, PenSquare } from "lucide-react";
 const CampaignCard = ({ name, email, role, status }: any) => (
   <Card className="mb-4">
     <CardContent className="p-4 flex items-center justify-between">
-      <div className="flex flex-col">
-        <span className="font-medium">{name}</span>
-        <span className="text-sm text-gray-500">{email}</span>
-        <span className="text-sm text-gray-600">{role}</span>
+      <div className="flex justify-between">
+        <div className="flex flex-col">
+          <span className="font-medium">{name}</span>
+          <span className="text-sm text-gray-500">{email}</span>
+          <span className="text-sm text-gray-600">{role}</span>
+        </div>
+        <button className="p-1">
+          <MoreVertical className="h-4 w-4 text-gray-500" />
+        </button>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 border-t border-gray-200">
         <div
-          className={`w-2 h-2 rounded-full ${
+          className={`w-7 h-7 rounded-full ${
             status === "pending"
               ? "bg-yellow-400"
               : status === "active"
@@ -25,9 +30,6 @@ const CampaignCard = ({ name, email, role, status }: any) => (
               : "bg-green-500"
           }`}
         />
-        <button className="p-1">
-          <MoreVertical className="h-4 w-4 text-gray-500" />
-        </button>
       </div>
     </CardContent>
   </Card>

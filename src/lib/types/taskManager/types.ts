@@ -29,7 +29,7 @@ export interface SprintTask extends BaseTask {
 
 // Standard task interface
 export interface StandardTask extends BaseTask {
-  category: StandardTaskCategory;
+  category: "viewAll" | StandardTaskCategory;
 }
 
 // Union type for all task types

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ArrowLeft, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -20,19 +20,7 @@ import StandardTaskCard from "../Cards/StandardTaskCard";
 import NewTaskModal from "./NewTaskModal";
 import { SprintTask, StandardTask } from "@/lib/types/taskManager/types";
 
-// interface Task {
-//   id: string;
-//   title: string;
-//   description: string;
-//   status: "todo" | "inProgress" | "done";
-//   date: string;
-//   tags: string[];
-//   assignees: string[];
-// }
-// interface Column {
-//   id: any;
-//   title: string;
-// }
+
 const TaskManagerOverview = () => {
   const [activeTab, setActiveTab] = useState<TabType>("viewAll");
   const [columns, setColumns] = useState<Column[]>([
@@ -284,14 +272,10 @@ const TaskManagerOverview = () => {
   );
 
   return (
-    <div className="min-h-screen bg-white p-8">
+    <div className="min-h-screen p-6">
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-6">
           <div>
-            <p className="mb-2 flex items-center p-1 gap-2 text-black underline">
-              <ArrowLeft className="w-4 h-4" />
-              go back to dashboard
-            </p>
             <h1 className="text-2xl font-bold">Task Manager</h1>
           </div>
           <div className="flex-grow" />

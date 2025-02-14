@@ -1,3 +1,4 @@
+"use client";
 import { createContext, useContext, ReactNode } from "react";
 import { useTaskManager } from "../hooks/useTaskManager";
 import { TaskManagerContextType } from "../types/taskManager/types";

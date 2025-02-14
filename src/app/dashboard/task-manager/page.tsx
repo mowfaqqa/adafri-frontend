@@ -1,12 +1,13 @@
-import TaskManagerOverview from '@/components/TaskManager/TaskManagerOverview'
-import React from 'react'
+import TaskManagerOverview from "@/components/TaskManager/TaskManagerOverview";
+import { TaskManagerProvider } from "@/lib/context/TaskmanagerContext";
+import React from "react";
 
 const TaskManager = () => {
   return (
-    <div>
-      <TaskManagerOverview /> 
-    </div>
-  )
-}
+    <TaskManagerProvider>
+      <TaskManagerOverview />
+    </TaskManagerProvider>
+  );
+};
 
-export default TaskManager
+export default TaskManager;

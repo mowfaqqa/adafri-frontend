@@ -70,7 +70,7 @@ const Message = ({ user, role, content, timestamp }: any) => (
 );
 
 // Sidebar Component
-const Sidebar = () => (
+const MessageSidebar = () => (
   <div className="w-60 border-r bg-gray-50 h-[90vh] flex flex-col">
     <ScrollArea className="flex-1 my-3 border-b border-gray-300">
       <div className="p-2 space-y-4">
@@ -217,23 +217,9 @@ const ChatArea = () => (
 // Main Layout Component
 const ChatLayout = () => {
   return (
-    <div className="h-[90vh] flex flex-col m-5 ">
-      <header className="h-12 flex items-center px-4 justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            go back to dashboard
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-gray-500" />
-          <Settings className="h-5 w-5 text-gray-500" />
-          <Button>Chat with us</Button>
-        </div>
-      </header>
-
+    <div className="h-[90vh] flex flex-col p-5">
       <div className="flex-1 flex overflow-hidden border border-gray-300">
-        <Sidebar />
+        <MessageSidebar />
         <ChatArea />
       </div>
     </div>

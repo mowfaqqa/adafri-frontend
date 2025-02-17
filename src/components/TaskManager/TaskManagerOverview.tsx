@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useState } from "react";
-import { ArrowLeft, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -19,20 +18,8 @@ import {
 import SprintTaskCard from "../Cards/SprintTaskCard";
 import StandardTaskCard from "../Cards/StandardTaskCard";
 import NewTaskModal from "./NewTaskModal";
+import { SprintTask, StandardTask } from "@/lib/types/taskManager/types";
 
-// interface Task {
-//   id: string;
-//   title: string;
-//   description: string;
-//   status: "todo" | "inProgress" | "done";
-//   date: string;
-//   tags: string[];
-//   assignees: string[];
-// }
-// interface Column {
-//   id: any;
-//   title: string;
-// }
 const TaskManagerOverview = () => {
   const [activeTab, setActiveTab] = useState<TabType>("viewAll");
   const [columns, setColumns] = useState<Column[]>([
@@ -41,6 +28,7 @@ const TaskManagerOverview = () => {
   ]);
 
   const [tasks, setTasks] = useState<Task[]>([
+    // Standard Task (Marketing)
     {
       id: "1",
       title: "CRM Dashboard",
@@ -51,50 +39,117 @@ const TaskManagerOverview = () => {
       assignees: ["/assets/Image-3.png"],
       category: "marketing",
       progress: 65,
+      createdAt: "2024-02-01T10:00:00Z",
+      lastModified: "2024-02-10T15:30:00Z",
+      activityLog: [
+        {
+          id: "log1",
+          timestamp: "2024-02-01T10:00:00Z",
+          action: "created",
+          description: "Task created",
+          userId: "user1",
+        },
+      ],
     },
+
+    // Sprint Task
     {
       id: "2",
-      title: "Orders",
-      description:
-        "Sales and marketing are two business functions within an organization.",
+      title: "User Authentication Flow",
+      description: "Implement OAuth2 authentication flow for the application",
       status: "todo",
-      date: "25 Sep, 2022",
-      tags: ["marketing", "sales"],
+      date: "25 Sep, 2024",
+      tags: ["development", "authentication"],
       assignees: ["/assets/Image-4.png"],
       category: "sprints",
+      progress: 30,
+      storyPoints: 8, // Added sprint-specific field
+      sprint: "Sprint 2", // Added sprint-specific field
+      createdAt: "2024-02-01T10:00:00Z",
+      lastModified: "2024-02-10T15:30:00Z",
+      activityLog: [
+        {
+          id: "log2",
+          timestamp: "2024-02-01T10:00:00Z",
+          action: "created",
+          description: "Task created",
+          userId: "user2",
+        },
+      ],
     },
+
+    // Another Sprint Task
     {
       id: "3",
-      title: "Orders",
-      description:
-        "Sales and marketing are two business functions within an organization.",
+      title: "API Integration",
+      description: "Integrate payment gateway API with error handling",
       status: "todo",
-      date: "25 Sep, 2022",
-      tags: ["marketing", "sales"],
+      date: "28 Sep, 2024",
+      tags: ["backend", "integration"],
       assignees: ["/assets/Image-4.png"],
       category: "sprints",
+      progress: 15,
+      storyPoints: 13, // Added sprint-specific field
+      sprint: "Sprint 2", // Added sprint-specific field
+      createdAt: "2024-02-01T10:00:00Z",
+      lastModified: "2024-02-10T15:30:00Z",
+      activityLog: [
+        {
+          id: "log3",
+          timestamp: "2024-02-01T10:00:00Z",
+          action: "created",
+          description: "Task created",
+          userId: "user3",
+        },
+      ],
     },
+
+    // Development Task
     {
       id: "4",
-      title: "Marketing",
-      description:
-        "Sales and marketing are two business functions within an organization.",
+      title: "Performance Optimization",
+      description: "Optimize application performance and reduce load times",
       status: "todo",
-      date: "25 Sep, 2022",
-      tags: ["marketing", "sales"],
+      date: "30 Sep, 2024",
+      tags: ["development", "optimization"],
       assignees: ["/assets/Image-4.png"],
       category: "development",
+      progress: 45,
+      createdAt: "2024-02-01T10:00:00Z",
+      lastModified: "2024-02-10T15:30:00Z",
+      activityLog: [
+        {
+          id: "log4",
+          timestamp: "2024-02-01T10:00:00Z",
+          action: "created",
+          description: "Task created",
+          userId: "user4",
+        },
+      ],
     },
+
+    // Sales Task
     {
       id: "5",
-      title: "Development",
-      description:
-        "Sales and marketing are two business functions within an organization.",
+      title: "Q1 Sales Analysis",
+      description: "Analyze Q1 sales data and prepare report",
       status: "todo",
-      date: "25 Sep, 2022",
-      tags: ["marketing", "sales"],
+      date: "1 Oct, 2024",
+      tags: ["sales", "analysis"],
       assignees: ["/assets/Image-4.png"],
-      category: "development",
+      category: "sales",
+      progress: 80,
+      createdAt: "2024-02-01T10:00:00Z",
+      lastModified: "2024-02-10T15:30:00Z",
+      activityLog: [
+        {
+          id: "log5",
+          timestamp: "2024-02-01T10:00:00Z",
+          action: "created",
+          description: "Task created",
+          userId: "user5",
+        },
+      ],
     },
   ]);
 
@@ -114,22 +169,13 @@ const TaskManagerOverview = () => {
     activeTab === "viewAll" ? true : task.category === activeTab
   );
 
-  const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    e.dataTransfer.setData("taskId", taskId);
-  };
-
-  const handleDrop = (e: React.DragEvent, status: Task["status"]) => {
-    e.preventDefault();
-    const taskId = e.dataTransfer.getData("taskId");
-    setTasks(
-      tasks.map((task) => (task.id === taskId ? { ...task, status } : task))
-    );
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
+  // const handleDrop = (e: React.DragEvent, status: Task["status"]) => {
+  //   e.preventDefault();
+  //   const taskId = e.dataTransfer.getData("taskId");
+  //   setTasks(
+  //     tasks.map((task) => (task.id === taskId ? { ...task, status } : task))
+  //   );
+  // };
   const addNewTask = () => {
     const task: Task = {
       id: Math.random().toString(),
@@ -149,6 +195,17 @@ const TaskManagerOverview = () => {
       }),
       tags: newTask.tags.split(",").map((tag) => tag.trim()),
       assignees: ["/assets/placeholder/32/32"],
+      createdAt: "2024-02-01T10:00:00Z",
+      lastModified: "2024-02-10T15:30:00Z",
+      activityLog: [
+        {
+          id: "log1",
+          timestamp: "2024-02-01T10:00:00Z",
+          action: "created",
+          description: "Task created",
+          userId: "user1",
+        },
+      ],
     };
     setTasks([...tasks, task]);
     setNewTask({
@@ -169,44 +226,55 @@ const TaskManagerOverview = () => {
       setShowNewColumnDialog(false);
     }
   };
+  const isSprintTask = (task: Task): task is SprintTask => {
+    return task.category === "sprints";
+  };
+
+  const isStandardTask = (task: Task): task is StandardTask => {
+    return task.category !== "sprints";
+  };
+
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    e.dataTransfer.setData("taskId", taskId);
+  };
+
+  const renderTask = (task: Task) => {
+    if (isSprintTask(task)) {
+      return <SprintTaskCard task={task} className="mb-4" />;
+    }
+    if (isStandardTask(task)) {
+      return <StandardTaskCard task={task} className="mb-4" />;
+    }
+    return null;
+  };
   const TaskColumn = ({ column, tasks }: { column: Column; tasks: Task[] }) => (
-    <div
-      className="w-80 bg-gray-50 rounded-lg p-4"
-      onDrop={(e) => handleDrop(e, column.id)}
-      onDragOver={handleDragOver}
-    >
+    <div className="w-80 bg-gray-50 rounded-lg px-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-semibold text-lg">{column.title}</h3>
         <Plus className="w-5 h-5 text-gray-500 cursor-pointer" />
       </div>
 
-      {tasks
-        .filter((task) => task.status === column.id)
-        .map((task) => (
-          <div
-            key={task.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, task.id)}
-          >
-            {activeTab === "sprints" ? (
-              <SprintTaskCard task={task} />
-            ) : (
-              <StandardTaskCard task={task} />
-            )}
-          </div>
-        ))}
+      <div className="space-y-4">
+        {tasks
+          .filter((task) => task.status === column.id)
+          .map((task) => (
+            <div
+              key={task.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, task.id)}
+            >
+              {renderTask(task)}
+            </div>
+          ))}
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white p-8">
+    <div className="min-h-screen px-6 py-2">
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-6">
           <div>
-            <p className="mb-2 flex items-center p-1 gap-2 text-black underline">
-              <ArrowLeft className="w-4 h-4" />
-              go back to dashboard
-            </p>
             <h1 className="text-2xl font-bold">Task Manager</h1>
           </div>
           <div className="flex-grow" />
@@ -229,7 +297,10 @@ const TaskManagerOverview = () => {
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? "default" : "ghost"}
-              className="px-4"
+              className={`px-4 ${
+                activeTab === tab.id &&
+                "bg-gradient-to-r from-[#00A791] to-[#014D42]"
+              }`}
               onClick={() => setActiveTab(tab.id as TabType)}
             >
               {tab.label}

@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MoreVertical, Bell, Settings, PenSquare } from "lucide-react";
+import { MoreVertical, PenSquare } from "lucide-react";
 
 // Campaign Card Component
 const CampaignCard = ({ name, email, role, status }: any) => (
@@ -102,18 +102,8 @@ const SenderCard = ({ name, email, phone, status }: any) => (
 
 const DashboardTabs = () => {
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <Button variant="ghost" className="text-gray-600">
-          <span className="mr-2">←</span> go back to dashboard
-        </Button>
-        <div className="flex items-center gap-4">
-          <Bell className="h-5 w-5 text-gray-500" />
-          <Settings className="h-5 w-5 text-gray-500" />
-          <Button variant="default">Chat with us</Button>
-        </div>
-      </div>
-
+    <div className="px-6 py-2">
+      <h2 className="text-2xl font-medium pb-2">Mass Mailing</h2>
       <Tabs defaultValue="campaigns" className="w-full">
         <div className="flex justify-between items-center mb-6">
           <TabsList>

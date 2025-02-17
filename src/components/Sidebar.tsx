@@ -1,108 +1,364 @@
-import React from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+import React, { useState } from "react";
+import {
+  ChevronRight,
+  Menu,
+  Settings,
+  // LayoutDashboard,
+  // MessageCircle,
+  // Tool,
+  // BrandRolodex
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
 
-interface SideBarProps {
-  className: string;
-}
+// Navigation configuration
+const navigation = [
+  {
+    title: "Main Menu",
+    items: [
+      {
+        label: "Dashboard",
+        icon: "/icons/martech.png",
+        href: "/dashboard",
+      },
+      {
+        label: "Martech",
+        icon: "/icons/martech.png",
+        href: "/martech",
+        subItems: [
+          {
+            label: "Mass Mailing",
+            href: "/dashboard/mass-mailing",
+            icon: "/icons/mass-mailing.png",
+          },
+          {
+            label: "CRM",
+            href: "/dashboard/social",
+            icon: "/icons/crm.png",
+          },
+          {
+            label: "Social Listeniing",
+            href: "/dashboard/analytics",
+            icon: "/icons/social.png",
+          },
+          {
+            label: "Post Publisher",
+            href: "/dashboard/analytics",
+            icon: "/icons/post-publisher.png",
+          },
+          {
+            label: "AI Calling",
+            href: "/dashboard/analytics",
+            icon: "/icons/ai-calling.png",
+          },
+          {
+            label: "sms",
+            href: "/dashboard/analytics",
+            icon: "/icons/sms.png",
+          },
+        ],
+      },
+      {
+        label: "Adtech",
+        icon: "/icons/adtech.png",
+        href: "/adtech",
+        subItems: [
+          {
+            label: "Google Ads",
+            href: "/dashboard/campaigns",
+            icon: "/icons/google-ads.png",
+          },
+          {
+            label: "Meta",
+            href: "/dashboard/builder",
+            icon: "/icons/meta.png",
+          },
+          {
+            label: "Twitter",
+            href: "/dashboard/performance",
+            icon: "/icons/twitter.png",
+          },
+          {
+            label: "tiktok",
+            href: "/dashboard/performance",
+            icon: "/icons/tiktok.png",
+          },
+          {
+            label: "LinkedIn",
+            href: "/dashboard/performance",
+            icon: "/icons/linkedin.png",
+          },
+          {
+            label: "Spotify",
+            href: "/dashboard/performance",
+            icon: "/icons/spotify.png",
+          },
+        ],
+      },
+      {
+        label: "Tools",
+        icon: "/icons/tool.png",
+        href: "/tool",
+        subItems: [
+          {
+            label: "Website Builder",
+            href: "/dashboard/campaigns",
+            icon: "/icons/website-builder.png",
+          },
+          {
+            label: "Internal Message",
+            href: "/dashboard/messaging",
+            icon: "/icons/internal-message.png",
+          },
+          {
+            label: "Online Meeting",
+            href: "/dashboard/performance",
+            icon: "/icons/online-meeting.png",
+          },
+          {
+            label: "E-sign",
+            href: "/dashboard/performance",
+            icon: "/icons/e-sign.png",
+          },
+          {
+            label: "Task Manager",
+            href: "/dashboard/task-manager",
+            icon: "/icons/task-manager.png",
+          },
+          {
+            label: "Image Editor",
+            href: "/dashboard/performance",
+            icon: "/icons/image-editor.png",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Messaging",
+    items: [
+      {
+        label: "Telegram",
+        icon: "/icons/telegram.png",
+        href: "/telegram",
+        iconColor: "#229ED9",
+      },
+      {
+        label: "WhatsApp",
+        icon: "/icons/whatsapp.png",
+        href: "/whatsapp",
+        iconColor: "#25D366",
+      },
+      {
+        label: "Messenger",
+        icon: "/icons/facebook.png",
+        href: "/messenger",
+        iconColor: "#0084FF",
+      },
+    ],
+  },
+];
 
-const Sidebar = ({ className }: SideBarProps) => {
+const PopoverContent = ({ item }: { item: any }) => {
   return (
-    <div>
-      <div
-        className={`${className} absolute top-0 z-50 flex-col w-[116px] border-t-0 bg-[#252A41] rounded-r-[25px] md:py-2 px-4 md:gap-5 justify-center h-[100vh] overflow-y-clip`}
-      >
+    <div className="fixed left-16 top-auto min-w-[200px] bg-white rounded-lg shadow-lg border z-[100]">
+      <div className="p-2">
+        <div className="font-medium text-sm mb-2">{item.label}</div>
+        {item.subItems && (
+          <div className="space-y-1">
+            {item.subItems.map((subItem: any, index: number) => (
+              <Link key={index} href={subItem.href} passHref>
+                <div className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
+                  <Image src={subItem.icon} alt="icon" width={14} height={14} />
+                  <span>{subItem.label}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+const SidebarItem = ({ item, isCollapsed }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showPopover, setShowPopover] = useState(false);
+  const pathname = usePathname();
+  const Icon = item.icon;
 
-          <Link href="/" passHref>
-            <Icon1 />
-          </Link>
-          <Link href="/" passHref>
-            <Icon2 />
-          </Link>
-          <Link href="/" passHref>
-          <Icon3 />
-          </Link>
+  const isActive = (item: any): boolean => {
+    if (pathname === item.href) return true;
+    if (item.subItems) {
+      return item.subItems.some((subItem: any) => pathname === subItem.href);
+    }
+    return false;
+  };
+  if (item.subItems) {
+    return (
+      <div
+        className="relative"
+        onMouseEnter={() => isCollapsed && setShowPopover(true)}
+        onMouseLeave={() => isCollapsed && setShowPopover(false)}
+      >
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger
+            className={cn(
+              "flex w-full items-center p-2 hover:bg-gray-100 rounded-lg",
+              isActive(item) && "bg-emerald-50 text-emerald-600"
+            )}
+          >
+            <div className="flex items-center flex-1">
+              <div className=" relative h-5 w-5 flex justify-center">
+                <Image
+                  src={item.icon}
+                  alt="icon"
+                  objectFit="cover"
+                  layout="fill"
+                />
+              </div>
+
+              {!isCollapsed && (
+                <>
+                  <span className="ml-3 text-sm">{item.label}</span>
+                  <ChevronRight
+                    className={cn(
+                      "ml-auto h-4 w-4 transition-transform",
+                      isOpen && "rotate-90"
+                    )}
+                  />
+                </>
+              )}
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            {!isCollapsed &&
+              item.subItems.map((subItem: any, index: number) => (
+                <Link key={index} href={subItem.href} passHref>
+                  <div className="flex items-center gap-3 p-2 pl-9 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
+                    <Image
+                      src={subItem.icon}
+                      alt="icon"
+                      width={14}
+                      height={14}
+                    />
+                    <span className="flex items-center ">{subItem.label}</span>
+                  </div>
+                </Link>
+              ))}
+          </CollapsibleContent>
+        </Collapsible>
+        {isCollapsed && showPopover && <PopoverContent item={item} />}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => isCollapsed && setShowPopover(true)}
+      onMouseLeave={() => isCollapsed && setShowPopover(false)}
+    >
+      <Link href={item.href} passHref>
+        <div className="flex items-center p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
+          <Image src={Icon} alt="icon" width={14} height={14} />
+          {!isCollapsed && <span className="ml-3 text-sm">{item.label}</span>}
+        </div>
+      </Link>
+      {isCollapsed && showPopover && <PopoverContent item={item} />}
+    </div>
+  );
+};
+
+const Sidebar = () => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showPopover, setShowPopover] = useState(false);
+
+  return (
+    <div className="relative">
+      <div
+        className={cn(
+          "flex flex-col h-screen bg-white border-r transition-all duration-300",
+          isCollapsed ? "w-20" : "w-64"
+        )}
+      >
+        {/* Logo */}
+        <div className="p-4 flex items-center">
+          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center mr-4">
+            <Image
+              src="/icons/icon-main.png"
+              width={40}
+              height={40}
+              alt="icon"
+            />
+          </div>
+          {!isCollapsed && (
+            <Image
+              src="/icons/djombi-icon.png"
+              width={140}
+              height={40}
+              alt="icon"
+            />
+          )}
+        </div>
+
+        {/* Toggle button */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="p-2 hover:bg-gray-100 rounded-lg"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        {/* Navigation Sections */}
+        <div className="flex-1 overflow-y-auto">
+          {navigation.map((section, index: number) => (
+            <div key={index} className="mt-4 px-2">
+              {!isCollapsed && (
+                <div className="text-xs uppercase text-gray-500 mb-2">
+                  {section.title}
+                </div>
+              )}
+              {section.items.map((item) => (
+                <SidebarItem
+                  key={item.href}
+                  item={item}
+                  isCollapsed={isCollapsed}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Settings at the bottom */}
+        <div className="p-2 border-t">
+          <div
+            className="relative"
+            onMouseEnter={() => isCollapsed && setShowPopover(true)}
+            onMouseLeave={() => isCollapsed && setShowPopover(false)}
+          >
+            <Link href="/dashboard/settings">
+              <div className="flex items-center p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
+                <Settings className="h-5 w-5 text-emerald-600" />
+                {!isCollapsed && <span className="ml-3 text-sm">Settings</span>}
+              </div>
+            </Link>
+            {isCollapsed && showPopover && (
+              <PopoverContent item={{ label: "Settings" }} />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
 export default Sidebar;
-
-const Icon1 = () => {
-  return (
-    <span>
-      <svg
-        width="56"
-        height="55"
-        viewBox="0 0 56 55"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect
-          x="0.853516"
-          width="54.2947"
-          height="54.2947"
-          rx="7"
-          fill="white"
-        />
-        <path
-          d="M27.6754 13.8293C29.4174 13.8293 31.0424 14.1673 32.5504 14.8433C34.0844 15.4933 35.4104 16.3903 36.5284 17.5343C37.6724 18.6523 38.5694 19.9783 39.2194 21.5123C39.8954 23.0463 40.2334 24.6713 40.2334 26.3873V36.5273C40.2334 37.2033 39.9994 37.7753 39.5314 38.2433C39.0634 38.7113 38.4914 38.9453 37.8154 38.9453C37.1394 38.9453 36.5544 38.7113 36.0604 38.2433C35.5924 37.7753 35.3584 37.2033 35.3584 36.5273V31.8473H27.6754V31.8083C27.5974 31.8343 27.4544 31.8473 27.2464 31.8473C26.3884 31.8473 25.5694 31.9773 24.7894 32.2373C24.0094 32.4973 23.2944 32.8613 22.6444 33.3293C22.0204 33.7973 21.4744 34.3563 21.0064 35.0063C20.5384 35.6563 20.1874 36.3713 19.9534 37.1513C19.9274 37.1773 19.9144 37.2033 19.9144 37.2293C19.9144 37.2553 19.9014 37.2813 19.8754 37.3073C19.7194 37.8013 19.4334 38.2043 19.0174 38.5163C18.6014 38.8023 18.1204 38.9453 17.5744 38.9453C16.8984 38.9453 16.3264 38.7113 15.8584 38.2433C15.3904 37.7753 15.1564 37.2033 15.1564 36.5273V36.1763V26.3873C15.1564 24.8533 15.4164 23.4103 15.9364 22.0583C16.5604 20.3943 17.4964 18.9123 18.7444 17.6123C19.9144 16.4423 21.2534 15.5193 22.7614 14.8433C24.2954 14.1673 25.9334 13.8293 27.6754 13.8293ZM35.3584 26.9723V26.3873C35.3584 25.0353 35.0334 23.7873 34.3834 22.6433C34.3834 22.6173 34.3704 22.6043 34.3444 22.6043C34.3444 22.5783 34.3444 22.5523 34.3444 22.5263C34.2404 22.3703 34.1364 22.2143 34.0324 22.0583C33.9284 21.9023 33.8244 21.7593 33.7204 21.6293C33.0184 20.7193 32.1474 20.0043 31.1074 19.4843C30.0674 18.9643 28.9234 18.7043 27.6754 18.7043C26.4274 18.7043 25.2704 18.9903 24.2044 19.5623C23.1644 20.1083 22.2934 20.8363 21.5914 21.7463C21.0974 22.3963 20.7074 23.1113 20.4214 23.8913C20.1614 24.6713 20.0314 25.5033 20.0314 26.3873V29.2733C21.0454 28.5453 22.1634 27.9863 23.3854 27.5963C24.6074 27.1803 25.8944 26.9723 27.2464 26.9723H27.6754H35.3584Z"
-          fill="#252A41"
-        />
-      </svg>
-    </span>
-  );
-};
-const Icon2 = () => {
-  return (
-    <span>
-      <svg
-        width="46"
-        height="47"
-        viewBox="0 0 46 47"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect y="0.294922" width="46" height="46" rx="7" fill="#242B4E" />
-        <path
-          d="M23.1537 16.4919V23.0072L28.0402 27.8937M37.8133 23.0072C37.8133 31.1035 31.25 37.6668 23.1537 37.6668C15.0575 37.6668 8.49414 31.1035 8.49414 23.0072C8.49414 14.911 15.0575 8.34766 23.1537 8.34766C31.25 8.34766 37.8133 14.911 37.8133 23.0072Z"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-  );
-};
-const Icon3 = () => {
-  return (
-    <span>
-      <svg
-        width="46"
-        height="47"
-        viewBox="0 0 46 47"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect y="0.294922" width="46" height="46" rx="7" fill="#242B4E" />
-        <rect
-          x="0.5"
-          y="0.794922"
-          width="45"
-          height="45"
-          rx="6.5"
-          stroke="white"
-          strokeOpacity="0.02"
-        />
-        <path
-          d="M8 19.8269H37.3191M14.5154 28.359H16.1442M22.6596 28.359H24.2884M12.8865 35.1846H32.4326C35.1314 35.1846 37.3191 32.8926 37.3191 30.0654V16.4141C37.3191 13.5869 35.1314 11.2949 32.4326 11.2949H12.8865C10.1878 11.2949 8 13.5869 8 16.4141V30.0654C8 32.8926 10.1878 35.1846 12.8865 35.1846Z"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-  );
-};

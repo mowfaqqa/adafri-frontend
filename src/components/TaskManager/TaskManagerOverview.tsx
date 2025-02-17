@@ -20,7 +20,6 @@ import StandardTaskCard from "../Cards/StandardTaskCard";
 import NewTaskModal from "./NewTaskModal";
 import { SprintTask, StandardTask } from "@/lib/types/taskManager/types";
 
-
 const TaskManagerOverview = () => {
   const [activeTab, setActiveTab] = useState<TabType>("viewAll");
   const [columns, setColumns] = useState<Column[]>([
@@ -249,7 +248,7 @@ const TaskManagerOverview = () => {
     return null;
   };
   const TaskColumn = ({ column, tasks }: { column: Column; tasks: Task[] }) => (
-    <div className="w-80 bg-gray-50 rounded-lg p-4">
+    <div className="w-80 bg-gray-50 rounded-lg px-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-semibold text-lg">{column.title}</h3>
         <Plus className="w-5 h-5 text-gray-500 cursor-pointer" />
@@ -272,7 +271,7 @@ const TaskManagerOverview = () => {
   );
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen px-6 py-2">
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-6">
           <div>
@@ -298,7 +297,10 @@ const TaskManagerOverview = () => {
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? "default" : "ghost"}
-              className="px-4"
+              className={`px-4 ${
+                activeTab === tab.id &&
+                "bg-gradient-to-r from-[#00A791] to-[#014D42]"
+              }`}
               onClick={() => setActiveTab(tab.id as TabType)}
             >
               {tab.label}

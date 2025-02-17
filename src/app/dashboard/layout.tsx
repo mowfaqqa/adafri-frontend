@@ -6,12 +6,12 @@ import React from "react";
 const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="h-full overflow-hidden flex" id="main">
-      <div className="top-0">
+      <div className="h-screen">
         <Sidebar />
       </div>
       <div className="flex-1 bg-gray-100 overflow-hidden">
-        <div className="flex justify-between items-center">
-          <h2 className="text-4xl font-medium text-gray-900 mt-10 mx-4 mb-3">
+        <div className="bg-white flex justify-between items-center my-2">
+          <h2 className="text-4xl font-medium text-gray-900 mt-2 mx-4 mb-3">
             Good Morning, Muwaf
           </h2>
           <div className="flex items-center gap-4 mx-6">

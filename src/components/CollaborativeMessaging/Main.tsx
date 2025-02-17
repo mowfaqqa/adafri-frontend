@@ -1,229 +1,204 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import React from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Search,
-  Bell,
-  Settings,
-  ChevronLeft,
-  Plus,
-  MoreVertical,
-  Send,
-} from "lucide-react";
+"use client";
+import React, { useState } from "react";
+import { Search, Bell, Plus, Send } from "lucide-react";
 
-// Sidebar Channel Item Component
-const ChannelItem = ({ icon, name, count = 0 }: any) => (
-  <div className="flex items-center px-3 py-1.5 hover:bg-[#E0E7FF80] rounded-md cursor-pointer group">
-    {icon}
-    <span className="ml-2 flex-1 text-sm">{name}</span>
-    {count > 0 && (
-      <span className="bg-gray-900 text-white text-xs px-2 py-0.5 rounded-full">
-        {count}
-      </span>
-    )}
-  </div>
-);
+interface Message {
+  id: number;
+  text: string;
+  sender: string;
+  timestamp: string;
+}
 
-// Direct Message Item Component
-const DirectMessageItem = ({ name, avatar, status, count = 0 }: any) => (
-  <div className="flex items-center px-3 py-1.5 hover:bg-[#E0E7FF80] rounded-md cursor-pointer group">
-    <Avatar className="h-6 w-6">
-      <AvatarImage src={avatar} />
-      <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-    </Avatar>
-    <span className="ml-2 flex-1 text-sm">{name}</span>
-    {count > 0 && (
-      <span className="bg-gray-900 text-white text-xs px-2 py-0.5 rounded-full">
-        {count}
-      </span>
-    )}
-  </div>
-);
+interface Chat {
+  id: number;
+  name: string;
+  type: "dm" | "channel";
+}
 
-// Message Component
-const Message = ({ user, role, content, timestamp }: any) => (
-  <div className="bg-white flex gap-3 py-2 group rounded-md px-3">
-    <Avatar className="h-8 w-8 mt-1">
-      <AvatarImage src={user.avatar} />
-      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-    </Avatar>
-    <div className="flex-1 bg-white">
-      <div className="flex items-center gap-2">
-        <span className="font-medium">{user.name}</span>
-        <span className="text-sm text-gray-500">{role}</span>
-        <span className="text-xs text-gray-400">{timestamp}</span>
-      </div>
-      <p className="text-sm text-gray-700">{content}</p>
-    </div>
-    <Button
-      variant="ghost"
-      size="icon"
-      className="opacity-0 group-hover:opacity-100"
-    >
-      <MoreVertical className="h-4 w-4" />
-    </Button>
-  </div>
-);
+interface DirectMessage {
+  id: number;
+  name: string;
+  unread: number;
+}
 
-// Sidebar Component
-const MessageSidebar = () => (
-  <div className="w-60 border-r bg-gray-50 h-[90vh] flex flex-col">
-    <ScrollArea className="flex-1 my-3 border-b border-gray-300">
-      <div className="p-2 space-y-4">
-        <div className="border-b border-gray-300">
-          <div className="px-3 mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-400">Options</span>
-            <Plus className="h-4 w-4 text-gray-500" />
-          </div>
-          <ChannelItem
-            icon={<Search className="h-4 w-4 text-gray-500" />}
-            name="Search"
-          />
-          <ChannelItem
-            icon={<Bell className="h-4 w-4 text-gray-500" />}
-            name="Announcement"
-          />
-        </div>
+interface Channel {
+  id: number;
+  name: string;
+  unread: number;
+}
+const MessagingUI = () => {
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<Record<number, Message[]>>({});
 
-        <div className="border-b border-gray-300">
-          <div className="px-3 mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium">Direct Messages</span>
-            <Plus className="h-4 w-4 text-gray-500" />
-          </div>
-          <DirectMessageItem
-            name="Nataly Chaplack"
-            avatar="/avatars/nataly.jpg"
-            count={15}
-          />
-          <DirectMessageItem
-            name="Shchastislav Yurchuk"
-            avatar="/avatars/shchastislav.jpg"
-            count={2}
-          />
-          <DirectMessageItem
-            name="Mary Croostina"
-            avatar="/avatars/mary.jpg"
-            count={4}
-          />
-        </div>
+  // Sample data
+  const directMessages: DirectMessage[] = [
+    { id: 1, name: "John Smith", unread: 3 },
+    { id: 2, name: "Sarah Johnson", unread: 1 },
+    { id: 3, name: "Mike Wilson", unread: 0 },
+    { id: 4, name: "Emma Davis", unread: 2 },
+  ];
 
-        <div>
-          <div className="px-3 mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium">Channels</span>
-            <Plus className="h-4 w-4 text-gray-500" />
-          </div>
-          <ChannelItem
-            icon={<span className="text-gray-500"></span>}
-            name="General"
-            count={5}
-          />
-          <ChannelItem
-            icon={<span className="text-gray-500"></span>}
-            name="Front-end Dev"
-          />
-          <ChannelItem
-            icon={<span className="text-gray-500"></span>}
-            name="Backend-Dev"
-          />
-          <ChannelItem
-            icon={<span className="text-gray-500"></span>}
-            name="Product Managers"
-          />
-        </div>
-      </div>
-    </ScrollArea>
-  </div>
-);
+  const channels: Channel[] = [
+    { id: 5, name: "General", unread: 5 },
+    { id: 6, name: "Front-end Dev", unread: 0 },
+    { id: 9, name: "Backend-Dev", unread: 0 },
+    { id: 8, name: "Projects", unread: 0 },
+  ];
 
-// Chat Header Component
-const ChatHeader = () => (
-  <div className="h-14 border-b flex items-center justify-between px-4">
-    <div className="flex items-center gap-3">
-      <Avatar className="h-8 w-8">
-        <AvatarImage src="/avatars/nataly.jpg" />
-        <AvatarFallback>NC</AvatarFallback>
-      </Avatar>
-      <div>
-        <h2 className="font-medium">Nataly Chaplack</h2>
-        <p className="text-sm text-gray-500">Director of the Lviv Forum</p>
-      </div>
-    </div>
-    <div className="flex items-center gap-2">
-      <Button variant="ghost" size="icon">
-        <Search className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="icon">
-        <MoreVertical className="h-4 w-4" />
-      </Button>
-    </div>
-  </div>
-);
+  const handleSendMessage = () => {
+    if (message.trim() && selectedChat) {
+      setMessages((prev) => ({
+        ...prev,
+        [selectedChat.id]: [
+          ...(prev[selectedChat.id] || []),
+          {
+            id: Date.now(),
+            text: message,
+            sender: "You",
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ],
+      }));
+      setMessage("");
+    }
+  };
 
-// Chat Input Component
-const ChatInput = () => (
-  <div className="border-t p-4">
-    <div className="flex items-center gap-2">
-      <Button variant="ghost" size="icon">
-        <Plus className="h-4 w-4" />
-      </Button>
-      <Input placeholder="Write a message" className="flex-1" />
-      <Button>
-        <Send className="h-4 w-4" />
-      </Button>
-    </div>
-  </div>
-);
-
-// Main Chat Area Component
-const ChatArea = () => (
-  <div className="flex-1 flex flex-col bg-[#F5F5FA]">
-    <ChatHeader />
-    <ScrollArea className="flex-1 p-4">
-      <Message
-        user={{
-          name: "Nataly Chaplack",
-          avatar: "/avatars/nataly.jpg",
-        }}
-        role="Director of the Lviv Forum"
-        content="Hello, I am sending today's indicators"
-        timestamp="Friday 2:20pm"
-      />
-      <div className="pl-11 pb-4 bg-white my-3">
-        <p className="text-sm text-gray-700">Box office: 36,870</p>
-        <p className="text-sm text-gray-700">Number of incoming: 2,346</p>
-        <p className="text-sm text-gray-700">Conversion: 89%</p>
-        <p className="text-sm text-gray-700">Sales: 67</p>
-        <p className="text-sm text-gray-700">The number of checks is 55</p>
-        <span className="text-xs text-gray-400">Friday 4:50pm</span>
-      </div>
-      <Message
-        user={{
-          name: "Nataly Chaplack",
-          avatar: "/avatars/nataly.jpg",
-        }}
-        role="Director of the Lviv Forum"
-        content="I promise that by the evening there will be better results, we are fulfilling the plan!!!"
-        timestamp="Friday 6:15pm"
-      />
-    </ScrollArea>
-    <ChatInput />
-  </div>
-);
-
-// Main Layout Component
-const ChatLayout = () => {
   return (
-    <div className="h-[90vh] flex flex-col p-5">
-      <div className="flex-1 flex overflow-hidden border border-gray-300">
-        <MessageSidebar />
-        <ChatArea />
+    <div className="px-8 py-3 border border-gray-200">
+      <h2 className="text-2xl  font-semibold">Messages</h2>
+      <div className="flex h-[85vh] bg-gray-100">
+        {/* Sidebar */}
+
+        <div className="w-64 bg-white text-gray-900 p-4">
+          {/* Options section */}
+          <div className="mb-8">
+            <h2 className="text-gray-400 text-sm mb-4">OPTIONS</h2>
+            <div className="flex items-center space-x-2 mb-2 text-gray-400">
+              <Search size={20} />
+              <span>Search</span>
+            </div>
+            <div className="flex items-center space-x-2 text-gray-400">
+              <Bell size={20} />
+              <span>Announcement</span>
+            </div>
+          </div>
+
+          {/* Direct Messages section */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-gray-400 text-sm">DIRECT MESSAGES</h2>
+              <Plus size={16} className="text-gray-400 cursor-pointer" />
+            </div>
+            {directMessages.map((dm) => (
+              <div
+                key={dm.id}
+                onClick={() =>
+                  setSelectedChat({ id: dm.id, name: dm.name, type: "dm" })
+                }
+                className={`flex justify-between items-center p-2 cursor-pointer rounded ${
+                  selectedChat?.id === dm.id
+                    ? "bg-emerald-200"
+                    : "hover:bg-[#EFF3FF]"
+                }`}
+              >
+                <span>{dm.name}</span>
+                {dm.unread > 0 && (
+                  <span className="bg-emerald-400 text-white text-xs px-2 py-1 rounded-full">
+                    {dm.unread}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Channels section */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-gray-400 text-sm">CHANNELS</h2>
+              <Plus size={16} className="text-gray-400 cursor-pointer" />
+            </div>
+            {channels.map((channel) => (
+              <div
+                key={channel.id}
+                onClick={() =>
+                  setSelectedChat({
+                    id: channel.id,
+                    name: channel.name,
+                    type: "channel",
+                  })
+                }
+                className={`flex justify-between items-center p-2 cursor-pointer rounded ${
+                  selectedChat?.id === channel.id
+                    ? "bg-emerald-200"
+                    : "hover:bg-[#EFF3FF]"
+                }`}
+              >
+                <span>{channel.name}</span>
+                {channel.unread > 0 && (
+                  <span className="bg-emerald-400 text-white text-xs px-2 py-1 rounded-full">
+                    {channel.unread}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main chat area */}
+        <div className="flex-1 flex flex-col border border-gray-200">
+          {/* Chat header */}
+          {selectedChat && (
+            <div className="bg-white p-4 border-b">
+              <h2 className="font-semibold">
+                {selectedChat.type === "channel" ? "#" : ""}
+                {selectedChat.name}
+              </h2>
+            </div>
+          )}
+
+          {/* Messages area */}
+          <div className="flex-1 p-4 overflow-y-auto">
+            {selectedChat ? (
+              messages[selectedChat.id]?.map((msg) => (
+                <span key={msg.id} className="mb-4 rounded-xl bg-white px-4 flex flex-col flex-wrap max-w-xl">
+                  <span className="font-semibold">{msg.sender}</span>
+                  <span className="text-gray-700">{msg.text}</span>
+                  <span className="text-xs text-gray-500">{msg.timestamp}</span>
+                </span>
+              ))
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                Select a chat to start messaging
+              </div>
+            )}
+          </div>
+
+          {/* Message input */}
+          {selectedChat && (
+            <div className="p-4 border-t bg-white">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Write a message"
+                  className="flex-1 p-2 border rounded"
+                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  className="bg-emerald-500 text-white px-4 py-2 rounded hover:bg-emerald-600"
+                >
+                  <Send size={20} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-export default ChatLayout;
+export default MessagingUI;

@@ -53,7 +53,7 @@ const EmailPreview: React.FC<{ email: Email }> = ({ email }) => (
 
 const EmailList: React.FC<EmailPreviewProps> = ({ emails, className }) => {
   return (
-    <Card className={cn("w-[370px] h-[600px] flex flex-col", className)}>
+    <Card className={cn("w-[370px] h-[600px] flex flex-col py-2", className)}>
       <CardHeader className="border-b">
         <CardTitle>Email</CardTitle>
       </CardHeader>

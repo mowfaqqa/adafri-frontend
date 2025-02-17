@@ -16,7 +16,7 @@ import CreateSprintForm from "./forms/CreateSprintForm";
 const NewTaskModal = ({ activeTab, newTask, setNewTask, addNewTask }: any) => (
   <Dialog>
     <DialogTrigger asChild>
-      <Button>
+      <Button className="bg-gradient-to-r from-[#00A791] to-[#014D42]">
         <Plus className="w-4 h-4 mr-2" />
         New {activeTab === "sprints" ? "Sprint Task" : "Task"}
       </Button>

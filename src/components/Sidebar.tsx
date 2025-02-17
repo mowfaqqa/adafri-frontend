@@ -37,7 +37,7 @@ const navigation = [
         subItems: [
           {
             label: "Mass Mailing",
-            href: "/dashboard/email",
+            href: "/dashboard/mass-mailing",
             icon: "/icons/mass-mailing.png",
           },
           {

@@ -4,12 +4,12 @@ import FavoritesCard from "@/components/Dashboard/FavoritesCard";
 import FeatureCarousel from "@/components/Dashboard/featureCarousel";
 import DashboardPollCard from "@/components/Dashboard/PollingCard";
 import { Tab } from "@/lib/interfaces/Dashboard/types";
+
 import React from "react";
 
 const Dashboard = () => {
   return (
     <div className="">
-    
       <div className="flex">
         <div>
           <div className="flex gap-1 max-w-3xl">

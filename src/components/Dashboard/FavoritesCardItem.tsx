@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { Feature } from "@/lib/interfaces/Dashboard/types";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "../ui/card";

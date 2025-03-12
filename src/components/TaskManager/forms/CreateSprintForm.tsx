@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PenSquare, Calendar, Plus } from 'lucide-react';
+import { PenSquare, Calendar, Plus, AlertTriangle } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 
 const CreateSprintForm = () => {
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-xl bg-white rounded-3xl">
+    <div className="flex items-center justify-center p-4">
+      <Card className="w-full max-w-xl bg-white rounded-2xl">
         <CardHeader className="border-b">
           <CardTitle className="text-xl font-semibold">Create Sprint</CardTitle>
         </CardHeader>
@@ -59,11 +61,23 @@ const CreateSprintForm = () => {
             </div>
 
             {/* Priority Level */}
-            <div className="flex items-start gap-3">
-              <PenSquare className="w-5 h-5 mt-2 text-gray-500" />
-              <div className="flex-1">
-                <Label className="mb-2 block">Priority Level</Label>
-                {/* Add your priority level implementation here if needed */}
+            <div className="flex items-start gap-3 p-0">
+              <AlertTriangle className="w-6 h-6 text-gray-500" />
+              <div className="flex-1 item-center">
+                <RadioGroup defaultValue="medium" className="flex gap-6">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="high" id="high"  />
+                    <Label htmlFor="high" className="text-red-600 font-medium">High</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="medium" id="medium" />
+                    <Label htmlFor="medium" className="text-yellow-600 font-medium">Medium</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="low" id="low" />
+                    <Label htmlFor="low" className="text-green-600 font-medium">Low</Label>
+                  </div>
+                </RadioGroup>
               </div>
             </div>
 
@@ -75,19 +89,19 @@ const CreateSprintForm = () => {
               <div className="flex-1">
                 <Label className="mb-2 block">Assignees</Label>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-blue-100 rounded-full pr-3">
+                  <div className="flex items-center rounded-full pr-3">
                     <Avatar className="h-6 w-6">
                       <AvatarImage src="/placeholder-avatar.jpg" />
                       <AvatarFallback>WL</AvatarFallback>
                     </Avatar>
-                    <span className="ml-2 text-sm text-blue-700">Williams Lady</span>
+                    <span className="ml-2 text-sm">Williams Lady</span>
                   </div>
-                  <div className="flex items-center bg-blue-100 rounded-full pr-3">
+                  <div className="flex items-center rounded-full pr-3">
                     <Avatar className="h-6 w-6">
                       <AvatarImage src="/placeholder-avatar.jpg" />
                       <AvatarFallback>AK</AvatarFallback>
                     </Avatar>
-                    <span className="ml-2 text-sm text-blue-700">Abdou Koli</span>
+                    <span className="ml-2 text-sm">Abdou Koli</span>
                   </div>
                   <Button variant="ghost" size="sm" className="rounded-full">
                     <Plus className="w-4 h-4" />
@@ -106,7 +120,7 @@ const CreateSprintForm = () => {
               Cancel
             </Button>
             <Button 
-              className="px-6 bg-navy-blue"
+              className="px-6 bg-teal-600"
             >
               + Add a Sprint
             </Button>

@@ -108,8 +108,8 @@ const DashboardTabs = () => {
         <div className="flex justify-between items-center mb-6">
           <TabsList>
             <TabsTrigger value="campaigns">Status</TabsTrigger>
-            <TabsTrigger value="tags">Sender</TabsTrigger>
-            <TabsTrigger value="senders">Tags</TabsTrigger>
+            <TabsTrigger value="tags">Tags</TabsTrigger>
+            <TabsTrigger value="senders">Senders</TabsTrigger>
             <TabsTrigger value="autor">Autor</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
@@ -167,7 +167,7 @@ const DashboardTabs = () => {
               />
             </div>
           </div>
-          <Button className="mt-6" variant="default">
+          <Button className="fixed bottom-8 md:right-[90px] shadow-lg" variant="default">
             <PenSquare className="h-4 w-4 mr-2" />
             New Campaign
           </Button>
@@ -209,7 +209,7 @@ const DashboardTabs = () => {
               />
             </div>
           </div>
-          <Button className="mt-6" variant="default">
+          <Button className="fixed bottom-8 md:right-[90px] shadow-lg" variant="default">
             <PenSquare className="h-4 w-4 mr-2" />
             Add New Tags
           </Button>
@@ -254,7 +254,7 @@ const DashboardTabs = () => {
               />
             </div>
           </div>
-          <Button className="mt-6" variant="default">
+          <Button className="fixed bottom-8 md:right-[90px] shadow-lg" variant="default">
             <PenSquare className="h-4 w-4 mr-2" />
             Add New Sender
           </Button>

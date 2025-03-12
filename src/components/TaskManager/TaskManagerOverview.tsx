@@ -248,7 +248,7 @@ const TaskManagerOverview = () => {
     return null;
   };
   const TaskColumn = ({ column, tasks }: { column: Column; tasks: Task[] }) => (
-    <div className="w-80 bg-gray-50 rounded-lg px-4">
+    <div className="w-80 rounded-lg px-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-semibold text-lg">{column.title}</h3>
         <Plus className="w-5 h-5 text-gray-500 cursor-pointer" />
@@ -271,11 +271,11 @@ const TaskManagerOverview = () => {
   );
 
   return (
-    <div className="min-h-screen px-6 py-2">
+    <div className="w-full h-screen overflow-y-auto px-8 py-6">
       <div className="mb-8">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-6 ml-4">
           <div>
-            <h1 className="text-2xl font-bold">Task Manager</h1>
+            <h1 className="text-2xl font-bold ">Task Manager</h1>
           </div>
           <div className="flex-grow" />
           <NewTaskModal
@@ -286,7 +286,7 @@ const TaskManagerOverview = () => {
           />
         </div>
 
-        <div className="flex gap-4 mb-6">
+        <div className="flex gap-4 mb-6 ml-4  ">
           {[
             { id: "viewAll", label: "View All" },
             { id: "sprints", label: "Sprints" },
@@ -299,7 +299,7 @@ const TaskManagerOverview = () => {
               variant={activeTab === tab.id ? "default" : "ghost"}
               className={`px-4 ${
                 activeTab === tab.id &&
-                "bg-gradient-to-r from-[#00A791] to-[#014D42]"
+                "bg-white text-black"
               }`}
               onClick={() => setActiveTab(tab.id as TabType)}
             >

@@ -60,9 +60,9 @@ const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
 const MessageList: React.FC<MessageListProps> = ({ messages, className }) => {
   return (
-    <Card className={cn("w-full max-w-3xl", className)}>
+    <Card className={cn("", className)}>
       <CardHeader className="pb-0">
-        <CardTitle className="text-2xl font-medium">Direct Messaging</CardTitle>
+        <CardTitle className="text-2xl font-semibold">Direct Messaging</CardTitle>
       </CardHeader>
       <CardContent className="divide-y">
         {messages.map((message) => (
@@ -100,10 +100,18 @@ const DashboardMessageList = () => {
       },
       content: 'We have a meeting today at 3p.m ...',
     },
+    {
+      id: '4',
+      sender: {
+        name: 'Timi',
+        avatarColor: '#007BFF', // Blue
+      },
+      content: 'We have a meeting today at 1p.m ...',
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen p-2">
       <MessageList messages={messages} />
     </div>
   );

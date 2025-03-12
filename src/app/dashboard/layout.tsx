@@ -1,27 +1,87 @@
+"use client";
+
 import Sidebar from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
-import { Bell, Settings } from "lucide-react";
-import React from "react";
+import { Bell, MessageSquare, Sun, Moon, User, Settings, LogOut } from "lucide-react";
+import React, { useState } from "react";
+import Image from "next/image";
 
-const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
+const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+  const [darkMode, setDarkMode] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
-    <div className="h-full overflow-hidden flex" id="main">
-      <div className="h-screen">
-        <Sidebar />
-      </div>
-      <div className="flex-1 bg-gray-100 overflow-hidden">
-        <div className="bg-white flex justify-between items-center my-2">
-          <h2 className="text-4xl font-medium text-gray-900 mt-2 mx-4 mb-3">
-            Good Morning, Muwaf
-          </h2>
-          <div className="flex items-center gap-4 mx-6">
-            <Bell className="w-5 h-5" />
-            <Settings className="w-5 h-5" />
-            <Button className="bg-gradient-to-r from-[#00A791] to-[#014D42]">
-              Chat with us
+    <div
+      className={`min-h-screen flex overflow-hidden ${
+        darkMode ? "bg-black text-white" : "bg-gray-200 text-black"
+      }`}
+    >
+      {/* Sidebar */}
+      <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+
+      {/* Main Content */}
+      <div
+        className={`flex-1 overflow-hidden transition-all duration-300 ${
+          isCollapsed ? "ml-[100px]" : "ml-[260px]"
+        }`}
+      >
+        {/* Top Navbar */}
+        <div className="flex justify-between items-center my-2 px-6">
+          <div className="flex items-center gap-4 ml-auto mr-6">
+            <Button className="bg-gradient-to-r from-[#00A791] to-[#014D42] text-white px-4 p-5 py-2 rounded-lg">
+              Share
             </Button>
+
+            {/* Profile & Notifications */}
+            <div className="flex items-center gap-4">
+              <Bell className="w-5 h-5 text-gray-600" />
+              <div
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+              >
+                <Image
+                  src="/icons/demo-profile.jpg"
+                  alt="Profile Picture"
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+                <div>
+                  <p className="text-sm font-medium">Muwaff Leo</p>
+                  <p className="text-xs text-gray-500">muwaffleo@gmail.com</p>
+                </div>
+              </div>
+
+              {/* Dropdown Menu */}
+              {dropdownOpen && (
+                <div className="absolute right-0 top-[60px] w-48 bg-white shadow-lg rounded-md p-2 z-50 mr-6">
+                  <div className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer">
+                    <User className="w-4 h-4" /> Profile
+                  </div>
+                  <div className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer">
+                    <MessageSquare className="w-4 h-4" /> Chat with us
+                  </div>
+                  <div
+                    className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => setDarkMode(!darkMode)}
+                  >
+                    {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                    Toggle Theme
+                  </div>
+                  <div className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer">
+                    <Settings className="w-4 h-4" /> Settings
+                  </div>
+                  <div className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer text-red-500">
+                    <LogOut className="w-4 h-4" /> Log out
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Main Content */}
         {children}
       </div>
     </div>

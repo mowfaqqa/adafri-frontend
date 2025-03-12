@@ -6,11 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PenSquare, Calendar, Paperclip, Plus } from "lucide-react";
+import { PenSquare, Calendar, Paperclip, Plus, AlertTriangle } from "lucide-react";
 
+
+// This is Add New Task Modal Component to edit
 const NewTaskForm = () => {
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div className="flex items-center justify-center p-4">
       <Card className="w-full max-w-xl bg-white rounded-3xl">
         <CardHeader className="border-b">
           <CardTitle className="text-xl font-semibold">New Task</CardTitle>
@@ -49,21 +51,21 @@ const NewTaskForm = () => {
             </div>
 
             {/* Priority Level */}
-            <div className="flex items-start gap-3">
-              <PenSquare className="w-5 h-5 mt-2 text-gray-500" />
-              <div className="flex-1">
+            <div className="flex items-start gap-3 p-0">
+              <AlertTriangle className="w-6 h-6 text-gray-500" />
+              <div className="flex-1 item-center">
                 <RadioGroup defaultValue="medium" className="flex gap-6">
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="high" id="high" />
-                    <Label htmlFor="high">High</Label>
+                    <RadioGroupItem value="high" id="high"  />
+                    <Label htmlFor="high" className="text-red-600 font-medium">High</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="medium" id="medium" />
-                    <Label htmlFor="medium">Medium</Label>
+                    <Label htmlFor="medium" className="text-yellow-600 font-medium">Medium</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="low" id="low" />
-                    <Label htmlFor="low">Low</Label>
+                    <Label htmlFor="low" className="text-green-600 font-medium">Low</Label>
                   </div>
                 </RadioGroup>
               </div>
@@ -77,21 +79,21 @@ const NewTaskForm = () => {
               <div className="flex-1">
                 <Label className="mb-2 block">Assignees</Label>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-blue-100 rounded-full pr-3">
+                  <div className="flex items-center rounded-full pr-3">
                     <Avatar className="h-6 w-6">
                       <AvatarImage src="/placeholder-avatar.jpg" />
                       <AvatarFallback>WL</AvatarFallback>
                     </Avatar>
-                    <span className="ml-2 text-sm text-blue-700">
+                    <span className="ml-2 text-sm ">
                       Williams Lady
                     </span>
                   </div>
-                  <div className="flex items-center bg-blue-100 rounded-full pr-3">
+                  <div className="flex items-center rounded-full pr-3">
                     <Avatar className="h-6 w-6">
                       <AvatarImage src="/placeholder-avatar.jpg" />
                       <AvatarFallback>AK</AvatarFallback>
                     </Avatar>
-                    <span className="ml-2 text-sm text-blue-700">
+                    <span className="ml-2 text-sm">
                       Abdou Koli
                     </span>
                   </div>
@@ -130,7 +132,7 @@ const NewTaskForm = () => {
             <Button variant="outline" className="px-6">
               Cancel
             </Button>
-            <Button className="px-6 bg-gray-900">+ Add a task</Button>
+            <Button className="px-6 bg-teal-600">+ Add a task</Button>
           </div>
         </CardContent>
       </Card>

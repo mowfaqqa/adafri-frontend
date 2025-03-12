@@ -23,16 +23,16 @@ import { usePathname } from "next/navigation";
 // Navigation configuration
 const navigation = [
   {
-    title: "Main Menu",
+    // title: "Main Menu",
     items: [
       {
         label: "Dashboard",
-        icon: "/icons/martech.png",
+        icon: "/icons/dashboard2.png",
         href: "/dashboard",
       },
       {
-        label: "Martech",
-        icon: "/icons/martech.png",
+        label: "Marketing",
+        icon: "/icons/martech2.png",
         href: "/martech",
         subItems: [
           {
@@ -68,8 +68,8 @@ const navigation = [
         ],
       },
       {
-        label: "Adtech",
-        icon: "/icons/adtech.png",
+        label: "Advertising",
+        icon: "/icons/adtech2.png",
         href: "/adtech",
         subItems: [
           {
@@ -106,7 +106,7 @@ const navigation = [
       },
       {
         label: "Tools",
-        icon: "/icons/tool.png",
+        icon: "/icons/tool2.png",
         href: "/tool",
         subItems: [
           {
@@ -144,7 +144,7 @@ const navigation = [
     ],
   },
   {
-    title: "Messaging",
+    title: "External Messaging",
     items: [
       {
         label: "Telegram",
@@ -160,7 +160,7 @@ const navigation = [
       },
       {
         label: "Messenger",
-        icon: "/icons/facebook.png",
+        icon: "/icons/messager.png",
         href: "/messenger",
         iconColor: "#0084FF",
       },
@@ -168,6 +168,12 @@ const navigation = [
   },
 ];
 
+interface SidebarProps {
+  isCollapsed: boolean;
+  setIsCollapsed: (collapsed: boolean) => void;
+}
+
+// Popover to show
 const PopoverContent = ({ item }: { item: any }) => {
   return (
     <div className="fixed left-16 top-auto min-w-[200px] bg-white rounded-lg shadow-lg border z-[100]">
@@ -177,8 +183,8 @@ const PopoverContent = ({ item }: { item: any }) => {
           <div className="space-y-1">
             {item.subItems.map((subItem: any, index: number) => (
               <Link key={index} href={subItem.href} passHref>
-                <div className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
-                  <Image src={subItem.icon} alt="icon" width={14} height={14} />
+                <div className="flex items-center gap-3 p-2 rounded-lg cursor-pointer text-sm">
+                  <Image src={subItem.icon} alt="icon" width={24} height={24} />
                   <span>{subItem.label}</span>
                 </div>
               </Link>
@@ -189,8 +195,10 @@ const PopoverContent = ({ item }: { item: any }) => {
     </div>
   );
 };
+
 const SidebarItem = ({ item, isCollapsed }: any) => {
-  const [isOpen, setIsOpen] = useState(false);
+  // Set isOpen to true by default if the item label is "Martech"
+  const [isOpen, setIsOpen] = useState(item.label === "Marketing");
   const [showPopover, setShowPopover] = useState(false);
   const pathname = usePathname();
   const Icon = item.icon;
@@ -212,12 +220,13 @@ const SidebarItem = ({ item, isCollapsed }: any) => {
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger
             className={cn(
-              "flex w-full items-center p-2 hover:bg-gray-100 rounded-lg",
+              "flex w-full items-center p-3 hover:bg-gray-100 rounded-lg",
               isActive(item) && "bg-emerald-50 text-emerald-600"
             )}
           >
             <div className="flex items-center flex-1">
-              <div className=" relative h-5 w-5 flex justify-center">
+              {/* Increased icon size to 6 (24px) and ensured consistent square container */}
+              <div className="relative h-6 w-6 flex justify-center items-center">
                 <Image
                   src={item.icon}
                   alt="icon"
@@ -228,7 +237,8 @@ const SidebarItem = ({ item, isCollapsed }: any) => {
 
               {!isCollapsed && (
                 <>
-                  <span className="ml-3 text-sm">{item.label}</span>
+                  {/* Increased spacing with ml-4 instead of ml-3 */}
+                  <span className="ml-4 text-sm p-1">{item.label}</span>
                   <ChevronRight
                     className={cn(
                       "ml-auto h-4 w-4 transition-transform",
@@ -239,18 +249,23 @@ const SidebarItem = ({ item, isCollapsed }: any) => {
               )}
             </div>
           </CollapsibleTrigger>
+
+          {/* SubItems Edit */}
           <CollapsibleContent>
             {!isCollapsed &&
               item.subItems.map((subItem: any, index: number) => (
                 <Link key={index} href={subItem.href} passHref>
-                  <div className="flex items-center gap-3 p-2 pl-9 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
-                    <Image
-                      src={subItem.icon}
-                      alt="icon"
-                      width={14}
-                      height={14}
-                    />
-                    <span className="flex items-center ">{subItem.label}</span>
+                  <div className="flex items-center gap-4 p-3 pl-10 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
+                    {/* Increased spacing and consistent icon size */}
+                    <div className="relative h-5 w-5 flex justify-center items-center">
+                      <Image
+                        src={subItem.icon}
+                        alt="icon"
+                        layout="fill"
+                        objectFit="cover"
+                      />
+                    </div>
+                    <span className="flex items-center">{subItem.label}</span>
                   </div>
                 </Link>
               ))}
@@ -268,9 +283,17 @@ const SidebarItem = ({ item, isCollapsed }: any) => {
       onMouseLeave={() => isCollapsed && setShowPopover(false)}
     >
       <Link href={item.href} passHref>
-        <div className="flex items-center p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
-          <Image src={Icon} alt="icon" width={14} height={14} />
-          {!isCollapsed && <span className="ml-3 text-sm">{item.label}</span>}
+        <div className="flex items-center p-3 hover:bg-gray-100 rounded-lg cursor-pointer">
+          {/* Increased icon size and consistent container */}
+          <div className="relative h-6 w-6 flex justify-center items-center">
+            <Image
+              src={Icon}
+              alt="icon"
+              layout="fill"
+              objectFit="cover"
+            />
+          </div>
+          {!isCollapsed && <span className="ml-4 text-sm">{item.label}</span>}
         </div>
       </Link>
       {isCollapsed && showPopover && <PopoverContent item={item} />}
@@ -278,21 +301,28 @@ const SidebarItem = ({ item, isCollapsed }: any) => {
   );
 };
 
-const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+
+const Sidebar = ({
+  isCollapsed,
+  setIsCollapsed,
+}: {
+  isCollapsed: boolean;
+  setIsCollapsed: (collapsed: boolean) => void;
+}) => {
   const [showPopover, setShowPopover] = useState(false);
+
 
   return (
     <div className="relative">
       <div
         className={cn(
-          "flex flex-col h-screen bg-white border-r transition-all duration-300",
+          "flex flex-col h-screen bg-white border-r transition-all duration-300 top-0 left-0 fixed",
           isCollapsed ? "w-20" : "w-64"
         )}
       >
         {/* Logo */}
-        <div className="p-4 flex items-center">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center mr-4">
+        <div className="p-4 flex items-center justify-center">
+          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex">
             <Image
               src="/icons/icon-main.png"
               width={40}
@@ -310,36 +340,279 @@ const Sidebar = () => {
           )}
         </div>
 
-        {/* Toggle button */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-
-        {/* Navigation Sections */}
-        <div className="flex-1 overflow-y-auto">
-          {navigation.map((section, index: number) => (
-            <div key={index} className="mt-4 px-2">
-              {!isCollapsed && (
-                <div className="text-xs uppercase text-gray-500 mb-2">
-                  {section.title}
-                </div>
-              )}
-              {section.items.map((item) => (
-                <SidebarItem
-                  key={item.href}
-                  item={item}
-                  isCollapsed={isCollapsed}
-                />
-              ))}
-            </div>
-          ))}
+        {/* Toggle button - centered when collapsed */}
+        <div className="flex justify-center">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-3 hover:bg-gray-100 rounded-lg items-center"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Settings at the bottom */}
-        <div className="p-2 border-t">
+        {/* Navigation Sections - Increased spacing */}
+        <div className="flex-1 overflow-y-auto">
+          {navigation
+            // filter out the external messaging
+            .filter((section) => section.title !== "External Messaging")
+            .map((section, index: number) => (
+              <div
+                key={index}
+                className={`flex flex-col ${isCollapsed ? "items-center" : "pl-6"} mb-8`}
+              >
+                {!isCollapsed && (
+                  <div className="text-xs uppercase text-gray-500 mb-3">
+                    {section.title}
+                  </div>
+                )}
+                <div className={`space-y-4 ${isCollapsed ? "flex flex-col items-center" : ""}`}>
+                  {section.items.map((item) => (
+                    <SidebarItem
+                      key={item.href}
+                      item={item}
+                      isCollapsed={isCollapsed}
+                      className={`py-3 ${isCollapsed ? "flex justify-center" : ""}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+        </div>
+
+        {/* Messaging Section (Moved to Bottom) - Added gray square backgrounds for collapsed icons */}
+        <div className={`p-4 mb-5 border-t ${isCollapsed ? "flex flex-col items-center" : "pl-6"}`}>
+          {!isCollapsed && (
+            <div className="text-xs uppercase text-gray-500 mb-3">
+              Messaging
+            </div>
+          )}
+          {navigation
+            .find((section) => section.title === "External Messaging")
+            ?.items.map((item) => (
+              <div key={item.href} className="mt-2">
+                {isCollapsed ? (
+                  <Link href={item.href} passHref>
+                    {/* Gray square background for collapsed messaging icons */}
+                    <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <div className="relative h-6 w-6 flex justify-center items-center">
+                        <Image
+                          src={item.icon}
+                          alt="icon"
+                          layout="fill"
+                          objectFit="cover"
+                        />
+                      </div>
+                    </div>
+                  </Link>
+                ) : (
+                  <SidebarItem
+                    item={item}
+                    isCollapsed={isCollapsed}
+                    className="py-3"
+                  />
+                )}
+              </div>
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// const SidebarItem = ({ item, isCollapsed }: any) => {
+//   const [isOpen, setIsOpen] = useState(false);
+//   const [showPopover, setShowPopover] = useState(false);
+//   const pathname = usePathname();
+//   const Icon = item.icon;
+
+//   const isActive = (item: any): boolean => {
+//     if (pathname === item.href) return true;
+//     if (item.subItems) {
+//       return item.subItems.some((subItem: any) => pathname === subItem.href);
+//     }
+//     return false;
+//   };
+//   if (item.subItems) {
+//     return (
+//       <div
+//         className="relative"
+//         onMouseEnter={() => isCollapsed && setShowPopover(true)}
+//         onMouseLeave={() => isCollapsed && setShowPopover(false)}
+//       >
+//         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+//           <CollapsibleTrigger
+//             className={cn(
+//               "flex w-full items-center p-2 hover:bg-gray-100 rounded-lg",
+//               isActive(item) && "bg-emerald-50 text-emerald-600"
+//             )}
+//           >
+//             <div className="flex items-center flex-1">
+//               <div className=" relative h-5 w-5 flex justify-center">
+//                 <Image
+//                   src={item.icon}
+//                   alt="icon"
+//                   objectFit="cover"
+//                   layout="fill"
+//                 />
+//               </div>
+
+//               {!isCollapsed && (
+//                 <>
+//                   <span className="ml-3 text-sm p-1">{item.label}</span>
+//                   <ChevronRight
+//                     className={cn(
+//                       "ml-auto h-4 w-4 transition-transform",
+//                       isOpen && "rotate-90"
+//                     )}
+//                   />
+//                 </>
+//               )}
+//             </div>
+//           </CollapsibleTrigger>
+
+//           {/* SubItems Edit */}
+//           <CollapsibleContent>
+//             {!isCollapsed &&
+//               item.subItems.map((subItem: any, index: number) => (
+//                 <Link key={index} href={subItem.href} passHref>
+//                   <div className="flex items-center gap-3 p-2 pl-9 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
+//                     <Image
+//                       src={subItem.icon}
+//                       alt="icon"
+//                       width={14}
+//                       height={14}
+
+//                     />
+//                     <span className="flex items-center ">{subItem.label}</span>
+//                   </div>
+//                 </Link>
+//               ))}
+//           </CollapsibleContent>
+//         </Collapsible>
+//         {isCollapsed && showPopover && <PopoverContent item={item} />}
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div
+//       className="relative"
+//       onMouseEnter={() => isCollapsed && setShowPopover(true)}
+//       onMouseLeave={() => isCollapsed && setShowPopover(false)}
+//     >
+//       <Link href={item.href} passHref>
+//         <div className="flex items-center p-2 hover:bg-gray-100 rounded-lg cursor-pointer">
+//           <Image src={Icon} alt="icon" width={14} height={14} />
+//           {!isCollapsed && <span className="ml-3 text-sm">{item.label}</span>}
+//         </div>
+//       </Link>
+//       {isCollapsed && showPopover && <PopoverContent item={item} />}
+//     </div>
+//   );
+// };
+
+// const Sidebar = () => {
+//   const [isCollapsed, setIsCollapsed] = useState(false);
+//   const [showPopover, setShowPopover] = useState(false);
+
+//   return (
+//     <div className="relative">
+//       <div
+//         className={cn(
+//           "flex flex-col h-screen bg-white border-r transition-all duration-300",
+//           isCollapsed ? "w-20" : "w-64"
+//         )}
+//       >
+//         {/* Logo */}
+//         <div className="p-4 flex items-center justify-center">
+//           <div className="w-8 h-8 bg-emerald-600 rounded-lg flex">
+//             <Image
+//               src="/icons/icon-main.png"
+//               width={40}
+//               height={40}
+//               alt="icon"
+//             />
+//           </div>
+//           {!isCollapsed && (
+//             <Image
+//               src="/icons/djombi-icon.png"
+//               width={140}
+//               height={40}
+//               alt="icon"
+//             />
+//           )}
+//         </div>
+
+//         {/* Toggle button - centered when collapsed */}
+//         <div className="flex justify-center">
+//           <button
+//             onClick={() => setIsCollapsed(!isCollapsed)}
+//             className="p-2 hover:bg-gray-100 rounded-lg items-center"
+//           >
+//             <Menu className="h-5 w-5" />
+//           </button>
+//         </div>
+
+//         {/* Navigation Sections */}
+//         <div className="flex-1 overflow-y-auto">
+//           {navigation
+//             // filter out the external messaging
+//             .filter((section) => section.title !== "External Messaging")
+//             .map((section, index: number) => (
+//               <div
+//                 key={index}
+//                 className={`flex flex-col ${isCollapsed ? "items-center" : "pl-6"} mb-6`}
+//               >
+//                 {!isCollapsed && (
+//                   <div className="text-xs uppercase text-gray-500 mb-2">
+//                     {section.title}
+//                   </div>
+//                 )}
+//                 <div className={`space-y-3 ${isCollapsed ? "flex flex-col items-center" : ""}`}>
+//                   {section.items.map((item) => (
+//                     <SidebarItem
+//                       key={item.href}
+//                       item={item}
+//                       isCollapsed={isCollapsed}
+//                       className={`py-2 ${isCollapsed ? "flex justify-center" : ""}`}
+//                     />
+//                   ))}
+//                 </div>
+//               </div>
+//             ))}
+//         </div>
+
+//         {/* Messaging Section (Moved to Bottom) */}
+//         <div className={`p-4 mb-5 border-t ${isCollapsed ? "flex flex-col items-center" : "pl-6"}`}>
+//           {!isCollapsed && (
+//             <div className="text-xs uppercase text-gray-500 mb-2">
+//               Messaging
+//             </div>
+//           )}
+//           {navigation
+//             .find((section) => section.title === "External Messaging")
+//             ?.items.map((item) => (
+//               <SidebarItem
+//                 key={item.href}
+//                 item={item}
+//                 isCollapsed={isCollapsed}
+//                 className={`py-2 ${isCollapsed ? "bg-gray-100 rounded-lg w-12 h-12 flex items-center justify-center" : ""}`}
+//               />
+//             ))}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+export default Sidebar;
+
+
+
+
+
+{/* Settings at the bottom */ }
+{/* <div className="p-2 border-t">
           <div
             className="relative"
             onMouseEnter={() => isCollapsed && setShowPopover(true)}
@@ -355,10 +628,4 @@ const Sidebar = () => {
               <PopoverContent item={{ label: "Settings" }} />
             )}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Sidebar;
+        </div> */}

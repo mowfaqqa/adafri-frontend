@@ -12,36 +12,31 @@ const FeatureCarousel: React.FC<FeatureCarouselProps> = ({
   const [activeTab, setActiveTab] = useState(tabs[0].id);
 
   return (
-    <div className={cn("w-full max-w-[810px] px-5 mx-2 bg-white", className)}>
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-semibold">Features</h2>
-        <div className="flex gap-8">
+    <div className={cn("p-6 bg-white rounded-xl shadow-md relative", className)}>
+      <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center justify-center bg-gray-100 rounded-lg p-1 space-x-2">
           {tabs.map((tab: any) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "py-2 px-1 text-lg font-medium relative",
+                "px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200",
                 activeTab === tab.id
-                  ? "text-emerald-600"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-teal-600 text-white shadow-sm"
+                  : "text-gray-500 hover:bg-gray-200"
               )}
             >
               {tab.label}
-              {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600" />
-              )}
             </button>
           ))}
         </div>
-        <div className="w-24" /> {/* Spacer for alignment */}
       </div>
 
       {tabs.map((tab: any) => (
         <div
           key={tab.id}
           className={cn(
-            "transition-opacity duration-300",
+            "transition-opacity duration-300 bg-gray-100 rounded-xl py-2",
             activeTab === tab.id ? "opacity-100" : "opacity-0 hidden"
           )}
         >

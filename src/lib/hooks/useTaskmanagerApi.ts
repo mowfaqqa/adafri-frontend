@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { TaskStatus } from "../types/taskManager/types";
+import { Task, TaskStatus } from "../types/taskManager/types";
 import {
   createTask,
   deleteTask,
@@ -126,7 +126,7 @@ export const useTaskManagerApi = () => {
 
   const useUpdateTaskStatusMutation = () => {
     return useMutation({
-      mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
+      mutationFn: ({ id, status }: { id: string; status: string }) =>
         updateTaskStatus(id, status),
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ["tasks"] });

@@ -2,9 +2,9 @@ import axios from "axios";
 
 //cretae axios instance wth default config
 const taskApiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:9000/api",
+  baseURL: process.env.TASK_MANAGER_API_URL || "https://task-manager-api-e7mf.onrender.com/api",
   headers: {
-    "Coontent-Type": "application/json",
+    "Content-Type": "application/json",
   },
 });
 

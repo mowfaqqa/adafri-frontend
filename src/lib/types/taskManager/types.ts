@@ -53,7 +53,7 @@ export interface BaseTaskFormData {
   title: string;
   description: string;
   tags: string;
-  status: TaskStatus;
+  status: string;
   date: string;
   assignees: string[];
   progress: number;

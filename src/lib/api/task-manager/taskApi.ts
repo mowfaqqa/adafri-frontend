@@ -83,7 +83,7 @@ export const deleteTask = async (id: string) => {
 };
 
 // Update task status
-export const updateTaskStatus = async (id: string, status: TaskStatus) => {
+export const updateTaskStatus = async (id: string, status: string) => {
   const response = await taskApi.patch(`/tasks/${id}/status`, { status });
   return response.data.data;
 };

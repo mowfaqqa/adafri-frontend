@@ -98,7 +98,7 @@ export const useTaskManager = () => {
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {
     setData((prev: StorageData): StorageData => {
-      const updatedTasks = prev.tasks.map((task) => {
+      const updatedTasks = prev.tasks?.map((task) => {
         if (task.id === taskId) {
           // Create updated task while preserving the correct type
           const updatedTask: Task =

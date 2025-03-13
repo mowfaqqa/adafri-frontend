@@ -13,10 +13,10 @@ interface EmailData {
 }
 
 const API_URL = "https://email-service-latest-agqz.onrender.com/api/v1/emails/send";
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjJjYjdlYWNhLWNmNWYtNGQ0Ni1iNGYxLTFmODcyYzcxMWE1YiIsImlhdCI6MTc0MTYxMzU3MCwiZXhwIjoxNzQxNjE3MTcwfQ.srlm27QtxhBr4AoI_iCTX_2bMKOYLliYG_utmDix0yo";
+const TOKEN = process.env.AUTH_TOKEN;
 
 // Export as a function declaration instead of arrow function
-export function sendEmail(emailData: EmailData): Promise<any> {
+export function sendEmail(emailData: EmailData) {
   return axios.post(
     API_URL,
     {

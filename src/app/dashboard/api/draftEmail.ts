@@ -12,9 +12,9 @@ interface DraftEmailData {
 }
 
 const API_URL = "https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts";
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjJjYjdlYWNhLWNmNWYtNGQ0Ni1iNGYxLTFmODcyYzcxMWE1YiIsImlhdCI6MTc0MTAzNDYwOSwiZXhwIjoxNzQxMDM4MjA5fQ.5fZUpWPX11oKxhf1lOOqilqvmo40L-MKHm1Qt1uUxbs";
+const TOKEN = process.env.AUTH_TOKEN;
 
-export function saveDraft(draftData: DraftEmailData): Promise<any> {
+export function saveDraft(draftData: DraftEmailData) {
   return axios.post(
     API_URL,
     {

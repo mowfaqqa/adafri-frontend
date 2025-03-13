@@ -12,8 +12,8 @@ const FeatureCarousel: React.FC<FeatureCarouselProps> = ({
   const [activeTab, setActiveTab] = useState(tabs[0].id);
 
   return (
-    <div className={cn("p-6 bg-white rounded-xl shadow-md relative", className)}>
-      <div className="flex items-center justify-center mb-8">
+    <div className={cn("p-4 bg-white rounded-xl shadow-md relative", className)}>
+      <div className="flex items-center justify-center mb-4">
         <div className="flex items-center justify-center bg-gray-100 rounded-lg p-1 space-x-2">
           {tabs.map((tab: any) => (
             <button

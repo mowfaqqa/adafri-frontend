@@ -44,18 +44,18 @@ const Dashboard = () => {
       </div>
 
       {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex flex-co">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left Section (Expanded) */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <FavoritesCard2 className="flex-grow" />
+        <div className="lg:col-span-2 flex flex-col gap-4">
+          <FavoritesCard2 className="" />
           <FeatureCarousel
             tabs={exampleData}
-            className="flex-grow shadow-md border border-gray-200 rounded-xl"
+            className="shadow-md border border-gray-200 rounded-xl overflow-hidden"
           />
         </div>
 
         {/* Right Section */}
-        <div className="col-span-1 lg:col-span-1 w-full min-w-0 shadow-md">
+        <div className="col-span-1 lg:col-span-1 w-full min-w-0">
           <EmailOnlineMessaging className="w-full" />
         </div>
       </div>

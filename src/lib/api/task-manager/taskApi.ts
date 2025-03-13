@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   NewTaskFormData,
   SprintTaskFormData,
@@ -71,8 +72,8 @@ export const createTask = async (formData: NewTaskFormData) => {
 };
 
 // Update task
-export const updateTask = async (id: string, updates: Partial<Task>) => {
-  const response = await taskApi.put(`/tasks/${id}`, updates);
+export const updateTask = async (id: string, updates: any) => {
+  const response = await taskApi.put(`/tasks/${id}`, updates!);
   return response.data.data;
 };
 

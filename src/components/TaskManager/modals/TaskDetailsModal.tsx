@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -53,6 +54,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
     useTaskFilesQuery,
     useUploadFileMutation,
     useDeleteFileMutation,
+    useColumnsQuery,
   } = useTaskManagerApi();
 
   const updateTaskMutation = useUpdateTaskMutation();
@@ -65,6 +67,9 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   const { data: taskFiles = [], isLoading: isLoadingFiles } = useTaskFilesQuery(
     task.id as string
   );
+
+  const { data: columnList = [] } =
+    useColumnsQuery();
 
   // Update local state when task changes
   useEffect(() => {
@@ -281,13 +286,18 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                 <select
                   value={task.status}
                   onChange={(e) => handleStatusChange(e.target.value)}
-                  className="p-2 border rounded-md"
+                  className="p-2 border rounded-md w-full"
                   disabled={updateStatusMutation.isPending}
                 >
-                  <option value="todo">To Do</option>
-                  <option value="inProgress">In Progress</option>
-                  <option value="done">Done</option>
-                  {/* Add other custom statuses as needed */}
+                  {/* Use the columns from API for status options */}
+                  <option value="" disabled>
+                    Select status
+                  </option>
+                  {columnList?.map((column: any) => (
+                    <option key={column?.id} value={column?.id}>
+                      {column.title}
+                    </option>
+                  ))}
                 </select>
                 {updateStatusMutation.isPending && (
                   <span className="text-sm text-gray-500">Updating...</span>

@@ -122,45 +122,54 @@ const TaskManagerOverview = () => {
     return null;
   };
 
-  const TaskColumn = ({ column, tasks }: { column: Column; tasks: Task[] }) => (
-    <div
-      className="w-80 rounded-lg px-4"
-      onDrop={(e) => handleDrop(e, column.id)}
-      onDragOver={handleDragOver}
-    >
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-semibold text-lg">{column.title}</h3>
-        {/* <Plus className="w-5 h-5 text-gray-500 cursor-pointer" /> */}
-        <div className="flex items-center gap-1">
-          <ColumnActionButtons 
-            column={column} 
-            onAddTask={() => {
-              // You can implement column-specific task creation here if needed
-              // For now, we'll just open the general new task modal
-            }} 
-          />
+  const TaskColumn = ({ column, tasks }: { column: Column; tasks: Task[] }) => {
+    const tasksInColumn = tasks.filter(
+      (task) => task?.status.toLowerCase() == column?.title.toLowerCase()
+    );
+    return (
+      <div
+        className="w-80 rounded-lg px-4"
+        onDrop={(e) => handleDrop(e, column.title)}
+        onDragOver={handleDragOver}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h3 className="font-semibold text-lg">{column.title}</h3>
+            <p className="text-xs text-gray-500">
+              {tasksInColumn.length} task{tasksInColumn.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          {/* <Plus className="w-5 h-5 text-gray-500 cursor-pointer" /> */}
+          <div className="flex items-center gap-1">
+            <ColumnActionButtons
+              column={column}
+              onAddTask={() => {
+                // You can implement column-specific task creation here if needed
+                // For now, we'll just open the general new task modal
+              }}
+            />
+          </div>
+        </div>
+        <div className="space-y-4 min-h-[100px]">
+          {tasksInColumn.length > 0 ? (
+            tasksInColumn.map((task) => (
+              <div
+                key={task.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, task.id as string)}
+              >
+                {renderTask(task)}
+              </div>
+            ))
+          ) : (
+            <div className="h-24 border border-dashed border-gray-300 rounded-md flex items-center justify-center">
+              <p className="text-sm text-gray-400">Drop tasks here</p>
+            </div>
+          )}
         </div>
       </div>
-
-      <div className="space-y-4">
-        {tasks
-          .filter(
-            (task) =>
-              task.status.toLowerCase() ===
-              column.title?.split(" ").join("").toLowerCase()
-          )
-          .map((task) => (
-            <div
-              key={task.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, task.id as string)}
-            >
-              {renderTask(task)}
-            </div>
-          ))}
-      </div>
-    </div>
-  );
+    );
+  };
 
   // Loading state
   if (isLoadingTasks || isLoadingColumns) {
@@ -204,8 +213,8 @@ const TaskManagerOverview = () => {
       </div>
 
       <div className="flex gap-6">
-        {columns.map((column: any) => (
-          <TaskColumn key={column?.id} column={column} tasks={tasks} />
+        {columns?.map((column: any) => (
+          <TaskColumn key={column?.id} column={column!} tasks={tasks} />
         ))}
 
         <Dialog

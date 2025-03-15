@@ -5,7 +5,7 @@ import { Pencil, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Column } from "@/lib/types/taskManager/types";
 import { DeleteColumnDialog } from "../modals/DeleteColumnDialog";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
 import { EditColumnDialog } from "../modals/EditColumnDialog";
 
@@ -23,10 +23,10 @@ export const ColumnActionButtons: React.FC<ColumnActionButtonsProps> = ({
 
   const { useDeleteColumnMutation } = useTaskManagerApi();
   const deleteColumnMutation = useDeleteColumnMutation();
-
+  const { toast } = useToast();
   const handleDelete = () => {
     // Only allow deletion of custom columns, not default ones
-    if (["todo", "inProgress", "done"].includes(column.id)) {
+    if (["todo", "in progress", "done"].includes(column.title.toLowerCase())) {
       toast({
         title: "Cannot delete default column",
         description: "Default columns cannot be deleted.",
@@ -46,30 +46,17 @@ export const ColumnActionButtons: React.FC<ColumnActionButtonsProps> = ({
   return (
     <>
       <div className="flex items-center gap-1">
-        {onAddTask && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={onAddTask}
-            title="Add Task"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        )}
         <Button
-          variant="ghost"
           size="icon"
-          className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-6 w-6 rounded-full group-hover:opacity-100 transition-opacity"
           onClick={() => setShowEditDialog(true)}
           title="Edit Column"
         >
           <Pencil className="h-4 w-4" />
         </Button>
         <Button
-          variant="ghost"
           size="icon"
-          className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500"
+          className="h-6 w-6 rounded-full group-hover:opacity-100 transition-opacity hover:text-red-500"
           onClick={() => setShowDeleteDialog(true)}
           title="Delete Column"
           disabled={

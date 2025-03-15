@@ -47,7 +47,7 @@ const EmailOnlineMessaging: React.FC<{ className?: string }> = ({ className = ""
 
   return (
     <div className={`min-h-screen ${className}`}>
-      <Card className="h-auto flex flex-col py-2 rounded-xl bg-white ml-auto">
+      <Card className="h-auto flex flex-col py-2 rounded-xl bg-white ml-auto shadow-md">
         <CardHeader className="pb-2 border-b">
           <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
         </CardHeader>

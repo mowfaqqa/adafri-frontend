@@ -65,12 +65,12 @@ const MessagingUI = () => {
   };
 
   return (
-    <div className="px-8 py-3 border  border-gray-200 ">
+    <div className="px-8 py-3 border  border-gray-200">
       <h2 className="text-2xl font-semibold">Messages</h2>
       <div className="flex h-[85vh] bg-gray-100 mt-5">
         {/* Sidebar */}
 
-        <div className="w-64 bg-white text-gray-900 p-4 rounded-l-xl">
+        <div className="w-64 bg-white text-gray-900 p-4 border border-gray-200 rounded-l-xl">
           {/* Options section */}
           <div className="mb-8">
             <h2 className="text-gray-400 text-sm mb-4">OPTIONS</h2>

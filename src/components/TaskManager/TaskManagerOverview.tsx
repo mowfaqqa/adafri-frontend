@@ -21,8 +21,8 @@ import StandardTaskCard from "../Cards/StandardTaskCard";
 import NewTaskModal from "./NewTaskModal";
 import { SprintTask, StandardTask } from "@/lib/types/taskManager/types";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
-import { toast } from "@/hooks/use-toast";
 import { ColumnActionButtons } from "./buttons/ColumnActionButtons";
+import { toast } from "sonner";
 
 const TaskManagerOverview = () => {
   const [activeTab, setActiveTab] = useState<TabType>("viewAll");
@@ -56,20 +56,10 @@ const TaskManagerOverview = () => {
   //handling loading nad error states
   useEffect(() => {
     if (tasksError) {
-      toast({
-        title: "Error loading tasks",
-        description:
-          "There was a problem loading your tasks. Please try again.",
-        variant: "destructive",
-      });
+      toast("There was a problem loading your tasks. Please try again.");
     }
     if (columnsError) {
-      toast({
-        title: "Error loading columns",
-        description:
-          "There was a problem loading your columns. Please try again.",
-        variant: "destructive",
-      });
+      toast("There was a problem loading your columns. Please try again.");
     }
   }, [tasksError, columnsError]);
 

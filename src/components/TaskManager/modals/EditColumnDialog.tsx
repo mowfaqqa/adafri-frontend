@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Column } from "@/lib/types/taskManager/types";
-import { toast } from "@/hooks/use-toast";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { toast } from "sonner";
 
 interface EditColumnDialogProps {
   open: boolean;
@@ -35,21 +35,13 @@ export const EditColumnDialog: React.FC<EditColumnDialogProps> = ({
     e.preventDefault();
 
     if (!title.trim()) {
-      toast({
-        title: "Title required",
-        description: "Please enter a column title.",
-        variant: "destructive",
-      });
+      toast("Please enter a column title.");
       return;
     }
 
     // Only allow editing of custom columns, not default ones
     if (["todo", "inProgress", "done"].includes(column.id)) {
-      toast({
-        title: "Cannot edit default column",
-        description: "Default columns cannot be edited.",
-        variant: "destructive",
-      });
+      toast( "Default columns cannot be edited.");
       onOpenChange(false);
       return;
     }

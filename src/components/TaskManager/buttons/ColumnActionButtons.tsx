@@ -1,13 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useState } from "react";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Column } from "@/lib/types/taskManager/types";
 import { DeleteColumnDialog } from "../modals/DeleteColumnDialog";
-import { useToast } from "@/hooks/use-toast";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
 import { EditColumnDialog } from "../modals/EditColumnDialog";
+import { toast } from "sonner";
 
 interface ColumnActionButtonsProps {
   column: Column;
@@ -23,15 +24,10 @@ export const ColumnActionButtons: React.FC<ColumnActionButtonsProps> = ({
 
   const { useDeleteColumnMutation } = useTaskManagerApi();
   const deleteColumnMutation = useDeleteColumnMutation();
-  const { toast } = useToast();
   const handleDelete = () => {
     // Only allow deletion of custom columns, not default ones
     if (["todo", "in progress", "done"].includes(column.title.toLowerCase())) {
-      toast({
-        title: "Cannot delete default column",
-        description: "Default columns cannot be deleted.",
-        variant: "destructive",
-      });
+      toast( "Default columns cannot be deleted.");
       setShowDeleteDialog(false);
       return;
     }

@@ -11,7 +11,7 @@ import {
   SprintTaskFormData,
   StandardTaskFormData,
 } from "../types/taskManager/types";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const STORAGE_KEY = "taskManager";
 
@@ -90,10 +90,7 @@ export const useTaskManager = () => {
       })
     );
 
-    toast({
-      title: "Task Created",
-      description: `"${formData.title}" has been created successfully.`,
-    });
+    toast(`"${formData.title}" has been created successfully.`);
   };
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {
@@ -135,10 +132,7 @@ export const useTaskManager = () => {
       };
     });
 
-    toast({
-      title: "Task Updated",
-      description: "The task has been updated successfully.",
-    });
+    toast("The task has been updated successfully.");
   };
 
   const deleteTask = (taskId: string) => {
@@ -149,11 +143,7 @@ export const useTaskManager = () => {
       })
     );
 
-    toast({
-      title: "Task Deleted",
-      description: "The task has been deleted successfully.",
-      variant: "destructive",
-    });
+    toast("The task has been deleted successfully.");
   };
 
   const moveTask = (taskId: string, newStatus: TaskStatus) => {
@@ -198,10 +188,7 @@ export const useTaskManager = () => {
       };
     });
 
-    toast({
-      title: "Task Moved",
-      description: `Task status updated to ${newStatus}`,
-    });
+    toast(`Task status updated to ${newStatus}`);
   };
 
   const addColumn = (title: string) => {
@@ -214,10 +201,7 @@ export const useTaskManager = () => {
       })
     );
 
-    toast({
-      title: "Column Added",
-      description: `New column "${title}" has been added.`,
-    });
+    toast(`New column "${title}" has been added.`);
   };
 
   return {

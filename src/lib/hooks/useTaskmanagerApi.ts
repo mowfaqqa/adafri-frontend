@@ -21,7 +21,7 @@ import {
   getTaskFiles,
   uploadFile,
 } from "../api/task-manager/fileApi";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export const useTaskManagerApi = () => {
   const queryClient = useQueryClient();
@@ -65,18 +65,10 @@ export const useTaskManagerApi = () => {
       mutationFn: (newTask: any) => createTask(newTask),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
-        toast({
-          title: "Task created",
-          description: "Your task has been created successfully.",
-        });
+        toast("Your task has been created successfully.");
       },
       onError: (error: any) => {
-        toast({
-          title: "Error creating task",
-          description:
-            error.message || "An error occurred while creating the task.",
-          variant: "destructive",
-        });
+        toast(error.message || "An error occurred while creating the task.");
       },
     });
   };
@@ -87,18 +79,10 @@ export const useTaskManagerApi = () => {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
         queryClient.invalidateQueries({ queryKey: ["task", data?.id] });
-        toast({
-          title: "Task updated",
-          description: "Your task has been updated successfully.",
-        });
+        toast("Your task has been updated successfully.");
       },
       onError: (error: any) => {
-        toast({
-          title: "Error updating task",
-          description:
-            error.message || "An error occurred while updating the task.",
-          variant: "destructive",
-        });
+        toast(error.message || "An error occurred while updating the task.");
       },
     });
   };
@@ -108,18 +92,10 @@ export const useTaskManagerApi = () => {
       mutationFn: (id: string) => deleteTask(id),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
-        toast({
-          title: "Task deleted",
-          description: "Your task has been deleted successfully.",
-        });
+        toast("Your task has been deleted successfully.");
       },
       onError: (error: any) => {
-        toast({
-          title: "Error deleting task",
-          description:
-            error.message || "An error occurred while deleting the task.",
-          variant: "destructive",
-        });
+        toast(error.message || "An error occurred while deleting the task.");
       },
     });
   };
@@ -131,19 +107,12 @@ export const useTaskManagerApi = () => {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
         queryClient.invalidateQueries({ queryKey: ["task", data?.id] });
-        toast({
-          title: "Status updated",
-          description: `Task status has been updated to ${data?.status}.`,
-        });
+        toast(`Task status has been updated to ${data?.status}.`);
       },
       onError: (error: any) => {
-        toast({
-          title: "Error updating status",
-          description:
-            error.message ||
-            "An error occurred while updating the task status.",
-          variant: "destructive",
-        });
+        toast(
+          error.message || "An error occurred while updating the task status."
+        );
       },
     });
   };
@@ -155,19 +124,12 @@ export const useTaskManagerApi = () => {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
         queryClient.invalidateQueries({ queryKey: ["task", data?.id] });
-        toast({
-          title: "Progress updated",
-          description: `Task progress has been updated to ${data?.progress}%.`,
-        });
+        toast(`Task progress has been updated to ${data?.progress}%.`);
       },
       onError: (error: any) => {
-        toast({
-          title: "Error updating progress",
-          description:
-            error.message ||
-            "An error occurred while updating the task progress.",
-          variant: "destructive",
-        });
+        toast(
+          error.message || "An error occurred while updating the task progress."
+        );
       },
     });
   };
@@ -178,18 +140,10 @@ export const useTaskManagerApi = () => {
       mutationFn: (title: string) => createColumn(title),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["columns"] });
-        toast({
-          title: "Column created",
-          description: "Your column has been created successfully.",
-        });
+        toast("Your column has been created successfully.");
       },
       onError: (error: any) => {
-        toast({
-          title: "Error creating column",
-          description:
-            error.message || "An error occurred while creating the column.",
-          variant: "destructive",
-        });
+        toast(error.message || "An error occurred while creating the column.");
       },
     });
   };
@@ -200,18 +154,10 @@ export const useTaskManagerApi = () => {
         updateColumn(id, title),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["columns"] });
-        toast({
-          title: "Column updated",
-          description: "Your column has been updated successfully.",
-        });
+        toast("Your column has been updated successfully.");
       },
       onError: (error: any) => {
-        toast({
-          title: "Error updating column",
-          description:
-            error.message || "An error occurred while updating the column.",
-          variant: "destructive",
-        });
+        toast(error.message || "An error occurred while updating the column.");
       },
     });
   };
@@ -221,18 +167,10 @@ export const useTaskManagerApi = () => {
       mutationFn: (id: string) => deleteColumn(id),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["columns"] });
-        toast({
-          title: "Column deleted",
-          description: "Your column has been deleted successfully.",
-        });
+        toast("Your column has been deleted successfully.");
       },
       onError: (error: any) => {
-        toast({
-          title: "Error deleting column",
-          description:
-            error.message || "An error occurred while deleting the column.",
-          variant: "destructive",
-        });
+        toast(error.message || "An error occurred while deleting the column.");
       },
     });
   };
@@ -247,18 +185,10 @@ export const useTaskManagerApi = () => {
           queryKey: ["taskFiles", data?.taskId],
         });
         queryClient.invalidateQueries({ queryKey: ["task", data?.taskId] });
-        toast({
-          title: "File uploaded",
-          description: "Your file has been uploaded successfully.",
-        });
+        toast("Your file has been uploaded successfully.");
       },
       onError: (error: any) => {
-        toast({
-          title: "Error uploading file",
-          description:
-            error.message || "An error occurred while uploading the file.",
-          variant: "destructive",
-        });
+        toast(error.message || "An error occurred while uploading the file.");
       },
     });
   };
@@ -268,18 +198,10 @@ export const useTaskManagerApi = () => {
       mutationFn: (fileId: string) => deleteFile(fileId),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["taskFiles"] });
-        toast({
-          title: "File deleted",
-          description: "Your file has been deleted successfully.",
-        });
+        toast("Your file has been deleted successfully.");
       },
       onError: (error: any) => {
-        toast({
-          title: "Error deleting file",
-          description:
-            error.message || "An error occurred while deleting the file.",
-          variant: "destructive",
-        });
+        toast(error.message || "An error occurred while deleting the file.");
       },
     });
   };

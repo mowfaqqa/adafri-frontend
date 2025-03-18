@@ -37,7 +37,7 @@ export async function sendEmail(emailData: EmailData): Promise<any> {
     cc: emailData.cc || [],
     bcc: emailData.bcc || [],
     subject: emailData.subject,
-    body: emailData.body,
+    content: emailData.content,
     signature: emailData.signature || undefined,
     email_id: emailData.email_id
   };

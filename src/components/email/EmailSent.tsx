@@ -178,7 +178,7 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
       const formattedEmails = emailsData.map((email: any) => ({
         id: email.id || email._id || `sent-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         subject: email.subject || 'No Subject',
-        content: email.content || email.body?.content || '',
+        content: email.content || '',
         from: email.from || email.sender || 'Unknown Sender',
         to: email.to || email.recipient || '',
         timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),

@@ -169,7 +169,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       const formattedEmails = emailsData.map((email: any) => ({
         ...email,
         id: email.id || email._id || `draft-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        content: email.content || email.body?.content || '',
+        content: email.content || '',
         createdAt: email.createdAt || email.created_at || Date.now(),
         status: "draft"
       }));

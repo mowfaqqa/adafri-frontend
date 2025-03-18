@@ -498,7 +498,7 @@ export const ComposeModal = ({ isOpen, onClose }: ComposeModalProps) => {
     const draftData = {
       to: email.to.trim() || "", 
       subject: email.subject.trim() || "",
-      body: email.content.trim() || "", // ✅ API expects "content", not "body"
+      content: email.content.trim() || "", // ✅ API expects "content", not "body"
       email_id: emailId, 
     };
   

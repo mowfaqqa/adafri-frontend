@@ -32,7 +32,7 @@ export async function saveDraft(emailData: EmailData): Promise<any> {
   const requestBody = {
     to: emailData.to || "", // Ensure empty fields are sent as empty strings
     subject: emailData.subject || "",
-    content: emailData.body || "", // Fix: API expects "content", not "body"
+    content: emailData.content || "", // Fix: API expects "content"
     email_id: emailData.email_id || "", // Ensure this is never undefined
   };
 

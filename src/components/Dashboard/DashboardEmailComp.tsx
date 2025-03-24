@@ -1,4 +1,6 @@
-import React from 'react';
+"use client";
+
+import React, { useState } from 'react';
 import { cn } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +23,11 @@ interface Email {
 interface EmailPreviewProps {
   emails: Email[];
   className?: string;
+}
+
+interface TabProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
 }
 
 const AttachmentChip: React.FC<{ attachment: EmailAttachment }> = ({ attachment }) => (
@@ -51,23 +58,80 @@ const EmailPreview: React.FC<{ email: Email }> = ({ email }) => (
   </div>
 );
 
-const EmailList: React.FC<EmailPreviewProps> = ({ emails, className }) => {
+const TabNavigation: React.FC<TabProps> = ({ activeTab, setActiveTab }) => {
   return (
-    <Card className={cn("w-[370px] h-[600px] flex flex-col py-2", className)}>
-      <CardHeader className="border-b">
-        <CardTitle>Email</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto p-0 divide-y">
-        {emails.map((email) => (
-          <EmailPreview key={email.id} email={email} />
-        ))}
-      </CardContent>
-    </Card>
+    <div className="flex rounded-md overflow-hidden w-full mb-4">
+      <button 
+        onClick={() => setActiveTab('email')}
+        className={cn(
+          "flex-1 py-2 px-4 text-center font-medium transition-colors",
+          activeTab === 'email' 
+            ? "bg-teal-500 text-white" 
+            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+        )}
+      >
+        Email
+      </button>
+      <button 
+        onClick={() => setActiveTab('message')}
+        className={cn(
+          "flex-1 py-2 px-4 text-center font-medium transition-colors",
+          activeTab === 'message' 
+            ? "bg-teal-500 text-white" 
+            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+        )}
+      >
+        Online Message
+      </button>
+    </div>
   );
 };
 
-// Example usage
-const DashboardEmailList = () => {
+const EmailList: React.FC<EmailPreviewProps> = ({ emails, className }) => {
+  return (
+    <div className={cn("flex-1 divide-y", className)}>
+      {emails.map((email) => (
+        <EmailPreview key={email.id} email={email} />
+      ))}
+    </div>
+  );
+};
+
+// Placeholder for Online Message component
+const OnlineMessageList: React.FC = () => {
+  return (
+    <div className="flex-1 divide-y">
+      <div className="p-4 hover:bg-gray-50 transition-colors">
+        <div className="flex items-start gap-3">
+          <Checkbox className="mt-1.5" />
+          <div className="flex-1 space-y-1">
+            <div className="text-sm text-gray-500">05/12 - 16:30</div>
+            <div className="font-medium">John Smith</div>
+            <div className="font-medium">Question about service</div>
+            <div className="text-gray-600 text-sm line-clamp-1">Hello, I would like to inquire about...</div>
+          </div>
+        </div>
+      </div>
+      <div className="p-4 hover:bg-gray-50 transition-colors">
+        <div className="flex items-start gap-3">
+          <Checkbox className="mt-1.5" />
+          <div className="flex-1 space-y-1">
+            <div className="text-sm text-gray-500">05/12 - 15:45</div>
+            <div className="font-medium">Sarah Johnson</div>
+            <div className="font-medium">Support request</div>
+            <div className="text-gray-600 text-sm line-clamp-1">I need assistance with my account...</div>
+          </div>
+        </div>
+      </div>
+      {/* Add more message items as needed */}
+    </div>
+  );
+};
+
+// Main component with tabs
+const TabbedCommunication: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('email');
+
   const emails: Email[] = [
     {
       id: '1',
@@ -75,7 +139,7 @@ const DashboardEmailList = () => {
       sender: 'danielodedara@....',
       subject: 'Welcome to Adafri Dashboard',
       preview: 'Hello, my name is Daniel, I am......',
-      attachments: [{ name: '2.png', type: 'image' }]
+      attachments: [{ name: '2.pdf', type: 'image' }]
     },
     {
       id: '2',
@@ -83,7 +147,7 @@ const DashboardEmailList = () => {
       sender: 'danielodedara@....',
       subject: 'Welcome to Adafri Dashboard',
       preview: 'Hello, my name is Daniel, I am......',
-      attachments: [{ name: 'Power.png', type: 'image' }]
+      attachments: [{ name: 'Power.pdf', type: 'image' }]
     },
     {
       id: '3',
@@ -98,16 +162,34 @@ const DashboardEmailList = () => {
       sender: 'danielodedara@....',
       subject: 'Welcome to Adafri Dashboard',
       preview: 'Hello, my name is Daniel, I am......',
-      attachments: [{ name: 'Power.png', type: 'image' }]
+      attachments: [{ name: 'Power.pdf', type: 'image' }]
     },
-    // Add more emails to demonstrate scrolling
+    {
+      id: '5',
+      timestamp: '05/12 - 14:48',
+      sender: 'danielodedara@....',
+      subject: 'Welcome to Adafri Dashboard',
+      preview: 'Hello, my name is Daniel, I am......',
+      attachments: [{ name: 'Power.pdf', type: 'image' }]
+    },
   ];
 
   return (
     <div className="min-h-screen">
-      <EmailList emails={emails} />
+      <Card className="w-[450px] h-auto flex flex-col py-2 rounded-xl bg-white ml-auto">
+        <CardHeader className="pb-2 border-b">
+          <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+        </CardHeader>
+        <CardContent className="flex-1 p-0">
+          {activeTab === 'email' ? (
+            <EmailList emails={emails} />
+          ) : (
+            <OnlineMessageList />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-export default DashboardEmailList;
+export default TabbedCommunication;

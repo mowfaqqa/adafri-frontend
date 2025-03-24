@@ -39,7 +39,7 @@ const Carousel: React.FC<{ features: Feature[] }> = ({ features }) => {
     <div className="relative overflow-hidden">
       <div
         ref={containerRef}
-        className="flex transition-transform duration-300"
+        className="flex transition-transform duration-300 animated"
         style={{
           transform: `translateX(${offset}px)`,
         }}
@@ -48,14 +48,14 @@ const Carousel: React.FC<{ features: Feature[] }> = ({ features }) => {
           <FeatureCard
             key={`${feature.id}-${index}`}
             feature={feature}
-            className="flex-shrink-0 px-3"
+            className="flex-shrink-0 px-3 m-3"
           />
         ))}
       </div>
 
       <button
         onClick={prev}
-        className="absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+        className="absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-200"
         aria-label="Previous slide"
       >
         <ChevronLeft className="w-6 h-6" />
@@ -63,7 +63,7 @@ const Carousel: React.FC<{ features: Feature[] }> = ({ features }) => {
 
       <button
         onClick={next}
-        className="absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+        className="absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-200"
         aria-label="Next slide"
       >
         <ChevronRight className="w-6 h-6" />

@@ -169,7 +169,7 @@ export const ComposeModal = ({ isOpen, onClose }: ComposeModalProps) => {
 
     try {
       // Create a structured request object matching your EmailData interface
-      const emailData: EmailData = {
+      const emailData = {
         to: email.to.trim(),
         subject: email.subject.trim(),
         body: email.content.trim(),

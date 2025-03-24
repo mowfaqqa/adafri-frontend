@@ -15,7 +15,7 @@ export default function MessagesPage() {
   useEffect(() => {
     // If not authenticated and not loading, redirect to home or show login modal
     if (!isAuthenticated && !isLoading) {
-      openModal("login", { redirectPath: "/dashboard" });
+      openModal("login", { redirectPath: "/dashboard/messaging" });
     }
   }, [isAuthenticated, isLoading, router, openModal]);
 

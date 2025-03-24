@@ -76,7 +76,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
       await updateMessage(message.id, editContent);
       setIsEditing(false);
     } catch (error) {
-      console.error("Error updating message:", error);
+      console.log("Error updating message:", error);
     }
   };
 
@@ -85,7 +85,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
     try {
       await deleteMessage(message.id);
     } catch (error) {
-      console.error("Error deleting message:", error);
+      console.log("Error deleting message:", error);
     }
   };
 
@@ -100,7 +100,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
       await addReaction(message.id, emoji);
       setShowEmojiPicker(false);
     } catch (error) {
-      console.error("Error adding reaction:", error);
+      console.log("Error adding reaction:", error);
     }
   };
 
@@ -109,7 +109,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
     try {
       await removeReaction(message.id, emoji);
     } catch (error) {
-      console.error("Error removing reaction:", error);
+      console.log("Error removing reaction:", error);
     }
   };
 

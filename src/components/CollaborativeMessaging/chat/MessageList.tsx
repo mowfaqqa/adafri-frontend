@@ -112,7 +112,7 @@ const MessageList = () => {
         await fetchOlderMessages('dm', selectedDirectMessageId);
       }
     } catch (error) {
-      console.error('Error loading more messages:', error);
+      console.log('Error loading more messages:', error);
     } finally {
       setIsLoadingMore(false);
     }

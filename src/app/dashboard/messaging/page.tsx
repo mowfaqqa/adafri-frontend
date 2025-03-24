@@ -45,15 +45,3 @@ export default function MessagesPage() {
   return <ChatLayout />;
 }
 
-// import React from 'react'
-
-// const Messaging = () => {
-//   return (
-//     <div className=''>
-//       {/* <ChatLayout /> */}
-
-//     </div>
-//   )
-// }
-
-// export default Messaging

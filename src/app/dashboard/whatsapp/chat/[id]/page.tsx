@@ -13,9 +13,9 @@ interface ChatPageProps {
   };
 }
 
-export default function ChatPage({ params }: ChatPageProps) {
+export default function ChatPage({ params }: any) {
   const router = useRouter();
-  const chatId = params.id;
+  const chatId = params?.id;
 
   const {
     status,

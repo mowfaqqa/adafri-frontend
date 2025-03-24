@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from "axios";
 
 // Define the API base URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_URL = process.env.MESSAGING_API_URL || "http://localhost:5000/api";
 
 // Create an axios instance with default configs
 const axiosInstance = axios.create({

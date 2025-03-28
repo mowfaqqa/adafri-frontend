@@ -33,7 +33,7 @@ export default function RootLayout({
         <QueryProvider>
           <HotjarInitializer />
           {children}
-          <Toaster />
+          <Toaster richColors />
         </QueryProvider>
       </body>
     </html>

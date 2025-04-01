@@ -1,2 +1,0 @@
-// token.ts
-export const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI5ZTMyNjYxLTdmNmMtNGQwZC04ODVmLTFkZGFiYWEwYjI3OCIsImlhdCI6MTc0MDkyODI2OSwiZXhwIjoxNzQwOTMxODY5fQ.t140Jy4ckRiyDhnONQ9Xiek-rCtR9lP4spxaqTl-YIg';

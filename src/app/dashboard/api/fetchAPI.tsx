@@ -1,10 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import Cookies from "js-cookie";
 
-// Use environment variables for base URL with proper typing for Next.js
 export const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://email-service-latest-agqz.onrender.com";
 
-// Interface for token payload
 interface TokenPayload {
   exp: number;
   [key: string]: any;

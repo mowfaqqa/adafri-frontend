@@ -13,6 +13,9 @@ import { LinkEmailModal } from "@/components/email/LinkEmailModal";
 import { ComposeModal } from "@/components/email/ComposeModal";
 import { EmailDraft } from "@/components/email/EmailDraft";
 import { EmailSpam } from "@/components/email/EmailSpam";
+import ProfessionalEmailInbox from "@/components/email/ProfessionalEmailInbox";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 
 export default function EmailDashboard() {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
@@ -107,59 +110,61 @@ export default function EmailDashboard() {
       case "sent":
         return <EmailSent />;
       case "draft":
-        return <EmailDraft/>;
-        // return <EmailDraft onEditDraft={handleEditDraft} />;
+        return <EmailDraft />;
+      // return <EmailDraft onEditDraft={handleEditDraft} />;
       case "spam":
-      return <EmailSpam />;
+        return <EmailSpam />;
       case "agenda":
       // return <EmailAgenda />;
       case "inbox":
       default:
-        return <EmailColumns2 />;
+        return <ProfessionalEmailInbox />;
     }
   };
 
   return (
-    <div className="min-h-screen">
-      <main className="p-6">
-        <Tabs
-          value={activeCategory}
-          onValueChange={handleTabChange}
-        >
-          <div className="flex justify-between items-center mb-6">
-            <TabsList>
-              <TabsTrigger value="inbox" className="">Inbox</TabsTrigger>
-              <TabsTrigger value="sent" className="">Sent</TabsTrigger>
-              <TabsTrigger value="draft" className="">Draft</TabsTrigger>
-              <TabsTrigger value="spam" className="">Spam</TabsTrigger>
-              <TabsTrigger value="agenda" className="">Agenda</TabsTrigger>
-            </TabsList>
-            <div className="flex items-center gap-3">
-              <LinkEmailModal />
-              <Input placeholder="Search mail..." className="max-w-sm" />
+    <ProtectedRoute>
+      <div className="min-h-screen">
+        <main className="p-6">
+          <Tabs
+            value={activeCategory}
+            onValueChange={handleTabChange}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <TabsList>
+                <TabsTrigger value="inbox" className="">Inbox</TabsTrigger>
+                <TabsTrigger value="sent" className="">Sent</TabsTrigger>
+                <TabsTrigger value="draft" className="">Draft</TabsTrigger>
+                <TabsTrigger value="spam" className="">Spam</TabsTrigger>
+                <TabsTrigger value="agenda" className="">Agenda</TabsTrigger>
+              </TabsList>
+              <div className="flex items-center gap-3">
+                <LinkEmailModal />
+                <Input placeholder="Search mail..." className="max-w-sm " />
+              </div>
             </div>
-          </div>
 
-          {/* Render the appropriate component based on active category */}
-          <TabsContent value={activeCategory}>
-            {renderEmailComponent()}
-          </TabsContent>
-        </Tabs>
+            {/* Render the appropriate component based on active category */}
+            <TabsContent value={activeCategory}>
+              {renderEmailComponent()}
+            </TabsContent>
+          </Tabs>
 
-        <Button
-          className="fixed bottom-8 md:right-[90px] shadow-lg"
-          onClick={() => setIsComposeOpen(true)}
-        >
-          <Pencil className="w-4 h-4 mr-2" />
-          Compose
-        </Button>
-      </main>
+          <Button
+            className="fixed bottom-8 md:right-[90px] shadow-lg"
+            onClick={() => setIsComposeOpen(true)}
+          >
+            <Pencil className="w-4 h-4 mr-2" />
+            Compose
+          </Button>
+        </main>
 
-      <ComposeModal
-        isOpen={isComposeOpen}
-        onClose={() => setIsComposeOpen(false)}
-      />
-    </div>
+        <ComposeModal
+          isOpen={isComposeOpen}
+          onClose={() => setIsComposeOpen(false)}
+        />
+      </div>
+    </ProtectedRoute>
   );
 }
 

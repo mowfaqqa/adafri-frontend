@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 
 interface EmailData {
@@ -11,7 +12,7 @@ interface EmailData {
 }
 
 const API_URL = "https://email-service-latest-agqz.onrender.com/api/v1/emails/send";
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI5ZTMyNjYxLTdmNmMtNGQwZC04ODVmLTFkZGFiYWEwYjI3OCIsImlhdCI6MTc0MDk0MzYzMywiZXhwIjoxNzQwOTQ3MjMzfQ.Kk4HiNuA0mA3oi42nRYdVEXgGR3i0X4a7kh2OQY1X-c"; // Replace with actual token
+const TOKEN = process.env.AUTH_TOKEN; // Replace with actual token
 
 const sendEmailAPI = async (emailData: EmailData): Promise<any> => {
     try {

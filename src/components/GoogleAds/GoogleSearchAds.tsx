@@ -1,11 +1,12 @@
 // components/GoogleSearchAds.tsx
 
 "use client";
-import React from 'react';
+import React, {useState} from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MoreVertical, Clock, CheckCircle2, CalendarClock, Eye, MessageSquare, ThumbsUp } from 'lucide-react';
 import { useGoogleAds } from "@/lib/context/GoogleAdsContext";
+import CampaignSearchManager from './modals/DisplaySearchModal/CampaignSearchManager';
 
 // Define TypeScript interface for search campaign data
 interface SearchCampaign {
@@ -28,6 +29,12 @@ interface SearchCampaign {
 const GoogleSearchAds: React.FC = () => {
   // Use the context to get search campaigns and related functions
   const { searchCampaigns, addCampaign, isLoading } = useGoogleAds();
+  const [isFlowOpen, setIsFlowOpen] = useState(false);
+
+  // Handler for opening the modal flow
+  const handleOpenFlow = () => {
+    setIsFlowOpen(true);
+  };
 
   const createSearchCampaign = () => {
     addCampaign("search", {
@@ -119,16 +126,22 @@ const GoogleSearchAds: React.FC = () => {
       ) : (
         <Card className="border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
           <CardContent className="p-4 flex items-center justify-center h-32">
-            <Button variant="ghost" className="flex items-center" onClick={createSearchCampaign}>
+            <Button variant="ghost" className="flex items-center" onClick={handleOpenFlow}>
               <span className="mr-2">+ Create campaign</span>
             </Button>
           </CardContent>
         </Card>
       )}
 
-      <Button variant="outline" className="w-full" onClick={createSearchCampaign}>
+      <Button variant="outline" className="w-full border border-gray-300 hover:bg-gray-100 transition-colors" onClick={handleOpenFlow}>
         + Create campaign
       </Button>
+
+      {/* Campaign Flow Manager */}
+      <CampaignSearchManager 
+        isOpen={isFlowOpen} 
+        onClose={() => setIsFlowOpen(false)}
+      />
     </div>
   );
 };

@@ -18,13 +18,13 @@ interface BaseTask {
   assignees: string[];
   progress: number;
   activityLog: ActivityLogEntry[];
+  storyPoints: number;
+  sprint: string;
 }
 
 // Sprint specific task interface
 export interface SprintTask extends BaseTask {
   category: "sprints";
-  storyPoints: number;
-  sprint: string;
 }
 
 // Standard task interface
@@ -36,7 +36,7 @@ export interface StandardTask extends BaseTask {
 export type Task = SprintTask | StandardTask;
 
 export interface Column {
-  id: TaskStatus;
+  id: string;
   title: string;
 }
 
@@ -53,7 +53,7 @@ export interface BaseTaskFormData {
   title: string;
   description: string;
   tags: string;
-  status: TaskStatus;
+  status: string;
   date: string;
   assignees: string[];
   progress: number;
@@ -80,4 +80,12 @@ export interface TaskManagerContextType {
   deleteTask: (taskId: string) => void;
   moveTask: (taskId: string, newStatus: TaskStatus) => void;
   addColumn: (title: string) => void;
+}
+
+export function isSprintTask(task: Task): task is SprintTask {
+  return task.category === "sprints";
+}
+
+export function isStandardTask(task: Task): task is StandardTask {
+  return task.category !== "sprints";
 }

@@ -4,21 +4,12 @@ import { ArrowLeft, Filter, Trash2, Send, Archive } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Email, EmailCategory } from "@/lib/types/email";
 import { Checkbox } from "@/components/ui/checkbox";
-import Link from "next/link";
+import Link from "next/link";           
+import { getAuthToken, getCookie, isAuthenticated } from "@/lib/utils/cookies"; // Import cookie utilities
 
 interface EmailSpamProps {
     onBack?: () => void;
 }
-
-// Helper function to get access token from localStorage
-const getAccessToken = () => {
-    return typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-};
-
-// Helper function to get linked email ID from localStorage
-const getLinkedEmailId = () => {
-    return typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null;
-};
 
 export const EmailSpam = ({ onBack }: EmailSpamProps) => {
     const { emails } = useEmailStore();
@@ -35,16 +26,16 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
             setError(null);
 
             try {
-                // Get token from localStorage
-                const token = getAccessToken();
+                // Get token from cookies instead of localStorage
+                const token = getAuthToken();
                 console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
 
                 if (!token) {
                     throw new Error('No access token available');
                 }
 
-                // Get linked email ID from localStorage
-                const linkedEmailId = getLinkedEmailId();
+                // Get linked email ID from cookies instead of localStorage
+                const linkedEmailId = getCookie('linkedEmailId');
                 console.log("Linked Email ID:", linkedEmailId);
 
                 if (!linkedEmailId) {
@@ -212,8 +203,9 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
         if (selectedEmails.length === 0) return;
 
         try {
-            const token = getAccessToken();
-            const linkedEmailId = getLinkedEmailId();
+            // Get token and email ID from cookies
+            const token = getAuthToken();
+            const linkedEmailId = getCookie('linkedEmailId');
 
             if (!token) {
                 throw new Error('No access token found');
@@ -283,8 +275,9 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
         if (selectedEmails.length === 0) return;
 
         try {
-            const token = getAccessToken();
-            const linkedEmailId = getLinkedEmailId();
+            // Get token and email ID from cookies
+            const token = getAuthToken();
+            const linkedEmailId = getCookie('linkedEmailId');
 
             if (!token) {
                 throw new Error('No access token found');

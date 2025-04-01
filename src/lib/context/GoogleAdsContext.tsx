@@ -46,26 +46,6 @@ const exampleDisplayCampaigns: DisplayCampaign[] = [
     conversions: '24',
     status: 'active'
   },
-  {
-    id: '2',
-    name: 'Holiday Promo Campaign',
-    date: '15 Dec, 2024',
-    imageUrl: '/holiday-banner.jpg',
-    impressions: '3,789',
-    clicks: '142',
-    conversions: '37',
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'New Product Launch',
-    date: '08 Dec, 2024',
-    imageUrl: '/product-launch.jpg',
-    impressions: '2,156',
-    clicks: '93',
-    conversions: '18',
-    status: 'paused'
-  }
 ];
 
 type GoogleAdsContextType = {

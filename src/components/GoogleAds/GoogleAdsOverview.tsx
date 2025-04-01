@@ -2,7 +2,7 @@
 import React from "react";
 import { useGoogleAds } from "@/lib/context/GoogleAdsContext";
 import GoogleDisplayAds from "./GoogleDisplayAds";
-// import GoogleSearchAds from "./GoogleSearchAds";
+import GoogleSearchAds from "./GoogleSearchAds";
 // import BulkSMS from "./BulkSMS";
 // import MetaAds from "./MetaAds";
 import { PlusIcon } from "lucide-react";
@@ -32,7 +32,7 @@ const GoogleAdsOverview = () => {
               <PlusIcon className="h-5 w-5" />
             </button>
           </div>
-          <GoogleDisplayAds />
+          <GoogleSearchAds />
         </div>
 
         {/* Bulk SMS Section */}

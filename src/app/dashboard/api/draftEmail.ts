@@ -1,69 +1,144 @@
-// api/draftEmail.ts
+// api/sendEmail.ts
 
 import { EmailData } from '@/lib/types/email';
+import { getAuthToken } from '@/lib/utils/cookies';
 
 /**
- * Safely gets the access token from localStorage
- */
-export const getAccessToken = (): string | null => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('token');
-  }
-  return null;
-};
-
-/**
- * Saves an email as a draft using the stored access token
+ * Sends an email using the stored access token
  * @param emailData Object containing email details
  * @returns Response from the email service
  */
 export async function saveDraft(emailData: EmailData): Promise<any> {
-  console.log("📤 Draft function called with data:", emailData);
+  console.log("sendEmail function called with data:", emailData);
 
-  const token = getAccessToken();
-  console.log("🔑 Token:", token ? `${token.substring(0, 10)}...` : "No token found");
+  const token = getAuthToken();
+  console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
 
   if (!token) {
     throw new Error("No access token available");
   }
 
-  const apiEndpoint = "https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts";
+  // API endpoint
+  const apiEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts';
+  console.log("Sending request to API endpoint:", apiEndpoint);
 
+  // Prepare the request body
   const requestBody = {
-    to: emailData.to || "", // Ensure empty fields are sent as empty strings
-    subject: emailData.subject || "",
-    content: emailData.content || "", // Fix: API expects "content"
-    email_id: emailData.email_id || "", // Ensure this is never undefined
-  };
+        to: emailData.to || "", // Ensure empty fields are sent as empty strings
+        subject: emailData.subject || "",
+        content: emailData.content || "", // Fix: API expects "content"
+        email_id: emailData.email_id || "", // Ensure this is never undefined
+      };
 
-  console.log("📤 Final request body:", JSON.stringify(requestBody, null, 2));
+  console.log("Prepared request body:", requestBody);
 
   try {
     const response = await fetch(apiEndpoint, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(requestBody)
     });
 
-    console.log("📥 API response status:", response.status);
+    console.log("API response status:", response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ API error response:", errorText);
-      throw new Error(errorText || `Failed to save draft: ${response.status}`);
+      console.error("API error response:", errorText);
+      throw new Error(errorText || `Failed to send email: ${response.status}`);
     }
 
     const responseData = await response.json();
-    console.log("✅ API success response:", responseData);
+    console.log("API success response:", responseData);
     return responseData;
   } catch (error) {
-    console.error("❌ Error in draftEmail function:", error);
+    console.error('Error in sendEmail function:', error);
     throw error;
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// api/draftEmail.ts
+
+// import { EmailData } from '@/lib/types/email';
+
+// /**
+//  * Safely gets the access token from localStorage
+//  */
+// export const getAccessToken = (): string | null => {
+//   if (typeof window !== 'undefined') {
+//     return localStorage.getItem('token');
+//   }
+//   return null;
+// };
+
+// /**
+//  * Saves an email as a draft using the stored access token
+//  * @param emailData Object containing email details
+//  * @returns Response from the email service
+//  */
+// export async function saveDraft(emailData: EmailData): Promise<any> {
+//   console.log("📤 Draft function called with data:", emailData);
+
+//   const token = getAccessToken();
+//   console.log("🔑 Token:", token ? `${token.substring(0, 10)}...` : "No token found");
+
+//   if (!token) {
+//     throw new Error("No access token available");
+//   }
+
+//   const apiEndpoint = "https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts";
+
+//   const requestBody = {
+//     to: emailData.to || "", // Ensure empty fields are sent as empty strings
+//     subject: emailData.subject || "",
+//     content: emailData.content || "", // Fix: API expects "content"
+//     email_id: emailData.email_id || "", // Ensure this is never undefined
+//   };
+
+//   console.log("📤 Final request body:", JSON.stringify(requestBody, null, 2));
+
+//   try {
+//     const response = await fetch(apiEndpoint, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `Bearer ${token}`,
+//       },
+//       body: JSON.stringify(requestBody),
+//     });
+
+//     console.log("📥 API response status:", response.status);
+
+//     if (!response.ok) {
+//       const errorText = await response.text();
+//       console.error("❌ API error response:", errorText);
+//       throw new Error(errorText || `Failed to save draft: ${response.status}`);
+//     }
+
+//     const responseData = await response.json();
+//     console.log("✅ API success response:", responseData);
+//     return responseData;
+//   } catch (error) {
+//     console.error("❌ Error in draftEmail function:", error);
+//     throw error;
+//   }
+// }
 
 
 

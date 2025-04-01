@@ -1,3 +1,4 @@
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import GoogleAdsOverview from "@/components/GoogleAds/GoogleAdsOverview";
 import { GoogleAdsProvider } from "@/lib/context/GoogleAdsContext";
 import React from "react";
@@ -5,9 +6,11 @@ import React from "react";
 
 const GoogleAds = () => {
   return (
-    <GoogleAdsProvider>
+    <ProtectedRoute>
+      <GoogleAdsProvider>
         <GoogleAdsOverview />
-    </GoogleAdsProvider>
+      </GoogleAdsProvider>
+    </ProtectedRoute>
   );
 };
 

@@ -1,16 +1,7 @@
 // api/sendEmail.ts
 
 import { EmailData } from '@/lib/types/email';
-
-/**
- * Safely gets the access token from localStorage
- */
-export const getAccessToken = (): string | null => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('token');
-  }
-  return null;
-};
+import { getAuthToken } from '@/lib/utils/cookies';
 
 /**
  * Sends an email using the stored access token
@@ -20,7 +11,7 @@ export const getAccessToken = (): string | null => {
 export async function sendEmail(emailData: EmailData): Promise<any> {
   console.log("sendEmail function called with data:", emailData);
 
-  const token = getAccessToken();
+  const token = getAuthToken();
   console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
 
   if (!token) {
@@ -70,6 +61,101 @@ export async function sendEmail(emailData: EmailData): Promise<any> {
     throw error;
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // api/sendEmail.ts
+
+// import { EmailData } from '@/lib/types/email';
+
+// /**
+//  * Safely gets the access token from localStorage
+//  */
+// export const getAccessToken = (): string | null => {
+//   if (typeof window !== 'undefined') {
+//     return localStorage.getItem('token');
+//   }
+//   return null;
+// };
+
+// /**
+//  * Sends an email using the stored access token
+//  * @param emailData Object containing email details
+//  * @returns Response from the email service
+//  */
+// export async function sendEmail(emailData: EmailData): Promise<any> {
+//   console.log("sendEmail function called with data:", emailData);
+
+//   const token = getAccessToken();
+//   console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
+
+//   if (!token) {
+//     throw new Error("No access token available");
+//   }
+
+//   // API endpoint
+//   const apiEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/send';
+//   console.log("Sending request to API endpoint:", apiEndpoint);
+
+//   // Prepare the request body
+//   const requestBody = {
+//     to: emailData.to,
+//     cc: emailData.cc || [],
+//     bcc: emailData.bcc || [],
+//     subject: emailData.subject,
+//     content: emailData.content,
+//     signature: emailData.signature || undefined,
+//     email_id: emailData.email_id
+//   };
+
+//   console.log("Prepared request body:", requestBody);
+
+//   try {
+//     const response = await fetch(apiEndpoint, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'Authorization': `Bearer ${token}`
+//       },
+//       body: JSON.stringify(requestBody)
+//     });
+
+//     console.log("API response status:", response.status);
+
+//     if (!response.ok) {
+//       const errorText = await response.text();
+//       console.error("API error response:", errorText);
+//       throw new Error(errorText || `Failed to send email: ${response.status}`);
+//     }
+
+//     const responseData = await response.json();
+//     console.log("API success response:", responseData);
+//     return responseData;
+//   } catch (error) {
+//     console.error('Error in sendEmail function:', error);
+//     throw error;
+//   }
+// }
 
 
 

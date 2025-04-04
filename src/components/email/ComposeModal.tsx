@@ -13,7 +13,7 @@ import { useEmailStore } from "@/store/email-store";
 import { sendEmail } from "@/app/dashboard/api/emailSend";
 import { saveDraft } from "@/app/dashboard/api/draftEmail";
 import { Email, EmailData } from '@/lib/types/email';
-import { getCookie, getUserInfo } from "@/lib/utils/cookies";
+import { getCookie, getUserInfo, getAuthToken } from "@/lib/utils/cookies";
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -141,6 +141,7 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
 
   // Function for Send Email
   const handleSend = async () => {
+    const accessToken = getAuthToken();
     console.log("handleSend function called");
 
     // Get the linked email ID from cookies
@@ -216,7 +217,7 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       }
 
       // Create a structured request object matching your EmailData interface
-      const emailData: EmailData = {
+      const emailData = {
         to: email.to.trim(),
         subject: email.subject.trim(),
         content: email.content.trim(),

@@ -9,6 +9,10 @@ interface InputFieldProps {
   text?: string;
   className?: string;
   error?: string;
+  disabled?: boolean;
+  maxLength?: number;
+  inputMode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search";
+  pattern?: string;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -20,6 +24,10 @@ const InputField: React.FC<InputFieldProps> = ({
   text,
   className = "",
   error = "",
+  disabled = false,
+  maxLength,
+  inputMode,
+  pattern,
 }) => {
   return (
     <div>
@@ -30,9 +38,13 @@ const InputField: React.FC<InputFieldProps> = ({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        disabled={disabled}
+        maxLength={maxLength}
+        inputMode={inputMode}
+        pattern={pattern}
         className={`w-full px-4 py-2 text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none ${
           error ? "border-red-500" : "border-gray-300"
-        } ${className}`}
+        } ${disabled ? "bg-gray-100 cursor-not-allowed" : ""} ${className}`}
       />
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </div>

@@ -40,7 +40,7 @@ const DirectMessageList = () => {
         const users = await userApi.getOnlineUsers();
         setOnlineUsers(users);
       } catch (error) {
-        console.error("Error fetching online users:", error);
+        console.log("Error fetching online users:", error);
       } finally {
         setIsLoadingUsers(false);
       }
@@ -77,7 +77,7 @@ const DirectMessageList = () => {
       setIsSearching(false);
       setSearchQuery("");
     } catch (error) {
-      console.error("Error creating direct message:", error);
+      console.log("Error creating direct message:", error);
     }
   };
 

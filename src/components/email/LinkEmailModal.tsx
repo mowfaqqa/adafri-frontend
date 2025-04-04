@@ -52,6 +52,8 @@ export function LinkEmailModal() {
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+    // Get access token
+    // const accessToken = getAuthToken();
 
     // Detect provider from email address
     const detectProviderFromEmail = (email) => {
@@ -97,13 +99,13 @@ export function LinkEmailModal() {
         // Reset messages
         setErrorMessage('');
         setSuccessMessage('');
-
+    
         // Basic validation
         if (!emailCredentials.email || !emailCredentials.password) {
             setErrorMessage('Please enter both email and password');
             return;
         }
-
+    
         // Validation for custom providers
         if (showAdvancedSettings) {
             if (!emailCredentials.imapHost || !emailCredentials.smtpHost) {
@@ -111,16 +113,19 @@ export function LinkEmailModal() {
                 return;
             }
         }
-
+    
         try {
             setIsLoading(true);
-
-            // Get access token
+    
+            // Get access token using the correct function
+            // This correctly checks both 'accessToken' and '__frsadfrusrtkn' cookies
             const accessToken = getAuthToken();
+            console.log('Access token from cookie:', accessToken);
+            
             if (!accessToken) {
                 throw new Error('You must be logged in to link an email');
             }
-
+    
             // Ensure provider is valid
             const provider = emailCredentials.provider || "custom";
             
@@ -128,7 +133,7 @@ export function LinkEmailModal() {
             if (!ALLOWED_PROVIDERS.includes(provider)) {
                 throw new Error(`Invalid provider. Must be one of: ${ALLOWED_PROVIDERS.join(', ')}`);
             }
-
+    
             // Prepare request payload
             const requestPayload = {
                 provider,
@@ -141,9 +146,10 @@ export function LinkEmailModal() {
                     smtpPort: Number(emailCredentials.smtpPort)
                 })
             };
-
+    
             console.log('Sending request payload:', JSON.stringify(requestPayload));
-
+    
+            // Use the accessToken from getAuthToken() function
             const response = await fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails/link', {
                 method: 'POST',
                 headers: {
@@ -152,23 +158,23 @@ export function LinkEmailModal() {
                 },
                 body: JSON.stringify(requestPayload),
             });
-
+    
             // Check response
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to link email');
             }
-
+    
             const data = await response.json();
             console.log('Email linked successfully:', data);
-
+    
             // Store linked email ID
             if (data.id) {
                 setCookie('linkedEmailId', data.id);
             } else if (data.data && data.data.id) {
                 setCookie('linkedEmailId', data.data.id);
             }
-
+    
             // Show success and reset
             setSuccessMessage('Email linked successfully!');
             setEmailCredentials({
@@ -181,13 +187,13 @@ export function LinkEmailModal() {
                 smtpPort: 587
             });
             setShowAdvancedSettings(false);
-
+    
             // Close modal after delay
             setTimeout(() => {
                 setIsOpen(false);
                 setSuccessMessage('');
             }, 2000);
-
+    
         } catch (error) {
             console.error('Error linking email:', error);
             setErrorMessage(

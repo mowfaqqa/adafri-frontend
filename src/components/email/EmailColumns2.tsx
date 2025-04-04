@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Email, EmailSegment } from "@/lib/types/email";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies"; // Import the cookie utilities
 
-
 export const EmailColumns2 = () => {
   const { emails, moveEmail, customSegments, addSegment, addEmail } = useEmailStore();
   const [showNewSegmentInput, setShowNewSegmentInput] = useState(false);
@@ -16,6 +15,40 @@ export const EmailColumns2 = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [apiInboxEmails, setApiInboxEmails] = useState<Email[]>([]);
+
+  // Helper function to extract and format email content
+  const formatEmailContent = (rawContent: string) => {
+    // Check if content contains MIME boundaries
+    if (rawContent && rawContent.includes('Content-Type:')) {
+      try {
+        // Try to extract HTML content first (preferred for display)
+        const htmlMatch = rawContent.match(/Content-Type: text\/html.*?\r\n\r\n([\s\S]*?)(?:\r\n--|-$)/i);
+        if (htmlMatch && htmlMatch[1]) {
+          return {
+            contentType: 'html',
+            content: htmlMatch[1].trim()
+          };
+        }
+        
+        // Fall back to plain text if HTML isn't available
+        const textMatch = rawContent.match(/Content-Type: text\/plain.*?\r\n\r\n([\s\S]*?)(?:\r\n--|-$)/i);
+        if (textMatch && textMatch[1]) {
+          return {
+            contentType: 'text',
+            content: textMatch[1].trim()
+          };
+        }
+      } catch (e) {
+        console.error('Error parsing MIME content:', e);
+      }
+    }
+    
+    // If no MIME parsing worked or content isn't MIME formatted, return as is
+    return {
+      contentType: 'text',
+      content: rawContent || ''
+    };
+  };
 
   // Fetch inbox emails from the API
   useEffect(() => {
@@ -156,19 +189,26 @@ export const EmailColumns2 = () => {
       }
 
       // Format emails and ensure they have proper structure
-      const formattedEmails = emailsData.map((email: any) => ({
-        id: email.id || email._id || `inbox-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        subject: email.subject || 'No Subject',
-        content: email.content || email.body?.content || '',
-        from: email.from || email.sender || 'Unknown Sender',
-        to: email.to || email.recipient || '',
-        timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
-        status: "inbox",
-        isUrgent: email.isUrgent || email.is_urgent || false,
-        hasAttachment: email.hasAttachment || email.has_attachment || false,
-        category: email.category || "inbox",
-        isRead: email.isRead || email.is_read || false
-      }));
+      const formattedEmails = emailsData.map((email: any) => {
+        // Parse and format the email content
+        const formattedContent = formatEmailContent(email.content || '');
+        
+        return {
+          id: email.id || email._id || `inbox-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          subject: email.subject || 'No Subject',
+          content: formattedContent.content,
+          contentType: formattedContent.contentType,
+          from: email.from || email.sender || 'Unknown Sender',
+          to: email.to || email.recipient || '',
+          timestamp: email.date || email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+          status: email.type || "inbox",
+          isUrgent: email.isUrgent || email.is_urgent || false,
+          hasAttachment: email.hasAttachment || email.has_attachment || false,
+          category: email.category || email.type || "inbox",
+          isRead: email.isRead || email.is_read || false,
+          email_id: email.email_id || null
+        };
+      });
 
       // Add emails to store
       formattedEmails.forEach(email => {
@@ -321,7 +361,33 @@ export default EmailColumns2;
 
 
 
-// using localStorage
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // import { DragDropContext, Droppable } from "react-beautiful-dnd";
 // import { useEmailStore } from "@/store/email-store";
 // import { EmailCard } from "./EmailCard";
@@ -330,16 +396,8 @@ export default EmailColumns2;
 // import { useState, useEffect } from "react";
 // import { Input } from "@/components/ui/input";
 // import { Email, EmailSegment } from "@/lib/types/email";
+// import { getCookie, getAuthToken } from "@/lib/utils/cookies"; // Import the cookie utilities
 
-// // Helper function to get access token from localStorage
-// const getAccessToken = () => {
-//   return typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-// };
-
-// // Helper function to get linked email ID from localStorage
-// const getLinkedEmailId = () => {
-//   return typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null;
-// };
 
 // export const EmailColumns2 = () => {
 //   const { emails, moveEmail, customSegments, addSegment, addEmail } = useEmailStore();
@@ -356,23 +414,24 @@ export default EmailColumns2;
 //       setError(null);
 
 //       try {
-//         // Get token from localStorage
-//         const token = getAccessToken();
+//         // Get token from cookies using the utility function
+//         const token = getAuthToken();
 //         console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
 
 //         if (!token) {
 //           throw new Error('No access token available');
 //         }
 
-//         // Get linked email ID from localStorage
-//         const linkedEmailId = getLinkedEmailId();
+//         // Get linked email ID from cookies or localStorage as fallback
+//         const linkedEmailId = getCookie('linkedEmailId') || 
+//                               (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
 //         console.log("Linked Email ID:", linkedEmailId);
 
 //         if (!linkedEmailId) {
 //           throw new Error('No linked email ID found');
 //         }
 
-//         // Use the same approach as EmailDraft - use query parameters with GET request
+//         // Rest of your code remains the same...
 //         const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}`;
 //         console.log("Fetching from API endpoint:", apiEndpoint);
 
@@ -512,7 +571,7 @@ export default EmailColumns2;
 //     fetchInboxEmails();
 //   }, [addEmail]);
 
-//   // Only get inbox emails
+//   // Rest of your component remains the same...
 //   const inboxEmails = emails.filter((email) => email.status === "inbox");
 
 //   const handleAddSegment = () => {
@@ -523,7 +582,6 @@ export default EmailColumns2;
 //     }
 //   };
 
-//   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 //   const onDragEnd = (result: any) => {
 //     if (!result.destination) return;
 //     const emailId = result.draggableId;
@@ -641,7 +699,6 @@ export default EmailColumns2;
 //         </div>
 //       </div>
 //     </DragDropContext> 
-    
 //   );
 // };
 
@@ -649,225 +706,8 @@ export default EmailColumns2;
 
 
 
-// <DragDropContext onDragEnd={onDragEnd}>
-    //   <div className="relative w-full h-full overflow-x-auto pb-4">
-    //     <div className="flex gap-4 w-max">
-    //       {/* All Mail Column */}
-    //       <Droppable droppableId="all">
-    //         {(provided) => (
-    //           <div
-    //             ref={provided.innerRef}
-    //             {...provided.droppableProps}
-    //             className="min-w-[450px] p-4 rounded-lg"
-    //           >
-    //             <div className="flex justify-between items-center mb-4">
-    //               <h3 className="font-semibold ">All Mail</h3>
-    //               {showNewSegmentInput ? (
-    //                 <div className="flex gap-2">
-    //                   <Input
-    //                     value={newSegmentName}
-    //                     onChange={(e) => setNewSegmentName(e.target.value)}
-    //                     placeholder="Segment name"
-    //                     className="w-32"
-    //                   />
-    //                   <Button size="sm" onClick={handleAddSegment}>
-    //                     Add
-    //                   </Button>
-    //                 </div>
-    //               ) : (
-    //                 <Button
-    //                   variant="ghost"
-    //                   size="sm"
-    //                   onClick={() => setShowNewSegmentInput(true)}
-    //                 >
-    //                   <Plus className="w-4 h-4" />
-    //                 </Button>
-    //               )}
-    //             </div>
-    //             {inboxEmails
-    //               .filter((email) => !email.isUrgent)
-    //               .map((email, index) => (
-    //                 <EmailCard key={email.id} email={email} index={index} />
-    //               ))}
-    //             {provided.placeholder}
-    //           </div>
-    //         )}
-    //       </Droppable>
-
-    //       {/* Urgent Column */}
-    //       <Droppable droppableId="urgent">
-    //         {(provided) => (
-    //           <div
-    //             ref={provided.innerRef}
-    //             {...provided.droppableProps}
-    //             className="min-w-[200px] p-4 rounded-lg"
-    //           >
-    //             <h3 className="font-semibold mb-4">Urgent</h3>
-    //             {inboxEmails
-    //               .filter((email) => email.isUrgent)
-    //               .map((email, index) => (
-    //                 <EmailCard key={email.id} email={email} index={index} />
-    //               ))}
-    //             {provided.placeholder}
-    //           </div>
-    //         )}
-    //       </Droppable>
-          
-    //       {/* Custom Segments */}
-    //       {customSegments.map((segment) => (
-    //         <Droppable key={segment} droppableId={segment}>
-    //           {(provided) => (
-    //             <div
-    //               ref={provided.innerRef}
-    //               {...provided.droppableProps}
-    //               className="min-w-[450px] p-4 rounded-lg"
-    //             >
-    //               <h3 className="font-semibold mb-4">{segment}</h3>
-    //               {emails
-    //                 .filter((email) => email.status === segment)
-    //                 .map((email, index) => (
-    //                   <EmailCard key={email.id} email={email} index={index} />
-    //                 ))}
-    //               {provided.placeholder}
-    //             </div>
-    //           )}
-    //         </Droppable>
-    //       ))}
-    //     </div>
-    //   </div>
-    // </DragDropContext> 
 
 
 
 
 
-
-
-
-
-
-
-
-// import { DragDropContext, Droppable } from "react-beautiful-dnd";
-// import { useEmailStore } from "@/store/email-store";
-// import { EmailCard } from "./EmailCard";
-// import { Button } from "@/components/ui/button";
-// import { Plus } from "lucide-react";
-// import { useState } from "react";
-// import { Input } from "@/components/ui/input";
-// import { EmailSegment } from "@/lib/types/email";
-
-// export const EmailColumns2 = () => {
-//   const { emails, moveEmail, customSegments, addSegment } = useEmailStore();
-//   const [showNewSegmentInput, setShowNewSegmentInput] = useState(false);
-//   const [newSegmentName, setNewSegmentName] = useState("");
-
-//   // Only get inbox emails - this is the key change
-//   const inboxEmails = emails.filter((email) => email.status === "inbox");
-
-//   const handleAddSegment = () => {
-//     if (newSegmentName.trim()) {
-//       addSegment(newSegmentName);
-//       setNewSegmentName("");
-//       setShowNewSegmentInput(false);
-//     }
-//   };
-
-//   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-//   const onDragEnd = (result: any) => {
-//     if (!result.destination) return;
-//     const emailId = result.draggableId;
-//     const targetSegment = result.destination.droppableId as EmailSegment;
-//     moveEmail(emailId, targetSegment);
-//   };
-
-//   return (
-//     <DragDropContext onDragEnd={onDragEnd}>
-//       <div className="relative w-full h-full overflow-x-auto pb-4">
-//         <div className="flex gap-4 w-max">
-//           {/* All Mail Column */}
-//           <Droppable droppableId="all">
-//             {(provided) => (
-//               <div
-//                 ref={provided.innerRef}
-//                 {...provided.droppableProps}
-//                 className="min-w-[450px] p-4 rounded-lg"
-//               >
-//                 <div className="flex justify-between items-center mb-4">
-//                   <h3 className="font-semibold ">All Mail</h3>
-//                   {showNewSegmentInput ? (
-//                     <div className="flex gap-2">
-//                       <Input
-//                         value={newSegmentName}
-//                         onChange={(e) => setNewSegmentName(e.target.value)}
-//                         placeholder="Segment name"
-//                         className="w-32"
-//                       />
-//                       <Button size="sm" onClick={handleAddSegment}>
-//                         Add
-//                       </Button>
-//                     </div>
-//                   ) : (
-//                     <Button
-//                       variant="ghost"
-//                       size="sm"
-//                       onClick={() => setShowNewSegmentInput(true)}
-//                     >
-//                       <Plus className="w-4 h-4" />
-//                     </Button>
-//                   )}
-//                 </div>
-//                 {inboxEmails
-//                   .filter((email) => !email.isUrgent)
-//                   .map((email, index) => (
-//                     <EmailCard key={email.id} email={email} index={index} />
-//                   ))}
-//                 {provided.placeholder}
-//               </div>
-//             )}
-//           </Droppable>
-
-//           {/* Urgent Column */}
-//           <Droppable droppableId="urgent">
-//             {(provided) => (
-//               <div
-//                 ref={provided.innerRef}
-//                 {...provided.droppableProps}
-//                 className="min-w-[450px] p-4 rounded-lg"
-//               >
-//                 <h3 className="font-semibold mb-4">Urgent</h3>
-//                 {inboxEmails
-//                   .filter((email) => email.isUrgent)
-//                   .map((email, index) => (
-//                     <EmailCard key={email.id} email={email} index={index} />
-//                   ))}
-//                 {provided.placeholder}
-//               </div>
-//             )}
-//           </Droppable>
-          
-//           {/* Custom Segments */}
-//           {customSegments.map((segment) => (
-//             <Droppable key={segment} droppableId={segment}>
-//               {(provided) => (
-//                 <div
-//                   ref={provided.innerRef}
-//                   {...provided.droppableProps}
-//                   className="min-w-[450px] p-4 rounded-lg"
-//                 >
-//                   <h3 className="font-semibold mb-4">{segment}</h3>
-//                   {emails
-//                     .filter((email) => email.status === segment)
-//                     .map((email, index) => (
-//                       <EmailCard key={email.id} email={email} index={index} />
-//                     ))}
-//                   {provided.placeholder}
-//                 </div>
-//               )}
-//             </Droppable>
-//           ))}
-//         </div>
-//       </div>
-//     </DragDropContext> 
-//   );
-// };

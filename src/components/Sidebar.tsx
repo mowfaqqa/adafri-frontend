@@ -149,19 +149,19 @@ const navigation = [
       {
         label: "Telegram",
         icon: "/icons/telegram.png",
-        href: "/telegram",
+        href: "/dashboard/telegram",
         iconColor: "#229ED9",
       },
       {
         label: "WhatsApp",
         icon: "/icons/whatsapp.png",
-        href: "/whatsapp",
+        href: "/dashboard/whatsapp",
         iconColor: "#25D366",
       },
       {
         label: "Messenger",
         icon: "/icons/messager.png",
-        href: "/messenger",
+        href: "/dashboard/messenger",
         iconColor: "#0084FF",
       },
     ],

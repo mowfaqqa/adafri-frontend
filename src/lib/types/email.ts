@@ -1,17 +1,18 @@
 // types/email.ts
 export interface Email {
-  id?: string; // Make id optional for new emails
-  email_id?: string;
-  from: string;
-  to: string;
+  id: string;
   subject: string;
   content: string;
-  timestamp?: string; // Make timestamp optional for new emails
-  isUrgent?: boolean; // Make optional for new emails
+  contentType?: 'text' | 'html';
+  from: string;
+  to: string;
+  timestamp: string;
+  status: EmailSegment;
+  isUrgent: boolean;
   hasAttachment: boolean;
-  status: EmailCategory;
-  category?: string; // Make category optional for new emails
-  createdAt?: number;
+  category: string;
+  isRead: boolean;
+  email_id?: string;
 }
 
 

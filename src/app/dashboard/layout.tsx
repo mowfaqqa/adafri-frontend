@@ -28,28 +28,40 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const handleLogout = () => {
     // Clear all authentication cookies
     clearAuthCookies();
-    
+
+    // For extra security, explicitly clear individual cookies using the correct syntax
+    // Cookies.remove('accessToken', { path: '/' });
+    // Cookies.remove('__frsadfrusrtkn', { path: '/' });
+    // Cookies.remove('__rfrsadfrusrtkn', { path: '/' });
+    // Cookies.remove('userEmail', { path: '/' });
+    // Cookies.remove('userName', { path: '/' });
+    // Cookies.remove('userId', { path: '/' });
+
+    // Reset user state in the component
+    setUserInfo({
+      name: "",
+      email: ""
+    });
+
     // Close dropdown
     setDropdownOpen(false);
-    
+
     // Redirect to login page
     router.push("/auth/login");
   };
 
   return (
     <div
-      className={`min-h-screen flex overflow-hidden ${
-        darkMode ? "bg-black text-white" : "bg-gray-200 text-black"
-      }`}
+      className={`min-h-screen flex overflow-hidden ${darkMode ? "bg-black text-white" : "bg-gray-200 text-black"
+        }`}
     >
       {/* Sidebar */}
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
 
       {/* Main Content */}
       <div
-        className={`flex-1 overflow-hidden transition-all duration-300 ${
-          isCollapsed ? "ml-[100px]" : "ml-[260px]"
-        }`}
+        className={`flex-1 overflow-hidden transition-all duration-300 ${isCollapsed ? "ml-[100px]" : "ml-[260px]"
+          }`}
       >
         {/* Top Navbar */}
         <div className="flex justify-between items-center my-2 px-6">
@@ -97,7 +109,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                   <div className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer">
                     <Settings className="w-4 h-4" /> Settings
                   </div>
-                  <div 
+                  <div
                     className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer text-red-500"
                     onClick={handleLogout}
                   >

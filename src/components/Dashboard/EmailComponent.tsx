@@ -48,7 +48,7 @@ export const EmailList: React.FC<EmailPreviewProps> = ({ emails, className }) =>
 };
 
 // Sample data for testing
-export const sampleEmails: Email[] = [
+export const sampleEmails = [
   {
     id: '1',
     from: 'danielodedara@....',

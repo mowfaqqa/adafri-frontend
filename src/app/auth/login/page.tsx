@@ -28,25 +28,25 @@ export default function Login() {
     const searchParams = useSearchParams();
     const [showPassword, setShowPassword] = useState(false);
 
-    useEffect(() => {
-        // Check if user just verified email
-        const verified = searchParams.get('verified');
-        if (verified === 'true') {
-            setSuccessMessage("Email verified successfully! Please log in.");
+    // useEffect(() => {
+    //     // Check if user just verified email
+    //     const verified = searchParams.get('verified');
+    //     if (verified === 'true') {
+    //         setSuccessMessage("Email verified successfully! Please log in.");
             
-            // Prefill email if available in cookies
-            const storedEmail = Cookies.get('userEmail');
-            if (storedEmail) {
-                setEmail(storedEmail);
-            }
-        }
+    //         // Prefill email if available in cookies
+    //         const storedEmail = Cookies.get('userEmail');
+    //         if (storedEmail) {
+    //             setEmail(storedEmail);
+    //         }
+    //     }
 
-        // Check if user is already authenticated
-        const authState = Cookies.get(AUTH_STATE_COOKIE);
-        if (authState === 'authenticated') {
-            router.push('/dashboard');
-        }
-    }, [searchParams, router]);
+    //     // Check if user is already authenticated
+    //     const authState = Cookies.get(AUTH_STATE_COOKIE);
+    //     if (authState === 'authenticated') {
+    //         router.push('/dashboard');
+    //     }
+    // }, [searchParams, router]);
 
     const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) =>
         setEmail(e.target.value);

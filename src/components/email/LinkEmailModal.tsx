@@ -82,7 +82,7 @@ export function LinkEmailModal() {
     const handleEmailChange = (email) => {
         const detectedProvider = detectProviderFromEmail(email);
         
-        let newCredentials = { 
+        const newCredentials = { 
             ...emailCredentials, 
             email,
             provider: detectedProvider || "custom" // Default to custom if no provider detected

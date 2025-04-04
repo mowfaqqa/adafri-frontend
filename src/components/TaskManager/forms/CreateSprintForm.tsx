@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PenSquare, Calendar, Plus, AlertTriangle } from "lucide-react";
+import {
+  PenSquare,
+  Calendar,
+  Plus,
+  AlertTriangle,
+  Paperclip,
+} from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SprintTaskFormData } from "@/lib/types/taskManager/types";
 
@@ -65,9 +70,7 @@ const CreateSprintForm: React.FC<CreateSprintFormProps> = ({
     });
   };
   return (
-    <form
-      onSubmit={handleSubmitForm}
-    >
+    <form onSubmit={handleSubmitForm}>
       <Card className="w-full max-w-xl bg-white rounded-0 border-none">
         <CardHeader className="border-b">
           <CardTitle className="text-xl font-semibold">Create Sprint</CardTitle>
@@ -207,6 +210,16 @@ const CreateSprintForm: React.FC<CreateSprintFormProps> = ({
                   value={formData.tags}
                   onChange={handleChange}
                 />
+              </div>
+            </div>
+
+            {/* Attachment Note - for Cloudinary integration */}
+            <div className="flex items-start gap-3">
+              <Paperclip className="w-5 h-5 mt-2 text-gray-500" />
+              <div className="flex-1">
+                <p className="text-sm text-gray-500">
+                  Files can be attached after creating the sprint task
+                </p>
               </div>
             </div>
 

@@ -126,7 +126,12 @@ const navigation = [
           },
           {
             label: "E-sign",
-            href: "/dashboard/performance",
+            href: "/dashboard/documents",
+            icon: "/icons/e-sign.png",
+          },
+          {
+            label: "E-sign(signatures)",
+            href: "/dashboard/signatures",
             icon: "/icons/e-sign.png",
           },
           {

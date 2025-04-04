@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 import React, { useState } from "react";
-import { Card, CardContent} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +20,7 @@ interface NewTaskFormProps {
   onSubmit: (data: StandardTaskFormData) => void;
   isSubmitting: boolean;
 }
+
 const NewTaskForm: React.FC<NewTaskFormProps> = ({
   onSubmit,
   isSubmitting,
@@ -65,6 +66,7 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
       category: selectedCategory as any,
     });
   };
+
   return (
     <form onSubmit={handleSubmitForm}>
       <Card className="w-full bg-white border-none">
@@ -216,19 +218,12 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
               </div>
             </div>
 
-            {/* Attachment */}
+            {/* Attachment Note - removed file input as attachments will be added after creating the task */}
             <div className="flex items-start gap-3">
               <Paperclip className="w-5 h-5 mt-2 text-gray-500" />
               <div className="flex-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start"
-                >
-                  Add Attachment
-                </Button>
-                <p className="text-xs text-gray-500 mt-1">
-                  (Attachments can be added after creating the task)
+                <p className="text-sm text-gray-500">
+                  Attachments can be added after creating the task
                 </p>
               </div>
             </div>

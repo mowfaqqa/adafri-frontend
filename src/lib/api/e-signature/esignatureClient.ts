@@ -1,12 +1,14 @@
 import axios from "axios";
+import Cookies from "js-cookie";
 
 const esignatureClient = axios.create({
-  baseURL: "/api",
+  baseURL: "https://e-signature-l8m5.onrender.com/api/v1",
 });
 
-// Add JWT interceptor
 esignatureClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ3Y2VmMzZhLWEyNDYtNGIxMi04NGQ3LWE5ZGVjMTUxMmZkNyIsImlhdCI6MTc0MzE2OTI5NiwiZXhwIjoxNzQzMTcyODk2fQ.43r2EHSw6QpCYgOaCDLbC8DgtUn-8d_GWafVKLvQFnY";
+  // localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

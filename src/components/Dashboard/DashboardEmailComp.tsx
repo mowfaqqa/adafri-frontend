@@ -47,7 +47,7 @@ const parseEmailResponse = (data: any): Email[] => {
 };
 
 const DashboardEmailComp: React.FC<DashboardEmailCompProps> = ({ className }) => {
-  const [emails, setEmails] = useState<Email[]>([]);
+  const [emails, setEmails] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   

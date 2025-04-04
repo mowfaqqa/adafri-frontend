@@ -298,7 +298,7 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
     setError("");
   
     // Get email_id from cookies
-    let emailId = getCookie('linkedEmailId') || "";
+    const emailId = getCookie('linkedEmailId') || "";
     if (!emailId) {
       // If no linkedEmailId found, we can't save the draft to the server
       console.log("No linked email ID found in cookies");

@@ -1,3 +1,4 @@
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import DashboardEmailList from "@/components/Dashboard/DashboardEmailComp";
 import DashboardMessageList from "@/components/Dashboard/DirectMessagingComp";
 import FavoritesCard from "@/components/Dashboard/FavoritesCard";
@@ -34,38 +35,40 @@ import React from "react";
 
 const Dashboard = () => {
   return (
-    <div className="p-6 w-full h-screen overflow-y-auto">
-      {/* Main layout grid */}
+    <ProtectedRoute>
+      <div className="p-6 w-full h-screen overflow-y-auto">
+        {/* Main layout grid */}
 
-      <h1 className="font-semibold mb-5 sticky ml-5 mb-4 text-4xl lg:text-3xl">Good Morning, Muwaff</h1>
+        <h1 className="font-semibold mb-5 sticky ml-5 mb-4 text-4xl lg:text-3xl">Good Morning, Muwaff</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-        {/* Left Section - Takes 2/3 of the space */}
-        <div className="space-y-5 flex-1">
-          {/* Poll & Favorites */}
-          <div className="flex flex-col md:flex-row gap-6 rounded-xl">
-            <DashboardPollCard />
-            <FavoritesCard />
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+          {/* Left Section - Takes 2/3 of the space */}
+          <div className="space-y-5 flex-1">
+            {/* Poll & Favorites */}
+            <div className="flex flex-col md:flex-row gap-6 rounded-xl">
+              <DashboardPollCard />
+              <FavoritesCard />
+            </div>
+
+            {/* Feature Carousel - Spans Full Width of Poll & Favorites */}
+            <div className="col-span-2">
+              <FeatureCarousel
+                tabs={exampleData}
+                className="shadow-md border border-gray-200 p-4 rounded-xl overflow-x-auto"
+              />
+            </div>
+
+            {/* Direct Messaging */}
+            <DashboardMessageList />
           </div>
 
-          {/* Feature Carousel - Spans Full Width of Poll & Favorites */}
-          <div className="col-span-2">
-            <FeatureCarousel
-              tabs={exampleData}
-              className="shadow-md border border-gray-200 p-4 rounded-xl overflow-x-auto"
-            />
+          {/* Right Section - Takes 1/3 of the space */}
+          <div className="flex-1 gap-6">
+            <DashboardEmailList />
           </div>
-
-          {/* Direct Messaging */}
-          <DashboardMessageList />
-        </div>
-
-        {/* Right Section - Takes 1/3 of the space */}
-        <div className="flex-1 gap-6">
-          <DashboardEmailList/>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 };
 

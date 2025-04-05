@@ -7,7 +7,6 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { EmailSegment } from "@/lib/types/email";
 
-
 export const EmailColumns = () => {
   const { emails, moveEmail, customSegments, addSegment, activeCategory } =
     useEmailStore();
@@ -33,7 +32,6 @@ export const EmailColumns = () => {
     const targetSegment = result.destination.droppableId as EmailSegment;
     moveEmail(emailId, targetSegment);
   };
-
 
   //  to edit the card css of the card
   return (
@@ -123,10 +121,7 @@ export const EmailColumns = () => {
           ))}
         </div>
       </div>
-    </DragDropContext>
-
-
-   
+    </DragDropContext> 
   );
 };
 

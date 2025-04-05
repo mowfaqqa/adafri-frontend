@@ -6,6 +6,7 @@ import useAuthStore from "@/store/messaging/authStore";
 import useModalStore from "@/store/messaging/modalStore";
 import { useRouter } from "next/navigation";
 import Spinner from "@/components/custom-ui/modal/custom-spinner";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 export default function MessagesPage() {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -31,14 +32,16 @@ export default function MessagesPage() {
   // Only render chat layout if authenticated
   if (!isAuthenticated) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-4">Please log in</h1>
-          <p className="text-gray-500">
-            You need to be logged in to view messages
-          </p>
+      <ProtectedRoute>
+        <div className="h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-semibold mb-4">Please log in</h1>
+            <p className="text-gray-500">
+              You need to be logged in to view messages
+            </p>
+          </div>
         </div>
-      </div>
+      </ProtectedRoute>
     );
   }
 

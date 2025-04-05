@@ -74,7 +74,7 @@ const navigation = [
         subItems: [
           {
             label: "Google Ads",
-            href: "/dashboard/campaigns",
+            href: "/dashboard/google-ads",
             icon: "/icons/google-ads.png",
           },
           {
@@ -121,12 +121,12 @@ const navigation = [
           },
           {
             label: "Online Meeting",
-            href: "/dashboard/performance",
+            href: "/dashboard/messaging",
             icon: "/icons/online-meeting.png",
           },
           {
             label: "E-sign",
-            href: "/dashboard/performance",
+            href: "/dashboard/e-sign",
             icon: "/icons/e-sign.png",
           },
           {

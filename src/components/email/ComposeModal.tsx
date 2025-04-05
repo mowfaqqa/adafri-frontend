@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { useEmailStore } from "@/store/email-store";
 import { sendEmail } from "@/app/dashboard/api/emailSend";
 import { saveDraft } from "@/app/dashboard/api/draftEmail";
-import { Email, EmailData } from '@/lib/types/email';
+import { Email, EmailData, EmailSendData, EmailSegment } from '@/lib/types/email';
 import { getCookie, getUserInfo, getAuthToken } from "@/lib/utils/cookies";
 
 interface ComposeModalProps {
@@ -20,6 +20,7 @@ interface ComposeModalProps {
   onClose: () => void;
   editMode?: boolean;
   draftEmail?: Email | null;
+  onSaveDraft?: (email: Email) => void;
 }
 
 export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = null }: ComposeModalProps) => {
@@ -185,7 +186,7 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
     setError("");
 
     // Get user signature if available
-    const userSignature = getCookie('userSignature') || undefined;
+    const userSignature = getCookie('userSignature') ?? undefined;
 
     console.log("Starting email send process with data:", {
       to: email.to,
@@ -199,7 +200,7 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       if (editMode && email.id) {
         try {
           console.log("Edit mode: deleting existing draft before sending", email.id);
-          const token = getAccessToken();
+          const token = getAuthToken();
           
           if (token && emailId) {
             await fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${email.id}?email_id=${encodeURIComponent(emailId)}`, {
@@ -224,7 +225,12 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
         email_id: emailId,
         cc: undefined,
         bcc: undefined,
-        signature: userSignature
+        signature: undefined,
+        inbox: false,  // or appropriate value
+        sent: true,    // since this is being sent
+        draft: false,  // not a draft
+        spam: false,   // not spam
+      
       };
 
       // Use your existing sendEmail function
@@ -239,7 +245,14 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
         subject: email.subject,
         content: email.content,
         hasAttachment: false,
-        status: "sent",
+        status: "sent" as EmailSegment,
+        email_id: emailId,  // Add the email ID
+        timestamp: new Date().toISOString(), // Changed from createdAt to timestamp
+        contentType: 'text', // Required property 
+        isUrgent: false,    // Required property
+        category: "sent",   // Required property
+        isRead: true,       // Required property
+        id: `sent-${Date.now()}` // Required property
       };
 
       // Try to update the store state using addEmail
@@ -304,13 +317,16 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       console.log("No linked email ID found in cookies");
     }
   
-    // Prepare draft data
-    const draftData = {
-      to: email.to.trim() || "", 
+    // Prepare draft data to match EmailSendData interface
+    const draftData: EmailSendData = {
+      to: email.to.trim() || "",
       subject: email.subject.trim() || "",
       content: email.content.trim() || "",
       email_id: emailId,
-      draft_id: email.id || undefined, // Include draft ID if editing an existing draft
+      // Optional fields can be included if needed
+      cc: null,
+      bcc: null,
+      signature: null
     };
   
     console.log("📤 Sending draft:", JSON.stringify(draftData, null, 2));
@@ -327,13 +343,15 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
   
       // Save draft locally
       addEmail({
-        id: email.id,
-        from: userEmail || "danielodedara@gmail.com",
+        from: userEmail || "",
         to: email.to,
         subject: email.subject,
         content: email.content,
+        contentType: 'text',
         hasAttachment: false,
-        status: "draft",
+        isRead: true,
+        status: "draft" as EmailSegment,
+        email_id: emailId || null
       });
   
       updateDraft({

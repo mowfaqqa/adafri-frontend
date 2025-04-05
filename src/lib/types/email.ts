@@ -7,12 +7,13 @@ export interface Email {
   from: string;
   to: string;
   timestamp: string;
+  createdAt?: string | number;
   status: EmailSegment;
   isUrgent: boolean;
   hasAttachment: boolean;
   category: string;
   isRead: boolean;
-  email_id?: string;
+  email_id?: string | null;
 }
 
 
@@ -23,7 +24,7 @@ export interface ApiResponse<T> {
   drafts?: T;
 }
 
-export interface EmailData {
+export interface EmailSendData {
   to: string;
   subject: string;
   content: string;

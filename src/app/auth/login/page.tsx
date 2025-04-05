@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from 'next/image';
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Cookies from 'js-cookie';
 import {
     Facebook as FaFacebook,
@@ -15,46 +15,38 @@ import { Button } from "@/components/ui/button";
 import InputField from "@/components/auth/InputField";
 import AuthLayout from "@/components/auth/AuthLayout";
 
-// Define constants for auth state
-// const AUTH_STATE_COOKIE = 'auth_state';
-
-export default function Login() {
+// Define the component that uses useSearchParams
+const LoginForm: React.FC = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const router = useRouter();
+    // Move useSearchParams to this component
+    const { useSearchParams } = require("next/navigation");
     const searchParams = useSearchParams();
     const [showPassword, setShowPassword] = useState(false);
 
-    // useEffect(() => {
-    //     // Check if user just verified email
-    //     const verified = searchParams.get('verified');
-    //     if (verified === 'true') {
-    //         setSuccessMessage("Email verified successfully! Please log in.");
+    useEffect(() => {
+        // Check if user just verified email
+        const verified = searchParams?.get('verified');
+        if (verified === 'true') {
+            setSuccessMessage("Email verified successfully! Please log in.");
             
-    //         // Prefill email if available in cookies
-    //         const storedEmail = Cookies.get('userEmail');
-    //         if (storedEmail) {
-    //             setEmail(storedEmail);
-    //         }
-    //     }
-
-    //     // Check if user is already authenticated
-    //     const authState = Cookies.get(AUTH_STATE_COOKIE);
-    //     if (authState === 'authenticated') {
-    //         router.push('/dashboard');
-    //     }
-    // }, [searchParams, router]);
+            // Prefill email if available in cookies
+            const storedEmail = Cookies.get('userEmail');
+            if (storedEmail) {
+                setEmail(storedEmail);
+            }
+        }
+    }, [searchParams]);
 
     const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) =>
         setEmail(e.target.value);
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) =>
         setPassword(e.target.value);
-
-    // Update your handleSubmit function in login.tsx:
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -154,149 +146,497 @@ export default function Login() {
     };
 
     return (
-        <AuthLayout>
-            <form className="space-y-6" onSubmit={handleSubmit}>
-                
-                <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
-                    <p className="text-emerald-500 mt-2">
-                        Sign in to access your account
-                    </p>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
+                <p className="text-emerald-500 mt-2">
+                    Sign in to access your account
+                </p>
+            </div>
+
+            {/* Success Message */}
+            {successMessage && (
+                <div className="bg-emerald-50 border border-emerald-300 text-emerald-700 px-4 py-3 rounded relative" role="alert">
+                    {successMessage}
                 </div>
+            )}
 
-                {/* Success Message */}
-                {successMessage && (
-                    <div className="bg-emerald-50 border border-emerald-300 text-emerald-700 px-4 py-3 rounded relative" role="alert">
-                        {successMessage}
-                    </div>
-                )}
+            {/* Error Message */}
+            {error && (
+                <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    {error}
+                </div>
+            )}
 
-                {/* Error Message */}
-                {error && (
-                    <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded relative" role="alert">
-                        {error}
-                    </div>
-                )}
+            {/* Email Input */}
+            <InputField
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={handleEmailChange}
+            />
 
-                {/* Email Input */}
+            {/* Password Input */}
+            <div className="relative">
                 <InputField
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={handleEmailChange}
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={handlePasswordChange}
                 />
-
-                {/* Password Input */}
-                <div className="relative">
-                    <InputField
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={handlePasswordChange}
-                    />
-                    <button 
-                        type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                        {showPassword ? (
-                            <EyeClosed className="h-5 w-5" />
-                        ) : (
-                            <EyeOpen className="h-5 w-5" />
-                        )}
-                    </button>
-                </div>
-
-                {/* Forgot Password Link */}
-                <div className="text-right">
-                    <Link
-                        href="/auth/forgot-password"
-                        className="text-sm text-white hover:underline"
-                    >
-                        Forgot password?
-                    </Link>
-                </div>
-
-                {/* Login Button */}
-                <Button
-                    type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    disabled={isLoading}
+                <button 
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                    {isLoading ? 'Logging in...' : 'Log In'}
-                </Button>
+                    {showPassword ? (
+                        <EyeClosed className="h-5 w-5" />
+                    ) : (
+                        <EyeOpen className="h-5 w-5" />
+                    )}
+                </button>
+            </div>
 
-                {/* Social Login Buttons */}
-                <div className="mt-6 space-y-4">
-                    <button
-                        type="button"
-                        className="w-full px-4 py-2 flex items-center justify-center bg-white text-black rounded-lg shadow-sm hover:bg-emerald-50 focus:outline-none"
-                        aria-label="Log in with Google"
-                    >
-                        <Image
-                            src="/icons/google.png"
-                            alt="Google"
-                            height={20}
-                            width={20}
-                            className="h-5 mr-2"
-                        />
-                        Log in with Google
-                    </button>
-                    <button
-                        type="button"
-                        className="w-full px-4 py-2 flex items-center justify-center bg-emerald-800 text-white rounded-lg shadow-sm hover:bg-emerald-900 focus:outline-none"
-                        aria-label="Log in with Facebook"
-                    >
-                        <FaFacebook className="mr-2 h-5 w-5" />
-                        Log in with Facebook
-                    </button>
-                    <button
-                        type="button"
-                        className="w-full px-4 py-2 flex items-center justify-center bg-emerald-700 text-white rounded-lg shadow-sm hover:bg-emerald-800 focus:outline-none"
-                        aria-label="Log in with LinkedIn"
-                    >
-                        <FaLinkedin className="mr-2 h-5 w-5" />
-                        Log in with LinkedIn
-                    </button>
-                </div>
+            {/* Forgot Password Link */}
+            <div className="text-right">
+                <Link
+                    href="/auth/forgot-password"
+                    className="text-sm text-white hover:underline"
+                >
+                    Forgot password?
+                </Link>
+            </div>
 
-                {/* Don't have an account */}
-                <div className="mt-6 text-center text-sm text-white">
-                    <p>
-                        Don't have an account?{" "}
-                        <Link
-                            href="/auth/signup"
-                            className="text-teal-500 hover:underline"
-                        >
-                            Sign up
-                        </Link>
-                    </p>
-                </div>
+            {/* Login Button */}
+            <Button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={isLoading}
+            >
+                {isLoading ? 'Logging in...' : 'Log In'}
+            </Button>
 
-                {/* Privacy Policy and Terms */}
-                <div className="mt-4 text-center text-sm text-white">
-                    <p>
-                        By signing in, you agree to our{" "}
-                        <Link
-                            href="/privacy-policy"
-                            className="text-emerald-400 hover:underline"
-                        >
-                            Privacy Policy
-                        </Link>{" "}
-                        and{" "}
-                        <Link
-                            href="/terms-of-service"
-                            className="text-emerald-400 hover:underline"
-                        >
-                            Terms of Service
-                        </Link>
-                    </p>
+            {/* Social Login Buttons */}
+            <div className="mt-6 space-y-4">
+                <button
+                    type="button"
+                    className="w-full px-4 py-2 flex items-center justify-center bg-white text-black rounded-lg shadow-sm hover:bg-emerald-50 focus:outline-none"
+                    aria-label="Log in with Google"
+                >
+                    <Image
+                        src="/icons/google.png"
+                        alt="Google"
+                        height={20}
+                        width={20}
+                        className="h-5 mr-2"
+                    />
+                    Log in with Google
+                </button>
+                <button
+                    type="button"
+                    className="w-full px-4 py-2 flex items-center justify-center bg-emerald-800 text-white rounded-lg shadow-sm hover:bg-emerald-900 focus:outline-none"
+                    aria-label="Log in with Facebook"
+                >
+                    <FaFacebook className="mr-2 h-5 w-5" />
+                    Log in with Facebook
+                </button>
+                <button
+                    type="button"
+                    className="w-full px-4 py-2 flex items-center justify-center bg-emerald-700 text-white rounded-lg shadow-sm hover:bg-emerald-800 focus:outline-none"
+                    aria-label="Log in with LinkedIn"
+                >
+                    <FaLinkedin className="mr-2 h-5 w-5" />
+                    Log in with LinkedIn
+                </button>
+            </div>
+
+            {/* Don't have an account */}
+            <div className="mt-6 text-center text-sm text-white">
+                <p>
+                    Don't have an account?{" "}
+                    <Link
+                        href="/auth/signup"
+                        className="text-teal-500 hover:underline"
+                    >
+                        Sign up
+                    </Link>
+                </p>
+            </div>
+
+            {/* Privacy Policy and Terms */}
+            <div className="mt-4 text-center text-sm text-white">
+                <p>
+                    By signing in, you agree to our{" "}
+                    <Link
+                        href="/privacy-policy"
+                        className="text-emerald-400 hover:underline"
+                    >
+                        Privacy Policy
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                        href="/terms-of-service"
+                        className="text-emerald-400 hover:underline"
+                    >
+                        Terms of Service
+                    </Link>
+                </p>
+            </div>
+        </form>
+    );
+};
+
+// Main component that uses Suspense
+const Login: React.FC = () => {
+    return (
+        <AuthLayout>
+            <Suspense fallback={
+                <div className="w-full max-w-md mx-auto text-white text-center p-6">
+                    <div className="animate-pulse">Loading...</div>
                 </div>
-            </form>
+            }>
+                <LoginForm />
+            </Suspense>
         </AuthLayout>
     );
-}
+};
+
+export default Login;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 'use client';
+
+// import { useState, useEffect, Suspense } from "react";
+// import Link from "next/link";
+// import Image from 'next/image';
+// import { useRouter, useSearchParams } from "next/navigation";
+// import Cookies from 'js-cookie';
+// import {
+//     Facebook as FaFacebook,
+//     Linkedin as FaLinkedin,
+//     Eye as EyeOpen,
+//     EyeOff as EyeClosed
+// } from "lucide-react";
+// import { Button } from "@/components/ui/button";
+// import InputField from "@/components/auth/InputField";
+// import AuthLayout from "@/components/auth/AuthLayout";
+
+// // Define constants for auth state
+// // const AUTH_STATE_COOKIE = 'auth_state';
+
+// export default function Login() {
+//     const [email, setEmail] = useState("");
+//     const [password, setPassword] = useState("");
+//     const [isLoading, setIsLoading] = useState(false);
+//     const [error, setError] = useState("");
+//     const [successMessage, setSuccessMessage] = useState("");
+//     const router = useRouter();
+//     const searchParams = useSearchParams();
+//     const [showPassword, setShowPassword] = useState(false);
+
+//     // useEffect(() => {
+//     //     // Check if user just verified email
+//     //     const verified = searchParams.get('verified');
+//     //     if (verified === 'true') {
+//     //         setSuccessMessage("Email verified successfully! Please log in.");
+            
+//     //         // Prefill email if available in cookies
+//     //         const storedEmail = Cookies.get('userEmail');
+//     //         if (storedEmail) {
+//     //             setEmail(storedEmail);
+//     //         }
+//     //     }
+
+//     //     // Check if user is already authenticated
+//     //     const authState = Cookies.get(AUTH_STATE_COOKIE);
+//     //     if (authState === 'authenticated') {
+//     //         router.push('/dashboard');
+//     //     }
+//     // }, [searchParams, router]);
+
+//     const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+//         setEmail(e.target.value);
+
+//     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+//         setPassword(e.target.value);
+
+//     // Update your handleSubmit function in login.tsx:
+
+//     const handleSubmit = async (e: React.FormEvent) => {
+//         e.preventDefault();
+    
+//         if (!email || !password) {
+//             setError("Please enter both email and password");
+//             return;
+//         }
+    
+//         setIsLoading(true);
+//         setError("");
+//         setSuccessMessage("");
+    
+//         try {
+//             // Login request
+//             const response = await fetch('https://be-auth-server.onrender.com/api/v1/auth/login', {
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json'
+//                 },
+//                 body: JSON.stringify({ email, password }),
+//                 credentials: 'include',
+//                 cache: 'no-store'
+//             });
+    
+//             if (!response.ok) {
+//                 const errorData = await response.json();
+//                 throw new Error(errorData.message || 'Login failed');
+//             }
+    
+//             const data = await response.json();
+//             console.log('Login response:', data);
+            
+//             // Handle tokens from meta object
+//             if (data.meta && data.meta.access_token) {
+//                 Cookies.set('__frsadfrusrtkn', data.meta.access_token, { 
+//                     secure: true,
+//                     sameSite: 'strict',
+//                     path: '/'
+//                 });
+                
+//                 // Also set it in the standardized cookie name for our utility functions
+//                 Cookies.set('accessToken', data.meta.access_token, { 
+//                     secure: true,
+//                     sameSite: 'strict',
+//                     path: '/'
+//                 });
+//             }
+            
+//             if (data.meta && data.meta.refresh_token) {
+//                 Cookies.set('__rfrsadfrusrtkn', data.meta.refresh_token, { 
+//                     secure: true,
+//                     sameSite: 'strict',
+//                     path: '/'
+//                 });
+//             }
+            
+//             // Store user information
+//             Cookies.set('userEmail', email, { 
+//                 expires: 30,
+//                 path: '/',
+//                 sameSite: 'lax'
+//             });
+            
+//             // Store the user ID
+//             if (data.data && data.data.id) {
+//                 Cookies.set('userId', data.data.id, { 
+//                     expires: 30,
+//                     path: '/',
+//                     sameSite: 'lax'
+//                 });
+//             }
+            
+//             // Store first name and last name as userName
+//             if (data.data && data.data.first_name && data.data.last_name) {
+//                 const firstName = data.data.first_name;
+//                 const lastName = data.data.last_name;
+//                 const combinedName = `${firstName}.${lastName}`;
+                
+//                 Cookies.set('userName', combinedName, { 
+//                     expires: 30,
+//                     path: '/',
+//                     sameSite: 'lax'
+//                 });
+//             }
+            
+//             // Redirect to dashboard
+//             router.push('/dashboard');
+            
+//         } catch (err: any) {
+//             const errorMessage = err.message || 'Login failed';
+//             setError(errorMessage);
+//             console.error('Login error:', err);
+//         } finally {
+//             setIsLoading(false);
+//         }
+//     };
+
+//     return (
+//         <AuthLayout>
+//             <form className="space-y-6" onSubmit={handleSubmit}>
+                
+//                 <div className="text-center mb-6">
+//                     <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
+//                     <p className="text-emerald-500 mt-2">
+//                         Sign in to access your account
+//                     </p>
+//                 </div>
+
+//                 {/* Success Message */}
+//                 {successMessage && (
+//                     <div className="bg-emerald-50 border border-emerald-300 text-emerald-700 px-4 py-3 rounded relative" role="alert">
+//                         {successMessage}
+//                     </div>
+//                 )}
+
+//                 {/* Error Message */}
+//                 {error && (
+//                     <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded relative" role="alert">
+//                         {error}
+//                     </div>
+//                 )}
+
+//                 {/* Email Input */}
+//                 <InputField
+//                     type="email"
+//                     placeholder="Enter your email"
+//                     value={email}
+//                     onChange={handleEmailChange}
+//                 />
+
+//                 {/* Password Input */}
+//                 <div className="relative">
+//                     <InputField
+//                         type={showPassword ? "text" : "password"}
+//                         placeholder="Enter your password"
+//                         value={password}
+//                         onChange={handlePasswordChange}
+//                     />
+//                     <button 
+//                         type="button"
+//                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+//                         onClick={() => setShowPassword(!showPassword)}
+//                         aria-label={showPassword ? "Hide password" : "Show password"}
+//                     >
+//                         {showPassword ? (
+//                             <EyeClosed className="h-5 w-5" />
+//                         ) : (
+//                             <EyeOpen className="h-5 w-5" />
+//                         )}
+//                     </button>
+//                 </div>
+
+//                 {/* Forgot Password Link */}
+//                 <div className="text-right">
+//                     <Link
+//                         href="/auth/forgot-password"
+//                         className="text-sm text-white hover:underline"
+//                     >
+//                         Forgot password?
+//                     </Link>
+//                 </div>
+
+//                 {/* Login Button */}
+//                 <Button
+//                     type="submit"
+//                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+//                     disabled={isLoading}
+//                 >
+//                     {isLoading ? 'Logging in...' : 'Log In'}
+//                 </Button>
+
+//                 {/* Social Login Buttons */}
+//                 <div className="mt-6 space-y-4">
+//                     <button
+//                         type="button"
+//                         className="w-full px-4 py-2 flex items-center justify-center bg-white text-black rounded-lg shadow-sm hover:bg-emerald-50 focus:outline-none"
+//                         aria-label="Log in with Google"
+//                     >
+//                         <Image
+//                             src="/icons/google.png"
+//                             alt="Google"
+//                             height={20}
+//                             width={20}
+//                             className="h-5 mr-2"
+//                         />
+//                         Log in with Google
+//                     </button>
+//                     <button
+//                         type="button"
+//                         className="w-full px-4 py-2 flex items-center justify-center bg-emerald-800 text-white rounded-lg shadow-sm hover:bg-emerald-900 focus:outline-none"
+//                         aria-label="Log in with Facebook"
+//                     >
+//                         <FaFacebook className="mr-2 h-5 w-5" />
+//                         Log in with Facebook
+//                     </button>
+//                     <button
+//                         type="button"
+//                         className="w-full px-4 py-2 flex items-center justify-center bg-emerald-700 text-white rounded-lg shadow-sm hover:bg-emerald-800 focus:outline-none"
+//                         aria-label="Log in with LinkedIn"
+//                     >
+//                         <FaLinkedin className="mr-2 h-5 w-5" />
+//                         Log in with LinkedIn
+//                     </button>
+//                 </div>
+
+//                 {/* Don't have an account */}
+//                 <div className="mt-6 text-center text-sm text-white">
+//                     <p>
+//                         Don't have an account?{" "}
+//                         <Link
+//                             href="/auth/signup"
+//                             className="text-teal-500 hover:underline"
+//                         >
+//                             Sign up
+//                         </Link>
+//                     </p>
+//                 </div>
+
+//                 {/* Privacy Policy and Terms */}
+//                 <div className="mt-4 text-center text-sm text-white">
+//                     <p>
+//                         By signing in, you agree to our{" "}
+//                         <Link
+//                             href="/privacy-policy"
+//                             className="text-emerald-400 hover:underline"
+//                         >
+//                             Privacy Policy
+//                         </Link>{" "}
+//                         and{" "}
+//                         <Link
+//                             href="/terms-of-service"
+//                             className="text-emerald-400 hover:underline"
+//                         >
+//                             Terms of Service
+//                         </Link>
+//                     </p>
+//                 </div>
+//             </form>
+//         </AuthLayout>
+//     );
+// }
 
 
 

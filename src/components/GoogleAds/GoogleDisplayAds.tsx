@@ -182,6 +182,15 @@ interface DisplayCampaign {
   clicks: string;
   conversions: string;
   status: 'active' | 'paused' | 'ended';
+  budget?: {
+    initial: number;
+    consumed: number;
+  };
+  performanceData?: Array<{
+    date: string;
+    clicks: number;
+    impressions: number;
+  }>;
 }
 
 const GoogleDisplayAds: React.FC = () => {

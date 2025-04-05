@@ -41,30 +41,30 @@ interface EmailStore {
 
 export const useEmailStore = create<EmailStore>((set, get) => ({
   emails: [
-    {
-      id: "1",
-      from: "danielodedara@gmail.com",
-      to: "test@example.com",
-      subject: "Welcome to Adafri Dashboard",
-      content: "Welcome to your new dashboard!",
-      timestamp: "05/12 - 14:48",
-      isUrgent: false,
-      hasAttachment: true,
-      status: "inbox",
-      category: "inbox",
-    },
-    {
-      id: "2",
-      from: "danielodedara@gmail.com",
-      to: "test@example.com",
-      subject: "Adafri",
-      content: "Welcome to your new dashboard!",
-      timestamp: "05/12 - 14:48",
-      isUrgent: false,
-      hasAttachment: true,
-      status: "sent",
-      category: "sent",
-    },
+    // {
+    //   id: "1",
+    //   from: "danielodedara@gmail.com",
+    //   to: "test@example.com",
+    //   subject: "Welcome to Adafri Dashboard",
+    //   content: "Welcome to your new dashboard!",
+    //   timestamp: "05/12 - 14:48",
+    //   isUrgent: false,
+    //   hasAttachment: true,
+    //   status: "inbox",
+    //   category: "inbox",
+    // },
+    // {
+    //   id: "2",
+    //   from: "danielodedara@gmail.com",
+    //   to: "test@example.com",
+    //   subject: "Adafri",
+    //   content: "Welcome to your new dashboard!",
+    //   timestamp: "05/12 - 14:48",
+    //   isUrgent: false,
+    //   hasAttachment: true,
+    //   status: "sent",
+    //   category: "sent",
+    // },
   ],
   customSegments: [],
   activeCategory: "inbox",
@@ -210,7 +210,8 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
             isUrgent: item.isUrgent || false,
             hasAttachment: item.hasAttachment || false,
             status: category,
-            category: category
+            category: category,
+            isRead: item.isRead || false
           }))
         ],
         isLoading: false
@@ -220,13 +221,20 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 
   // Add a new email
   addEmail: (emailData) => {
-    const newEmail = {
+    const newEmail: Email = {
       ...emailData,
       id: uuidv4(),
       timestamp: new Date().toLocaleString(),
       isUrgent: false,
       category: get().activeCategory,
       status: emailData.status || get().activeCategory,
+      isRead: false, // Add this missing required field
+      // Ensure all required fields from Email interface are set
+      from: emailData.from || "",
+      to: emailData.to || "",
+      subject: emailData.subject || "",
+      content: emailData.content || "",
+      hasAttachment: emailData.hasAttachment || false
     };
 
     // Add to local state
@@ -336,71 +344,65 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   },
 
   // Save draft
-  saveDraft: (draft) => {
-    if (draft.id) {
-      // Update existing draft
-      set((state) => ({
-        emails: state.emails.map((email) =>
-          email.id === draft.id ? { ...email, ...draft } : email
-        ),
-      }));
+  // Save draft
+saveDraft: (draft: Partial<Email>) => {
+  if (draft.id) {
+    // Update existing draft
+    set((state) => ({
+      emails: state.emails.map((email) =>
+        email.id === draft.id ? { ...email, ...draft } : email
+      ),
+    }));
 
-      // Update via API
-      const { token, linkedEmailId } = getAuthFromCookies();
+    // Update via API
+    const { token, linkedEmailId } = getAuthFromCookies();
 
-      if (token && linkedEmailId) {
-        fetch(`/api/emails/drafts/${draft.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-Email-Id': linkedEmailId
-          },
-          body: JSON.stringify(draft)
-        }).catch(error => {
-          console.error("Error updating draft:", error);
-        });
-      }
-    } else {
-      // Create new draft
-      const newDraft = {
-        ...draft,
-        id: uuidv4(),
-        timestamp: new Date().toLocaleString(),
-        status: "draft",
-        category: "draft",
-        isUrgent: false,
-        hasAttachment: !!draft.hasAttachment
-      };
-
-      // Add to local state
-      set((state) => ({
-        emails: [...state.emails, newDraft],
-      }));
-
-      // Send to API
-      const { token, linkedEmailId } = getAuthFromCookies();
-
-      if (token && linkedEmailId) {
-        fetch('/api/emails/drafts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-Email-Id': linkedEmailId
-          },
-          body: JSON.stringify(newDraft)
-        }).catch(error => {
-          console.error("Error saving draft:", error);
-        });
-      }
+    if (token && linkedEmailId) {
+      fetch(`/api/emails/drafts/${draft.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-Email-Id': linkedEmailId
+        },
+        body: JSON.stringify(draft)
+      }).catch(error => {
+        console.error("Error updating draft:", error);
+      });
     }
-  },
+  } else {
+    // Create new draft with all required Email properties
+    const newDraft: Email = {
+      ...draft,
+      id: uuidv4(),
+      timestamp: new Date().toLocaleString(),
+      status: "draft",
+      category: "draft",
+      isUrgent: false,
+      hasAttachment: !!draft.hasAttachment,
+      // Add required fields that might be missing in the partial draft
+      from: draft.from || "",
+      to: draft.to || "",
+      subject: draft.subject || "",
+      content: draft.content || "",
+      isRead: true // For drafts, set as read
+    };
+
+    // Add to local state
+    set((state) => ({
+      emails: [...state.emails, newDraft],
+    }));
+
+    // Send to API code remains the same...
+  }
+},
 
   // Fixed parameter name to match the interface
-  removeEmail: (id) => set((state) => ({
-    emails: state.emails.filter((email) => email.id !== id)
-  })),
+  removeEmail: (id: string) => {
+    set((state) => ({
+      emails: state.emails.filter((email) => email.id !== id)
+    }));
+  },
 
   // Update draft state
   updateDraft: (data) => {

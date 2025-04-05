@@ -39,9 +39,15 @@ interface CreativeUploadData {
 }
 
 // Budget data interface
-interface BudgetData {
+// interface BudgetData {
+//   budget: number;
+//   budgetType: 'daily' | 'lifetime';
+// }
+
+interface BidBudgetData {
+  bidType: 'CPM' | 'CPC';
   budget: number;
-  budgetType: 'daily' | 'lifetime';
+  impressions: number;
 }
 
 const CampaignFlowManager: React.FC<CampaignFlowManagerProps> = ({
@@ -118,7 +124,7 @@ const CampaignFlowManager: React.FC<CampaignFlowManagerProps> = ({
   };
   
   // Handler for the budget step submission
-  const handleBudgetSubmit = (budgetData: BudgetData) => {
+  const handleBudgetSubmit = (budgetData: BidBudgetData) => {
     setCampaignData({
       ...campaignData,
       ...budgetData

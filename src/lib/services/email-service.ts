@@ -33,7 +33,8 @@ export const emailService = {
             throw new Error(`API error: ${response.statusText}`);
         }
 
-        const data: ApiResponse<Email[]> = await response.json();
+        // Use a more flexible type that allows indexing with string
+        const data: any = await response.json();
 
         // Handle different response structures
         let emailsData: any[] = [];
@@ -48,7 +49,9 @@ export const emailService = {
         } else {
             // Look for any array in the response
             for (const key in data) {
-                if (Array.isArray(data[key]) && data[key].length > 0) {
+                if (Object.prototype.hasOwnProperty.call(data, key) &&
+                    Array.isArray(data[key]) &&
+                    data[key].length > 0) {
                     emailsData = data[key];
                     break;
                 }
@@ -56,20 +59,28 @@ export const emailService = {
 
             // Handle single draft case
             if (emailsData.length === 0 && typeof data === "object" && data !== null) {
-                if (data.id || data._id) {
+                if ('id' in data || '_id' in data) {
                     emailsData = [data];
                 }
             }
         }
 
         // Format emails to ensure consistent structure
-        return emailsData.map((email: any) => ({
+        // Add explicit type annotation for the returned array
+        return emailsData.map((email: any): Email => ({
             id: email.id || email._id || `draft-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             to: email.to || "No recipient",
             subject: email.subject || "No subject",
             content: email.content || "",
-            createdAt: email.createdAt || email.created_at || Date.now(),
-            status: "draft",
+            // Convert createdAt to timestamp string format
+            timestamp: new Date(email.createdAt || email.created_at || email.timestamp || Date.now()).toISOString(),
+            from: email.from || "no-reply@example.com", // Provide a default
+            status: email.status || "draft", // Cast to the correct type
+            isUrgent: email.isUrgent || false,
+            hasAttachment: email.hasAttachment || false,
+            category: email.category || "uncategorized",
+            isRead: email.isRead || false,
+            email_id: email.email_id || null
         }));
     },
 

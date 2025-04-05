@@ -1,6 +1,6 @@
 // api/sendEmail.ts
 
-import { EmailData } from '@/lib/types/email';
+import { EmailData, EmailSendData } from '@/lib/types/email';
 import { getAuthToken } from '@/lib/utils/cookies';
 
 /**
@@ -8,7 +8,7 @@ import { getAuthToken } from '@/lib/utils/cookies';
  * @param emailData Object containing email details
  * @returns Response from the email service
  */
-export async function sendEmail(emailData: EmailData): Promise<any> {
+export async function sendEmail(emailData: EmailSendData): Promise<any> {
   console.log("sendEmail function called with data:", emailData);
 
   const token = getAuthToken();

@@ -14,16 +14,10 @@ interface SearchCampaign {
   name: string;
   description: string;
   date: string;
-  views: string;
-  comments: string;
-  likes: string;
+  views?: string; // Added with optional marker
+  comments?: string; // Added with optional marker
+  likes?: string; // Added with optional marker
   status: 'active' | 'paused' | 'ended';
-  tasks?: {
-    id: string;
-    title: string;
-    completed: boolean;
-  }[];
-  assignee?: string;
 }
 
 const GoogleSearchAds: React.FC = () => {
@@ -47,7 +41,7 @@ const GoogleSearchAds: React.FC = () => {
         { id: "2", title: "Add promotional visuals", completed: false }
       ],
       assignee: "Nuur"
-    });
+    } as any);
   };
 
   return (

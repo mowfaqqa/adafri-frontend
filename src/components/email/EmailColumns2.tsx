@@ -189,7 +189,7 @@ export const EmailColumns2 = () => {
       }
 
       // Format emails and ensure they have proper structure
-      const formattedEmails = emailsData.map((email: any) => {
+      const formattedEmails: Email[] = emailsData.map((email: any) => {
         // Parse and format the email content
         const formattedContent = formatEmailContent(email.content || '');
         
@@ -197,11 +197,11 @@ export const EmailColumns2 = () => {
           id: email.id || email._id || `inbox-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           subject: email.subject || 'No Subject',
           content: formattedContent.content,
-          contentType: formattedContent.contentType,
+          contentType: formattedContent.contentType as 'text' | 'html',
           from: email.from || email.sender || 'Unknown Sender',
           to: email.to || email.recipient || '',
           timestamp: email.date || email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
-          status: email.type || "inbox",
+          status: email.type || "inbox" as EmailSegment,
           isUrgent: email.isUrgent || email.is_urgent || false,
           hasAttachment: email.hasAttachment || email.has_attachment || false,
           category: email.category || email.type || "inbox",
@@ -211,7 +211,7 @@ export const EmailColumns2 = () => {
       });
 
       // Add emails to store
-      formattedEmails.forEach(email => {
+      formattedEmails.forEach((email: Email) => {
         addEmail(email);
       });
       

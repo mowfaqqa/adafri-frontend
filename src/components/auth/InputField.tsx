@@ -1,6 +1,7 @@
 import React from "react";
 
 interface InputFieldProps {
+  id?: string;  // Add id property
   type?: string;
   placeholder?: string;
   name?: string;
@@ -16,6 +17,7 @@ interface InputFieldProps {
 }
 
 const InputField: React.FC<InputFieldProps> = ({
+  id,  // Include id in destructured props
   type = "text",
   placeholder = "",
   name,
@@ -31,8 +33,9 @@ const InputField: React.FC<InputFieldProps> = ({
 }) => {
   return (
     <div>
-      {text && <label className="block mb-1 text-sm font-medium">{text}</label>}
+      {text && <label htmlFor={id} className="block mb-1 text-sm font-medium">{text}</label>}
       <input
+        id={id}  // Add id to input element
         type={type}
         name={name}
         placeholder={placeholder}

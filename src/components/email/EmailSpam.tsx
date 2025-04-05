@@ -172,16 +172,16 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
 
     // Sort and filter emails
     const sortedAndFilteredEmails = [...apiSpamEmails]
-        .filter(email => {
-            if (!filterDate) return true;
-            const emailDate = new Date(email.createdAt || Date.now()).toDateString();
-            return emailDate === filterDate;
-        })
-        .sort((a, b) => {
-            const dateA = new Date(a.createdAt || Date.now()).getTime();
-            const dateB = new Date(b.createdAt || Date.now()).getTime();
-            return sortNewest ? dateB - dateA : dateA - dateB;
-        });
+    .filter(email => {
+        if (!filterDate) return true;
+        const emailDate = new Date((email as any).createdAt ?? Date.now()).toDateString();
+        return emailDate === filterDate;
+      })
+      .sort((a, b) => {
+        const dateA = new Date((a as any).createdAt ?? Date.now()).getTime();
+        const dateB = new Date((b as any).createdAt ?? Date.now()).getTime();
+        return sortNewest ? dateB - dateA : dateA - dateB;
+      });
 
     const toggleSelectEmail = (id: string) => {
         setSelectedEmails(prev =>
@@ -431,7 +431,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
                                                     </div>
                                                 </div>
                                                 <div className="col-span-3 text-right text-sm text-gray-500">
-                                                    {formatDate(email.createdAt?.toString())}
+                                                    {formatDate((email as any).createdAt?.toString())}
                                                 </div>
                                             </div>
                                         </div>

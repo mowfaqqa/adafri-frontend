@@ -24,10 +24,15 @@ interface AudienceData {
 }
 
 // Budget data interface
-interface BudgetData {
+interface BidBudgetData  {
+  bidType: 'CPM' | 'CPC';
   budget: number;
-  budgetType: 'daily' | 'lifetime';
+  impressions: number;
 }
+// interface BudgetData {
+//   budget: number;
+//   budgetType: 'daily' | 'lifetime';
+// }
 
 // Search Ad Creative data
 interface SearchAdData {
@@ -102,7 +107,7 @@ const CampaignSearchManager: React.FC<CampaignFlowManagerProps> = ({
   };
   
   // Handler for the budget step submission
-  const handleBudgetSubmit = (budgetData: BudgetData) => {
+  const handleBudgetSubmit = (budgetData: BidBudgetData) => {
     setCampaignData({
       ...campaignData,
       ...budgetData

@@ -9,18 +9,22 @@ type Task = {
   completed: boolean;
 };
 
-type Campaign = {
+interface Campaign {
   id: string;
   name: string;
-  date?: string;
-  status: "active" | "draft" | "completed";
-  description?: string;
-  imageUrl?: string;
-  impressions?: number;
-  clicks?: number;
-  conversions?: number;
-  tasks?: Task[];
-};
+  description: string;
+  date: string;
+  views?: string;
+  comments?: string;
+  likes?: string;
+  status: 'active' | 'paused' | 'ended';
+  tasks?: {
+    id: string;
+    title: string;
+    completed: boolean;
+  }[];
+  assignee?: string; // Add this field
+}
 
 // Define types for display campaigns
 interface DisplayCampaign {

@@ -93,78 +93,77 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
     };
     
     // Helper function to process response data
-    const processResponseData = (data: any) => {
-      // Check if data contains emails (handle different response structures)
-      let emailsData: any[] = [];
-      
-      if (Array.isArray(data)) {
-        emailsData = data;
-      } else if (data.data && Array.isArray(data.data)) {
-        emailsData = data.data;
-      } else if (data.sent && Array.isArray(data.sent)) {
-        emailsData = data.sent;
-      } else if (data.emails && Array.isArray(data.emails)) {
-        emailsData = data.emails;
-      } else {
-        console.log("Response structure different than expected:", data);
-        // Look for any array in the response that might contain emails
-        for (const key in data) {
-          if (Array.isArray(data[key]) && data[key].length > 0) {
-            console.log(`Found array in response at key: ${key}`, data[key]);
-            emailsData = data[key];
-            break;
-          }
+    // Helper function to process response data
+  const processResponseData = (data: any) => {
+    // Check if data contains emails (handle different response structures)
+    let emailsData: any[] = [];
+    
+    if (Array.isArray(data)) {
+      emailsData = data;
+    } else if (data.data && Array.isArray(data.data)) {
+      emailsData = data.data;
+    } else if (data.sent && Array.isArray(data.sent)) {
+      emailsData = data.sent;
+    } else if (data.emails && Array.isArray(data.emails)) {
+      emailsData = data.emails;
+    } else {
+      console.log("Response structure different than expected:", data);
+      // Look for any array in the response that might contain emails
+      for (const key in data) {
+        if (Array.isArray(data[key]) && data[key].length > 0) {
+          console.log(`Found array in response at key: ${key}`, data[key]);
+          emailsData = data[key];
+          break;
         }
       }
-      
-      if (emailsData.length === 0) {
-        console.log("No emails found in the response");
-        setApiSentEmails([]);
-        return;
-      }
-      
-      console.log("Sample email data structure:", emailsData[0]);
-      
-      // Format emails and ensure they have proper structure
-      const formattedEmails: Email[] = emailsData.map((email: any) => {
-        // Ensure we have a valid object to work with
-        if (!email || typeof email !== 'object') {
-          console.warn("Skipping invalid email data:", email);
-          return null;
-        }
-        
-        return {
-          id: email.id || email._id || `sent-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          subject: email.subject || 'No Subject',
-          content: email.content || '',
-          from: email.from || email.sender || 'Unknown Sender',
-          to: email.to || email.recipient || '',
-          timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+    }
+    
+    if (emailsData.length === 0) {
+      console.log("No emails found in the response");
+      setApiSentEmails([]);
+      return;
+    }
+    
+    console.log("Sample email data structure:", emailsData[0]);
+    
+    // First, filter out invalid emails, then map them to the correct structure
+    const validEmailsData = emailsData.filter(email => email && typeof email === 'object');
+    
+    // Now map the valid emails to the correct structure
+    const formattedEmails: Email[] = validEmailsData.map((email: any): Email => {
+      return {
+        id: email.id || email._id || `sent-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        subject: email.subject || 'No Subject',
+        content: email.content || '',
+        contentType: email.contentType || 'text',  // Add this if it's required in your Email interface
+        from: email.from || email.sender || 'Unknown Sender',
+        to: email.to || email.recipient || '',
+        timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+        status: "sent",
+        isUrgent: Boolean(email.isUrgent || email.is_urgent || false),
+        hasAttachment: Boolean(email.hasAttachment || email.has_attachment || false),
+        category: "sent",
+        isRead: true, // Sent emails are always read
+        email_id: email.email_id || null  // Add this if it's required in your Email interface
+      };
+    });
+    
+    console.log(`Processed ${formattedEmails.length} sent emails`);
+    
+    // Add to email store first
+    formattedEmails.forEach(email => {
+      // Check if email already exists in store to prevent duplicates
+      const exists = emails.some(e => e.id === email.id);
+      if (!exists) {
+        addEmail({
+          ...email,
           status: "sent",
-          isUrgent: Boolean(email.isUrgent || email.is_urgent || false),
-          hasAttachment: Boolean(email.hasAttachment || email.has_attachment || false),
-          category: "sent" as EmailCategory,
-          isRead: true // Sent emails are always read
-        };
-      }).filter((email): email is Email => email !== null);
-      
-      console.log(`Processed ${formattedEmails.length} sent emails`);
-      
-      // Add to email store first
-      formattedEmails.forEach(email => {
-        // Check if email already exists in store to prevent duplicates
-        const exists = emails.some(e => e.id === email.id);
-        if (!exists) {
-          addEmail({
-            ...email,
-            status: "sent",
-            category: "sent" as EmailCategory
-          });
-        }
-      });
-      
-      setApiSentEmails(formattedEmails);
-    };
+        });
+      }
+    });
+    
+    setApiSentEmails(formattedEmails);
+  };
     
     fetchSentEmails();
   }, [emails, addEmail]);

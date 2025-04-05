@@ -24,8 +24,12 @@ const ALLOWED_PROVIDERS = [
     "googleWorkspace"
 ];
 
+interface EmailProviderMap {
+    [domain: string]: string;
+}
+
 // Email provider detection configuration
-const EMAIL_PROVIDERS = {
+const EMAIL_PROVIDERS: EmailProviderMap = {
     "gmail.com": "gmail",
     "googlemail.com": "gmail",
     "outlook.com": "outlook",
@@ -56,30 +60,17 @@ export function LinkEmailModal() {
     // const accessToken = getAuthToken();
 
     // Detect provider from email address
-    const detectProviderFromEmail = (email) => {
+    const detectProviderFromEmail = (email: string): string | null => {
         if (!email || !email.includes('@')) return null;
         
         const domain = email.split('@')[1].toLowerCase().trim();
-
+      
         // Return provider if in predefined list, otherwise return null
-    return EMAIL_PROVIDERS[domain] || null;
-        
-        // // Check for known providers
-        // if (EMAIL_PROVIDERS[domain]) {
-        //     return EMAIL_PROVIDERS[domain];
-        // }
-        
-        // // Check for Google Workspace
-        // if (domain.includes('.')) {
-        //     // Simple check for potential Google Workspace domain
-        //     return domain.includes('gmail.com') ? 'gmail' : 'googleWorkspace';
-        // }
-        
-        // return null;
+        return EMAIL_PROVIDERS[domain] || null;
     };
 
     // Update email and check provider
-    const handleEmailChange = (email) => {
+    const handleEmailChange = (email: string) => {
         const detectedProvider = detectProviderFromEmail(email);
         
         const newCredentials = { 

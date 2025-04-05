@@ -1,37 +1,39 @@
-// api/sendEmail.ts
-
-import { EmailData } from '@/lib/types/email';
+import { EmailSendData } from '@/lib/types/email';
 import { getAuthToken } from '@/lib/utils/cookies';
 
 /**
- * Sends an email using the stored access token
+ * Saves a draft email using the stored access token
  * @param emailData Object containing email details
  * @returns Response from the email service
  */
-export async function saveDraft(emailData: EmailData): Promise<any> {
-  console.log("sendEmail function called with data:", emailData);
-
+export async function saveDraft(emailData: EmailSendData): Promise<any> {
+  console.log("saveDraft function called with data:", emailData);
+  
   const token = getAuthToken();
   console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
-
+  
   if (!token) {
     throw new Error("No access token available");
   }
-
+  
   // API endpoint
   const apiEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts';
   console.log("Sending request to API endpoint:", apiEndpoint);
-
+  
   // Prepare the request body
   const requestBody = {
-        to: emailData.to || "", // Ensure empty fields are sent as empty strings
-        subject: emailData.subject || "",
-        content: emailData.content || "", // Fix: API expects "content"
-        email_id: emailData.email_id || "", // Ensure this is never undefined
-      };
-
+    to: emailData.to || "", // Using EmailSendData which has 'to' property
+    subject: emailData.subject || "",
+    content: emailData.content || "",
+    email_id: emailData.email_id || "",
+    // Include optional fields if they exist
+    ...(emailData.cc && { cc: emailData.cc }),
+    ...(emailData.bcc && { bcc: emailData.bcc }),
+    ...(emailData.signature && { signature: emailData.signature })
+  };
+  
   console.log("Prepared request body:", requestBody);
-
+  
   try {
     const response = await fetch(apiEndpoint, {
       method: 'POST',
@@ -41,20 +43,20 @@ export async function saveDraft(emailData: EmailData): Promise<any> {
       },
       body: JSON.stringify(requestBody)
     });
-
+    
     console.log("API response status:", response.status);
-
+    
     if (!response.ok) {
       const errorText = await response.text();
       console.error("API error response:", errorText);
-      throw new Error(errorText || `Failed to send email: ${response.status}`);
+      throw new Error(errorText || `Failed to save draft: ${response.status}`);
     }
-
+    
     const responseData = await response.json();
     console.log("API success response:", responseData);
     return responseData;
   } catch (error) {
-    console.error('Error in sendEmail function:', error);
+    console.error('Error in saveDraft function:', error);
     throw error;
   }
 }

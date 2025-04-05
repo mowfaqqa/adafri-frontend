@@ -1,18 +1,18 @@
 'use client';
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import InputField from "@/components/auth/InputField";
 import AuthLayout from "@/components/auth/AuthLayout";
 
-export default function ResetPasswordPage() {
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState(false);
-    const [token, setToken] = useState("");
+// Create a separate component that uses useSearchParams
+function ResetPasswordForm() {
+    const [password, setPassword] = useState<string>("");
+    const [confirmPassword, setConfirmPassword] = useState<string>("");
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string>("");
+    const [success, setSuccess] = useState<boolean>(false);
+    const [token, setToken] = useState<string>("");
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -76,88 +76,101 @@ export default function ResetPasswordPage() {
     };
 
     return (
-        <AuthLayout>
-            <div className="w-full max-w-md mx-auto">
-                <h1 className="text-2xl font-bold text-center text-white mb-6">Reset Your Password</h1>
-                
-                {success ? (
-                    <div className="text-center space-y-6">
-                        <div className="bg-emerald-50 border border-emerald-300 text-emerald-700 px-4 py-3 rounded relative" role="alert">
-                            Your password has been successfully reset.
-                        </div>
-                        <Button
-                            type="button"
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                            onClick={() => router.push('/login')}
-                        >
-                            Return to Sign In
-                        </Button>
+        <div className="w-full max-w-md mx-auto">
+            <h1 className="text-2xl font-bold text-center text-white mb-6">Reset Your Password</h1>
+            
+            {success ? (
+                <div className="text-center space-y-6">
+                    <div className="bg-emerald-50 border border-emerald-300 text-emerald-700 px-4 py-3 rounded relative" role="alert">
+                        Your password has been successfully reset.
                     </div>
-                ) : (
-                    <form className="space-y-6" onSubmit={handleSubmit}>
-                        {/* Error Message */}
-                        {error && (
-                            <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="text-white mb-4">
-                            Please enter your new password below.
+                    <Button
+                        type="button"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => router.push('/login')}
+                    >
+                        Return to Sign In
+                    </Button>
+                </div>
+            ) : (
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                    {/* Error Message */}
+                    {error && (
+                        <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded relative" role="alert">
+                            {error}
                         </div>
+                    )}
 
-                        {/* New Password Input */}
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
-                                New Password
-                            </label>
-                            <InputField
-                                // id="password"
-                                type="password"
-                                placeholder="Enter new password"
-                                value={password}
-                                onChange={handlePasswordChange}
-                                // required
-                            />
-                        </div>
+                    <div className="text-white mb-4">
+                        Please enter your new password below.
+                    </div>
 
-                        {/* Confirm Password Input */}
-                        <div>
-                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
-                                Confirm New Password
-                            </label>
-                            <InputField
-                                // id="confirmPassword"
-                                type="password"
-                                placeholder="Confirm new password"
-                                value={confirmPassword}
-                                onChange={handleConfirmPasswordChange}
-                                // required
-                            />
-                        </div>
+                    {/* New Password Input */}
+                    <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
+                            New Password
+                        </label>
+                        <InputField
+                            id="password"
+                            type="password"
+                            placeholder="Enter new password"
+                            value={password}
+                            onChange={handlePasswordChange}
+                        />
+                    </div>
 
-                        {/* Password Requirements */}
-                        <div className="text-sm text-white opacity-80">
-                            <p>Password must:</p>
-                            <ul className="list-disc pl-5 mt-1">
-                                <li>Be at least 8 characters long</li>
-                                <li>Include at least one uppercase letter</li>
-                                <li>Include at least one number</li>
-                                <li>Include at least one special character</li>
-                            </ul>
-                        </div>
+                    {/* Confirm Password Input */}
+                    <div>
+                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
+                            Confirm New Password
+                        </label>
+                        <InputField
+                            id="confirmPassword"
+                            type="password"
+                            placeholder="Confirm new password"
+                            value={confirmPassword}
+                            onChange={handleConfirmPasswordChange}
+                        />
+                    </div>
 
-                        {/* Submit Button */}
-                        <Button
-                            type="submit"
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                            disabled={isLoading || !token}
-                        >
-                            {isLoading ? 'Resetting...' : 'Reset Password'}
-                        </Button>
-                    </form>
-                )}
-            </div>
+                    {/* Password Requirements */}
+                    <div className="text-sm text-white opacity-80">
+                        <p>Password must:</p>
+                        <ul className="list-disc pl-5 mt-1">
+                            <li>Be at least 8 characters long</li>
+                            <li>Include at least one uppercase letter</li>
+                            <li>Include at least one number</li>
+                            <li>Include at least one special character</li>
+                        </ul>
+                    </div>
+
+                    {/* Submit Button */}
+                    <Button
+                        type="submit"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={isLoading || !token}
+                    >
+                        {isLoading ? 'Resetting...' : 'Reset Password'}
+                    </Button>
+                </form>
+            )}
+        </div>
+    );
+}
+
+// Main component with Suspense boundary
+const ResetPasswordPage: React.FC = () => {
+    return (
+        <AuthLayout>
+            <Suspense fallback={
+                <div className="w-full max-w-md mx-auto text-white text-center p-6">
+                    <div className="animate-pulse">Loading...</div>
+                </div>
+            }>
+                <ResetPasswordForm />
+            </Suspense>
         </AuthLayout>
     );
 }
+
+export default ResetPasswordPage;

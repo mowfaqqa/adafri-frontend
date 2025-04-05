@@ -10,10 +10,10 @@ interface AdBudgetSelectionProps {
     isOpen: boolean;
     onClose: () => void;
     onPrevious: () => void;
-    onNext: (budgetData: BudgetData) => void;
+    onNext: (budgetData: BidBudgetData) => void;
 }
 
-interface BudgetData {
+interface BidBudgetData  {
     bidType: 'CPM' | 'CPC';
     budget: number;
     impressions: number;
@@ -62,7 +62,7 @@ const AdBudgetSelection: React.FC<AdBudgetSelectionProps> = ({
     };
 
     const handleSubmit = () => {
-        const budgetData: BudgetData = {
+        const budgetData: BidBudgetData = {
             bidType,
             budget,
             impressions

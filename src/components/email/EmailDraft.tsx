@@ -30,7 +30,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Add state for controlling the ComposeModal
   const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
   const [selectedDraft, setSelectedDraft] = useState<Email | null>(null);
@@ -190,15 +190,14 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   const sortedAndFilteredEmails = [...apiDraftEmails]
     .filter(email => {
       if (!filterDate) return true;
-      const emailDate = new Date(email.createdAt || Date.now()).toDateString();
+      const emailDate = new Date(email.timestamp ?? Date.now()).toDateString();
       return emailDate === filterDate;
     })
     .sort((a, b) => {
-      const dateA = new Date(a.createdAt || Date.now()).getTime();
-      const dateB = new Date(b.createdAt || Date.now()).getTime();
+      const dateA = new Date(a.timestamp ?? Date.now()).getTime();
+      const dateB = new Date(b.timestamp ?? Date.now()).getTime();
       return sortNewest ? dateB - dateA : dateA - dateB;
     });
-
   const toggleSelectEmail = (id: string) => {
     setSelectedEmails(prev =>
       prev.includes(id)
@@ -220,7 +219,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
 
     try {
       const token = getAccessToken();
-      
+
       if (!token) {
         throw new Error('No access token found');
       }
@@ -301,8 +300,8 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   // FIXED: Update draft instead of creating a new one
   const updateDraftInApi = async (draftId: string, updatedData: any) => {
     try {
-      const token = getAccessToken();
-      
+      const token = getAuthToken();
+
       if (!token) {
         throw new Error('No access token found');
       }
@@ -324,10 +323,10 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       // Refresh the drafts list
       const updatedEmail = await response.json();
       console.log('Draft updated successfully:', updatedEmail);
-      
+
       // Update the local state with the updated draft
-      setApiDraftEmails(prev => 
-        prev.map(email => 
+      setApiDraftEmails(prev =>
+        prev.map(email =>
           email.id === draftId ? { ...email, ...updatedData } : email
         )
       );
@@ -351,10 +350,10 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
         status: "draft"
       });
     }
-    
+
     // Set the selected draft for the modal
     setSelectedDraft(email);
-    
+
     // Open the compose modal
     setIsComposeModalOpen(true);
   };
@@ -362,16 +361,16 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   // Handler for when the ComposeModal is closed
   const handleComposeModalClose = (savedDraft?: Email) => {
     setIsComposeModalOpen(false);
-    
+
     // If a draft was saved and it's an edit (has an ID), update the local state
     if (savedDraft && selectedDraft && savedDraft.id === selectedDraft.id) {
-      setApiDraftEmails(prev => 
-        prev.map(email => 
+      setApiDraftEmails(prev =>
+        prev.map(email =>
           email.id === savedDraft.id ? savedDraft : email
         )
       );
     }
-    
+
     setSelectedDraft(null);
   };
 
@@ -385,10 +384,10 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
           subject: draftData.subject,
           content: draftData.content
         });
-        
+
         // Update local state
-        setApiDraftEmails(prev => 
-          prev.map(email => 
+        setApiDraftEmails(prev =>
+          prev.map(email =>
             email.id === draftData.id ? draftData : email
           )
         );
@@ -471,7 +470,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
                         onCheckedChange={() => toggleSelectEmail(email.id || '')}
                       />
                     </div>
-                    <div 
+                    <div
                       className="flex-grow"
                       onClick={() => handleEditDraft(email)}
                     >
@@ -485,7 +484,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
                           </div>
                         </div>
                         <div className="col-span-3 text-right text-sm text-gray-500">
-                          {formatDate(email.createdAt?.toString())}
+                          {formatDate((email as any).timestamp?.toString())}
                         </div>
                       </div>
                     </div>
@@ -521,9 +520,9 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       </div>
 
       {/* Compose Modal */}
-      <ComposeModal 
-        isOpen={isComposeModalOpen} 
-        onClose={handleComposeModalClose} 
+      <ComposeModal
+        isOpen={isComposeModalOpen}
+        onClose={handleComposeModalClose}
         editMode={true}
         draftEmail={selectedDraft}
         onSaveDraft={handleSaveDraft}  // ADDED: Pass the save handler to update existing drafts

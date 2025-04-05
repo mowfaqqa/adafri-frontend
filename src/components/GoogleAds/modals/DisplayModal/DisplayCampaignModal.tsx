@@ -62,7 +62,10 @@ const DisplayCampaignModal: React.FC<DisplayCampaignModalProps> = ({
       try {
         const endDate = parse(initialData.endDate, 'yyyy-MM-dd', new Date());
         if (isValid(endDate)) {
-          setDate(prev => ({ ...prev, to: endDate }));
+          setDate(prev => ({ 
+            from: prev?.from || endDate, // Ensure from is always defined
+            to: endDate 
+          }));
         }
       } catch (error) {
         console.error("Invalid end date format:", error);
@@ -97,7 +100,10 @@ const DisplayCampaignModal: React.FC<DisplayCampaignModalProps> = ({
     try {
       const parsedDate = parse(value, 'yyyy-MM-dd', new Date());
       if (isValid(parsedDate)) {
-        setDate(prev => ({ ...prev, to: parsedDate }));
+        setDate(prev => ({
+          from: prev?.from || parsedDate,
+          to: parsedDate
+        }))
       }
     } catch (error) {
       // Invalid date format, just update the input

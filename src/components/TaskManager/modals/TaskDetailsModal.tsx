@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -26,6 +25,11 @@ import {
   Plus,
   Download,
   Trash2,
+  File,
+  Image,
+  FileText,
+  Video,
+  Music,
 } from "lucide-react";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
 import { getFileUrl } from "@/lib/api/task-manager/fileApi";
@@ -35,6 +39,21 @@ interface TaskDetailsModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
 }
+
+// Helper function to get the appropriate file icon based on mimetype
+const getFileIcon = (mimetype: string) => {
+  if (mimetype.startsWith("image/")) {
+    return <Image className="h-4 w-4 mr-2 text-gray-400" />;
+  } else if (mimetype.startsWith("video/")) {
+    return <Video className="h-4 w-4 mr-2 text-gray-400" />;
+  } else if (mimetype.startsWith("audio/")) {
+    return <Music className="h-4 w-4 mr-2 text-gray-400" />;
+  } else if (mimetype.startsWith("text/") || mimetype.includes("document")) {
+    return <FileText className="h-4 w-4 mr-2 text-gray-400" />;
+  } else {
+    return <File className="h-4 w-4 mr-2 text-gray-400" />;
+  }
+};
 
 const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   task,
@@ -68,8 +87,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
     task.id as string
   );
 
-  const { data: columnList = [] } =
-    useColumnsQuery();
+  const { data: columnList = [] } = useColumnsQuery();
 
   // Update local state when task changes
   useEffect(() => {
@@ -448,7 +466,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                     className="flex items-center justify-between p-3 border rounded-md"
                   >
                     <div className="flex items-center">
-                      <Paperclip className="h-4 w-4 mr-2 text-gray-400" />
+                      {getFileIcon(file.mimetype)}
                       <div>
                         <p className="text-sm font-medium">
                           {file.originalname}
@@ -461,10 +479,9 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                     </div>
                     <div className="flex gap-2">
                       <a
-                        href={getFileUrl(file.id)}
+                        href={getFileUrl(file)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        download
                       >
                         <Button
                           variant="ghost"

@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoreVertical, PenSquare } from "lucide-react";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Campaign Card Component
 const CampaignCard = ({ name, email, role, status }: any) => (
@@ -102,7 +103,8 @@ const SenderCard = ({ name, email, phone, status }: any) => (
 
 const DashboardTabs = () => {
   return (
-    <div className="px-6 py-2">
+    <ProtectedRoute>
+      <div className="px-6 py-2">
       <h2 className="text-2xl font-medium pb-2">Mass Mailing</h2>
       <Tabs defaultValue="campaigns" className="w-full">
         <div className="flex justify-between items-center mb-6">
@@ -261,6 +263,7 @@ const DashboardTabs = () => {
         </TabsContent>
       </Tabs>
     </div>
+    </ProtectedRoute>
   );
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,8 @@ import {
     EyeOff as EyeClosed
 } from "lucide-react";
 
-export default function VerifyResetOTPPage() {
+// Create a separate component that uses useSearchParams
+function VerifyResetOTPForm() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [email, setEmail] = useState("");
@@ -102,127 +103,127 @@ export default function VerifyResetOTPPage() {
     };
 
     return (
-        <AuthLayout>
-            <div className="w-full max-w-md mx-auto">
-                <h1 className="text-2xl font-bold text-center text-white mb-6">Reset Your Password</h1>
-                
-                {success ? (
-                    <div className="text-center space-y-6">
-                        <div className="bg-emerald-50 border border-emerald-300 text-emerald-700 px-4 py-3 rounded relative" role="alert">
-                            Password reset successful! Redirecting to login page...
-                        </div>
+        <div className="w-full max-w-md mx-auto">
+            <h1 className="text-2xl font-bold text-center text-white mb-6">Reset Your Password</h1>
+            
+            {success ? (
+                <div className="text-center space-y-6">
+                    <div className="bg-emerald-50 border border-emerald-300 text-emerald-700 px-4 py-3 rounded relative" role="alert">
+                        Password reset successful! Redirecting to login page...
                     </div>
-                ) : (
-                    <form className="space-y-6" onSubmit={handleSubmit}>
-                        {/* Error Message */}
-                        {error && (
-                            <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="text-white mb-4">
-                            Enter the verification code sent to your email and your new password.
+                </div>
+            ) : (
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                    {/* Error Message */}
+                    {error && (
+                        <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded relative" role="alert">
+                            {error}
                         </div>
+                    )}
 
-                        {/* Email Input */}
+                    <div className="text-white mb-4">
+                        Enter the verification code sent to your email and your new password.
+                    </div>
+
+                    {/* Email Input */}
+                    <InputField
+                        type="email"
+                        name="email"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={handleEmailChange}
+                        className="text-gray-900"
+                        error=""
+                        disabled={!!searchParams?.get('email')}
+                    />
+
+                    {/* OTP Input */}
+                    <InputField
+                        type="text"
+                        name="otp"
+                        placeholder="Enter verification code"
+                        value={otp}
+                        onChange={handleOtpChange}
+                        className="text-gray-900"
+                        error=""
+                    />
+                    
+                    {/* New Password Input */}
+                    <div className="relative">
                         <InputField
-                            type="email"
-                            name="email"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={handleEmailChange}
-                            // text="Email"
-                            className="text-gray-900"
-                            error=""
-                            disabled={!!searchParams?.get('email')}
-                        />
-
-                        {/* OTP Input */}
-                        <InputField
-                            type="text"
-                            name="otp"
-                            placeholder="Enter verification code"
-                            value={otp}
-                            onChange={handleOtpChange}
-                            // text="Verification Code"
-                            className="text-gray-900"
-                            error=""
-                        />
-                        
-                        {/* New Password Input */}
-                        <div className="relative">
-                            <InputField
-                                type={showPassword ? "text" : "password"}
-                                name="newPassword"
-                                placeholder="Create new password"
-                                value={newPassword}
-                                onChange={handleNewPasswordChange}
-                                // text="New Password"
-                                className="text-gray-900"
-                                error=""
-                            />
-                            <button 
-                                type="button"
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                onClick={() => setShowPassword(!showPassword)}
-                                aria-label={showPassword ? "Hide password" : "Show password"}
-                            >
-                                {showPassword ? (
-                                    <EyeClosed className="h-5 w-5" />
-                                ) : (
-                                    <EyeOpen className="h-5 w-5" />
-                                )}
-                            </button>
-                        </div>
-
-                        {/* <InputField
                             type={showPassword ? "text" : "password"}
                             name="newPassword"
                             placeholder="Create new password"
                             value={newPassword}
                             onChange={handleNewPasswordChange}
-                            // text="New Password"
-                            className="text-gray-900"
-                            error=""
-                        /> */}
-                        
-                        {/* Confirm Password Input */}
-                        <InputField
-                            type={showPassword ? "text" : "password"}
-                            name="confirmPassword"
-                            placeholder="Confirm new password"
-                            value={confirmPassword}
-                            onChange={handleConfirmPasswordChange}
-                            // text="Confirm Password"
                             className="text-gray-900"
                             error=""
                         />
-
-                        {/* Submit Button */}
-                        <Button
-                            type="submit"
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                            disabled={isLoading}
+                        <button 
+                            type="button"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
                         >
-                            {isLoading ? 'Processing...' : 'Reset Password'}
-                        </Button>
+                            {showPassword ? (
+                                <EyeClosed className="h-5 w-5" />
+                            ) : (
+                                <EyeOpen className="h-5 w-5" />
+                            )}
+                        </button>
+                    </div>
+                    
+                    {/* Confirm Password Input */}
+                    <InputField
+                        type={showPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        placeholder="Confirm new password"
+                        value={confirmPassword}
+                        onChange={handleConfirmPasswordChange}
+                        className="text-gray-900"
+                        error=""
+                    />
 
-                        {/* Return to Login */}
-                        <div className="text-center">
-                            <Link
-                                href="/auth/login"
-                                className="text-white hover:underline text-sm block"
-                            >
-                                Return to Sign In
-                            </Link>
-                        </div>
-                    </form>
-                )}
-            </div>
+                    {/* Submit Button */}
+                    <Button
+                        type="submit"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? 'Processing...' : 'Reset Password'}
+                    </Button>
+
+                    {/* Return to Login */}
+                    <div className="text-center">
+                        <Link
+                            href="/auth/login"
+                            className="text-white hover:underline text-sm block"
+                        >
+                            Return to Sign In
+                        </Link>
+                    </div>
+                </form>
+            )}
+        </div>
+    );
+}
+
+// Main component with Suspense boundary
+const VerifyResetOTPPage = () => {
+    return (
+        <AuthLayout>
+            <Suspense fallback={
+                <div className="w-full max-w-md mx-auto text-white text-center p-6">
+                    <div className="animate-pulse">Loading...</div>
+                </div>
+            }>
+                <VerifyResetOTPForm />
+            </Suspense>
         </AuthLayout>
     );
 }
+
+export default VerifyResetOTPPage;
 
 
 

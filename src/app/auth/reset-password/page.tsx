@@ -81,7 +81,7 @@ function ResetPasswordForm() {
             
             {success ? (
                 <div className="text-center space-y-6">
-                    <div className="bg-emerald-50 border border-emerald-300 text-emerald-700 px-4 py-3 rounded relative" role="alert">
+                    <div className="bg-emerald-50 border border-emerald-500 text-emerald-700 px-4 py-3 rounded relative" role="alert">
                         Your password has been successfully reset.
                     </div>
                     <Button

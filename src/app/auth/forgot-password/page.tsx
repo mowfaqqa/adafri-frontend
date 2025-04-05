@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
                 
                 {success ? (
                     <div className="text-center space-y-6">
-                        <div className="bg-emerald-50 border border-emerald-300 text-emerald-700 px-4 py-3 rounded relative" role="alert">
+                        <div className="bg-emerald-50 border border-emerald-500 text-emerald-700 px-4 py-3 rounded relative" role="alert">
                             Password reset OTP has been sent to your email address. Redirecting you to verification page...
                         </div>
                     </div>

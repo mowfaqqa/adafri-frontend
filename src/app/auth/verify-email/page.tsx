@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Cookies from 'js-cookie';
@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import InputField from "@/components/auth/InputField";
 import AuthLayout from "@/components/auth/AuthLayout";
 
-export default function VerifyEmail() {
+// Create a separate component that uses useSearchParams
+function VerifyEmailForm() {
     const [otp, setOtp] = useState("");
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -156,74 +157,84 @@ export default function VerifyEmail() {
     };
 
     return (
-        <AuthLayout>
-            <form className="space-y-4" onSubmit={handleVerify}>
-                <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-white">Verify Your Email</h2>
-                    <p className="text-emerald-300 mt-2">
-                        We've sent a verification code to {email}
-                    </p>
-                    {isDemo && (
-                        <p className="text-xs mt-2 text-amber-300">
-                            Demo Mode: Any 4-6 digit code will work
-                        </p>
-                    )}
+        <form className="space-y-4" onSubmit={handleVerify}>
+            <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-white">Verify Your Email</h2>
+                <p className="text-emerald-500 mt-2">
+                    We've sent a verification code to {email}
+                </p>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+                <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    {error}
                 </div>
+            )}
 
-                {/* Error Message */}
-                {error && (
-                    <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded relative" role="alert">
-                        {error}
-                    </div>
-                )}
+            {/* OTP Input */}
+            <InputField
+                type="text"
+                placeholder="Enter 6-digit verification code"
+                value={otp}
+                onChange={handleOtpChange}
+                maxLength={6}
+                inputMode="numeric"
+                pattern="\d{6}"
+            />
 
-                {/* OTP Input */}
-                <InputField
-                    type="text"
-                    placeholder="Enter 6-digit verification code"
-                    value={otp}
-                    onChange={handleOtpChange}
-                    maxLength={6}
-                    inputMode="numeric"
-                    pattern="\d{4,6}"
-                />
+            {/* Verify Button */}
+            <Button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={isLoading}
+            >
+                {isLoading ? 'Verifying...' : 'Verify Email'}
+            </Button>
 
-                {/* Verify Button */}
-                <Button
-                    type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    disabled={isLoading}
+            {/* Resend OTP */}
+            <div className="mt-4 text-center">
+                <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={resendCooldown > 0 || isLoading}
+                    className="text-emerald-400 hover:underline disabled:text-gray-500 disabled:no-underline"
                 >
-                    {isLoading ? 'Verifying...' : 'Verify Email'}
-                </Button>
+                    {resendCooldown > 0 
+                        ? `Resend code in ${resendCooldown}s` 
+                        : 'Resend verification code'}
+                </button>
+            </div>
 
-                {/* Resend OTP */}
-                <div className="mt-4 text-center">
-                    <button
-                        type="button"
-                        onClick={handleResendOtp}
-                        disabled={resendCooldown > 0 || isLoading}
-                        className="text-emerald-400 hover:underline disabled:text-gray-500 disabled:no-underline"
+            {/* Back to Registration */}
+            <div className="mt-4 text-center text-sm text-white">
+                <p>
+                    Wrong email?{" "}
+                    <Link
+                        href="/auth/signup"
+                        className="text-emerald-400 hover:underline"
                     >
-                        {resendCooldown > 0 
-                            ? `Resend code in ${resendCooldown}s` 
-                            : 'Resend verification code'}
-                    </button>
-                </div>
+                        Go back to sign up
+                    </Link>
+                </p>
+            </div>
+        </form>
+    );
+}
 
-                {/* Back to Registration */}
-                <div className="mt-4 text-center text-sm text-white">
-                    <p>
-                        Wrong email?{" "}
-                        <Link
-                            href="/auth/signup"
-                            className="text-emerald-400 hover:underline"
-                        >
-                            Go back to sign up
-                        </Link>
-                    </p>
+// Main component with Suspense boundary
+const VerifyEmail: React.FC = () => {
+    return (
+        <AuthLayout>
+            <Suspense fallback={
+                <div className="w-full max-w-md mx-auto text-white text-center p-6">
+                    <div className="animate-pulse">Loading...</div>
                 </div>
-            </form>
+            }>
+                <VerifyEmailForm />
+            </Suspense>
         </AuthLayout>
     );
 }
+
+export default VerifyEmail;

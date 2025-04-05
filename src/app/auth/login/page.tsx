@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from 'next/image';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from 'js-cookie';
 import {
     Facebook as FaFacebook,
@@ -23,8 +23,6 @@ const LoginForm: React.FC = () => {
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const router = useRouter();
-    // Move useSearchParams to this component
-    const { useSearchParams } = require("next/navigation");
     const searchParams = useSearchParams();
     const [showPassword, setShowPassword] = useState(false);
 

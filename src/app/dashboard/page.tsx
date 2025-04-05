@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 // import DashboardEmailList from "@/components/Dashboard/DashboardEmailComp";
 // import DashboardMessageList from "@/components/Dashboard/DirectMessagingComp";
 // import FavoritesCard from "@/components/Dashboard/FavoritesCard";
@@ -10,9 +10,12 @@ import FavoritesCard2 from "@/components/Dashboard/FavoritesCard2";
 import EmailOnlineMessaging from "@/components/Dashboard/EmailOnlineMessaging";
 import { PollingCard2 } from "@/components/Dashboard/PollingCard2";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { getUserInfo, clearAuthCookies } from "@/lib/utils/cookies";
+
 
 
 const Dashboard = () => {
+  const [userInfo, setUserInfo] = useState({ name: ""});
   const [pollData, setPollData] = useState({
     title: "Vote for the Next Feature",
     options: [
@@ -32,13 +35,21 @@ const Dashboard = () => {
     }));
   };
 
+  // Load user info from cookies on component mount
+    useEffect(() => {
+      const cookieInfo = getUserInfo();
+      setUserInfo({
+        name: cookieInfo.name || "User",
+      });
+    }, []);
+
   return (
     <ProtectedRoute>
       <div className="p-6 min-h-screen overflow-hidden overflow-y-auto transition-all duration-300">
         {/* Welcome banner */}
         <div className="bg-gradient-to-r from-teal-500 to-teal-700 text-white p-8 rounded-xl mb-8 mt-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div>
-            <h1 className="text-2xl font-medium">Welcome William Leo</h1>
+            <h1 className="text-2xl font-medium">Welcome {userInfo.name}</h1>
             <p>We are here to help you</p>
           </div>
           {/* Polling Card */}

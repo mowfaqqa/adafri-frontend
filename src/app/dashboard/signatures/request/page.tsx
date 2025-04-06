@@ -3,13 +3,22 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import SignatureRequestForm from "@/components/E-signature/Signature/SignatureRequestForm";
 
 export default function SignatureRequestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const documentId = searchParams.get("documentId");
+
+  // Use state to safely store the documentId
+  const [documentId, setDocumentId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // This will only run on the client side
+    setDocumentId(searchParams.get("documentId"));
+    setIsLoading(false);
+  }, [searchParams]);
 
   return (
     <div className="space-y-6">
@@ -27,7 +36,14 @@ export default function SignatureRequestPage() {
         </p>
       </header>
 
-      <SignatureRequestForm documentId={documentId!} />
+      {isLoading ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading signature request...</span>
+        </div>
+      ) : (
+        <SignatureRequestForm documentId={documentId!} />
+      )}
     </div>
   );
 }

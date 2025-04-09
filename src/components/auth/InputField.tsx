@@ -14,6 +14,7 @@ interface InputFieldProps {
   maxLength?: number;
   inputMode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search";
   pattern?: string;
+  required?: boolean;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -30,6 +31,7 @@ const InputField: React.FC<InputFieldProps> = ({
   maxLength,
   inputMode,
   pattern,
+  required = false,
 }) => {
   return (
     <div>
@@ -45,6 +47,7 @@ const InputField: React.FC<InputFieldProps> = ({
         maxLength={maxLength}
         inputMode={inputMode}
         pattern={pattern}
+        required={required}
         className={`w-full px-4 py-2 text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none ${
           error ? "border-red-500" : "border-gray-300"
         } ${disabled ? "bg-gray-100 cursor-not-allowed" : ""} ${className}`}

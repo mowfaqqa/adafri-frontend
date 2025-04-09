@@ -248,7 +248,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 
       if (token && linkedEmailId) {
         // Send email via API
-        fetch('/api/emails/send', {
+        fetch('https://email-service-latest-agqz.onrender.com/api/emails/send', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

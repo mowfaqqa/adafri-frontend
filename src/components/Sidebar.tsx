@@ -110,6 +110,11 @@ const navigation = [
         href: "/tool",
         subItems: [
           {
+            label: "Professional Mail",
+            href: "/dashboard/professional-mail",
+            icon: "/icons/online-meeting.png",
+          },
+          {
             label: "Website Builder",
             href: "/dashboard/campaigns",
             icon: "/icons/website-builder.png",

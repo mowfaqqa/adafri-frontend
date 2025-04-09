@@ -1,4 +1,5 @@
 // lib/axios.js
+import { getAuthToken } from "@/lib/utils/cookies";
 import axios from "axios";
 
 const API_BASE_URL = "https://e-signature-l8m5.onrender.com/api/v1";
@@ -13,8 +14,7 @@ const apiClient = axios.create({
 // Add a request interceptor to include the authentication token
 apiClient.interceptors.request.use(
   (config) => {
-    const token =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNDBhYWI3YjktODdmOS00YmZmLWFmMDAtMTRlZWJhODNhNWU0IiwiaWF0IjoxNzQzNzYxNzM0LCJleHAiOjE3NDM4NDgxMzR9.A0WDV5oDMTOsYUwmY1nVhYVgY4yz0WPVqQQFRVqmGUE";
+    const token = getAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

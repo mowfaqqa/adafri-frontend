@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
 import { FileAttachment } from "@/lib/types/taskManager/types";
 import {
@@ -9,9 +9,11 @@ import {
   Video,
   Music,
   Trash2,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getFileUrl } from "@/lib/api/task-manager/fileApi";
+import { FilePreview } from "./FilePreview";
 
 interface FileAttachmentListProps {
   taskId: string;
@@ -36,6 +38,7 @@ const FileAttachmentList: React.FC<FileAttachmentListProps> = ({ taskId }) => {
   const { useTaskFilesQuery, useDeleteFileMutation } = useTaskManagerApi();
   const { data: files, isLoading } = useTaskFilesQuery(taskId);
   const deleteFileMutation = useDeleteFileMutation();
+  const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
 
   const handleDeleteFile = (fileId: string) => {
     if (confirm("Are you sure you want to delete this file?")) {
@@ -43,6 +46,9 @@ const FileAttachmentList: React.FC<FileAttachmentListProps> = ({ taskId }) => {
     }
   };
 
+  const handlePreview = (file: FileAttachment) => {
+    setPreviewFile(file);
+  };
   const openFile = (file: FileAttachment) => {
     // Using Cloudinary URL directly
     window.open(getFileUrl(file), "_blank");
@@ -73,6 +79,15 @@ const FileAttachmentList: React.FC<FileAttachmentListProps> = ({ taskId }) => {
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0"
+              onClick={() => handlePreview(file)}
+              title="View"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
               onClick={() => openFile(file)}
               title="Open/Download"
             >
@@ -90,6 +105,9 @@ const FileAttachmentList: React.FC<FileAttachmentListProps> = ({ taskId }) => {
           </div>
         </div>
       ))}
+      {previewFile && (
+        <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
     </div>
   );
 };

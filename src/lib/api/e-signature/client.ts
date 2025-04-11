@@ -54,24 +54,29 @@ export const documentService = {
   getDocumentById: (id: string) => apiClient.get(`/documents/${id}`),
 
   // Create a new document
-  createDocument: (data: any) => apiClient.post("/documents", data),
+  createDocument: (data: any) =>
+    apiClient.post("/documents", data, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }),
 
   // Get all signatures for a document
   getDocumentSignatures: (documentId: string) =>
-    apiClient.get(`/esignatures/document/${documentId}`),
+    apiClient.get(`/e-signatures/document/${documentId}`),
 };
 
 // E-signature-related API calls
 export const signatureService = {
   // Request a new signature
-  requestSignature: (data: any) => apiClient.post("/esignatures", data),
+  requestSignature: (data: any) => apiClient.post("/e-signatures", data),
 
   // Get signature details by ID
-  getSignatureById: (id: string) => apiClient.get(`/esignatures/${id}`),
+  getSignatureById: (id: string) => apiClient.get(`/e-signatures/${id}`),
 
   // Update signature status (sign or reject)
   updateSignatureStatus: (id: string, statusData: any) =>
-    apiClient.patch(`/esignatures/${id}/status`, statusData),
+    apiClient.patch(`/e-signatures/${id}/status`, statusData),
 };
 
 export default apiClient;

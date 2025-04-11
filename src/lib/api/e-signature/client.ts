@@ -37,7 +37,7 @@ apiClient.interceptors.response.use(
       // Token expired or invalid - redirect to login
       if (typeof window !== "undefined") {
         localStorage.removeItem("token");
-        window.location.href = "/login";
+        window.location.href = "/auth/login";
       }
     }
 

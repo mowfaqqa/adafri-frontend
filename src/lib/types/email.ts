@@ -3,7 +3,7 @@ export interface Email {
   id: string;
   subject: string;
   content: string;
-  contentType?: 'text' | 'html';
+  contentType?: 'text' | 'html' | 'mime';
   from: string;
   to: string;
   timestamp: string;

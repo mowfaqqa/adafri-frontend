@@ -139,6 +139,13 @@ const exampleData: Tab[] = [
     label: "Tools",
     features: [
       {
+        id: "professional-mail",
+        title: "Professional Mail",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/online-meeting.png",
+        link: "/dashboard/professional-mail",
+      },
+      {
         id: "website-builder",
         title: "Website Builder",
         subtitle: "Boost Connections, Drive Sales!",
@@ -150,7 +157,7 @@ const exampleData: Tab[] = [
         title: "Internal Message",
         subtitle: "Boost Connections, Drive Sales!",
         imageUrl: "/icons/internal-message.png",
-        link: "/dashboard/internal-message",
+        link: "/dashboard/messaging",
       },
       {
         id: "online-meeting",

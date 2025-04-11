@@ -81,7 +81,7 @@ const SearchAdCreative: React.FC<SearchAdCreativeComponentProps> = ({
                         <div className="space-y-4">
                             <div>
                                 <Input
-                                    placeholder="Title 1"
+                                    placeholder="What product do you sell?"
                                     value={title1}
                                     onChange={(e) => setTitle1(e.target.value)}
                                     maxLength={TITLE_MAX}
@@ -94,7 +94,7 @@ const SearchAdCreative: React.FC<SearchAdCreativeComponentProps> = ({
 
                             <div>
                                 <Input
-                                    placeholder="Title 2"
+                                    placeholder="What product do you sell?"
                                     value={title2}
                                     onChange={(e) => setTitle2(e.target.value)}
                                     maxLength={TITLE_MAX}
@@ -107,7 +107,7 @@ const SearchAdCreative: React.FC<SearchAdCreativeComponentProps> = ({
 
                             <div>
                                 <Input
-                                    placeholder="Title 3"
+                                    placeholder="What product do you sell?"
                                     value={title3}
                                     onChange={(e) => setTitle3(e.target.value)}
                                     maxLength={TITLE_MAX}
@@ -125,7 +125,7 @@ const SearchAdCreative: React.FC<SearchAdCreativeComponentProps> = ({
                         <div className="space-y-4">
                             <div>
                                 <Input
-                                    placeholder="Description 1"
+                                    placeholder="describe your product and your value proposition"
                                     value={description1}
                                     onChange={(e) => setDescription1(e.target.value)}
                                     maxLength={DESC_MAX}
@@ -138,7 +138,7 @@ const SearchAdCreative: React.FC<SearchAdCreativeComponentProps> = ({
 
                             <div>
                                 <Input
-                                    placeholder="Description 2"
+                                    placeholder="describe your product and your value proposition"
                                     value={description2}
                                     onChange={(e) => setDescription2(e.target.value)}
                                     maxLength={DESC_MAX}

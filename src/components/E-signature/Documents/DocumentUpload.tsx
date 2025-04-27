@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -29,7 +28,7 @@ export function DocumentUpload({ onUploadSuccess }: any) {
   const fileInputRef = useRef<any>(null);
 
   const handleFileChange = (e: any) => {
-    const selectedFile = e.target.files[0];
+    const selectedFile = e?.target.files[0];
     setError("");
 
     if (!selectedFile) return;
@@ -39,7 +38,7 @@ export function DocumentUpload({ onUploadSuccess }: any) {
       setFile(null);
       return;
     }
-
+    console.log(selectedFile, "SELECTED FILE");
     setFile(selectedFile);
   };
 
@@ -58,15 +57,16 @@ export function DocumentUpload({ onUploadSuccess }: any) {
       // Create form data to upload the file
       const formData = new FormData();
       formData.append("title", title);
-      formData.append("media", file);
+      formData.append("media", file, file?.name);
 
+      console.log(formData, "formdata");
       // Use axios with custom config for multipart/form-data
       const response = await documentService.createDocument(formData);
 
       // Reset form
       setTitle("");
       setFile(null);
-      if (fileInputRef.current) {
+      if (fileInputRef?.current) {
         fileInputRef.current.value = "";
       }
 

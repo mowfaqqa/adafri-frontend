@@ -1,8 +1,11 @@
+import { getAuthToken, removeCookie } from "@/lib/utils/cookies";
 import axios from "axios";
 
 //cretae axios instance wth default config
 const taskApiClient = axios.create({
-  baseURL: process.env.TASK_MANAGER_API_URL || "https://task-manager-api-e7mf.onrender.com/api",
+  baseURL:
+    process.env.TASK_MANAGER_API_URL ||
+    "https://task-manager-api-e7mf.onrender.com/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -11,6 +14,10 @@ const taskApiClient = axios.create({
 //Request intercepto for API calls
 taskApiClient.interceptors.request.use(
   (config) => {
+    const token = getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -24,13 +31,18 @@ taskApiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    const customError = {
-      message: error.response?.data?.message || "Something went wrong",
-      status: error.response?.status || 500,
-      data: error.response?.data || null,
-    };
+    // Handle common errors
+    const statusCode = error.response?.status;
 
-    return Promise.reject(customError);
+    if (statusCode === 401) {
+      // Token expired or invalid - redirect to login
+      if (typeof window !== "undefined") {
+        removeCookie("accessToken");
+        window.location.href = "/auth/login";
+      }
+    }
+
+    return Promise.reject(error);
   }
 );
 

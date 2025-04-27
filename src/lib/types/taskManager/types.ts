@@ -89,3 +89,33 @@ export function isSprintTask(task: Task): task is SprintTask {
 export function isStandardTask(task: Task): task is StandardTask {
   return task.category !== "sprints";
 }
+
+export interface FileAttachment {
+  id: string;
+  filename: string;
+  originalname: string;
+  mimetype: string;
+  size: number;
+  taskId: string;
+  url: string;
+  secureUrl: string;
+  publicId: string;
+  resourceType?: string;
+  format?: string;
+  createdAt: string;
+  updatedAt?: string
+}
+export interface CloudinaryUploadResponse {
+  public_id: string;
+  version: string;
+  signature: string;
+  width?: number;
+  height?: number;
+  format: string;
+  resource_type: string;
+  created_at: string;
+  bytes: number;
+  type: string;
+  url: string;
+  secure_url: string;
+}

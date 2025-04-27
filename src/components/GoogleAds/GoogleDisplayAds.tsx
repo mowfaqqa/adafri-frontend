@@ -279,7 +279,7 @@ const GoogleDisplayAds: React.FC = () => {
         </Card>
       )}
 
-      <Button variant="outline" className="w-full border border-gray-300 hover:bg-gray-100 transition-colors" onClick={handleOpenFlow}>
+      <Button className="w-full py-3 px-4 border border-gray-300 rounded-lg flex items-center justify-center text-white hover:bg-gray-100 transition-colors" onClick={handleOpenFlow}>
         + Create campaign
       </Button>
 

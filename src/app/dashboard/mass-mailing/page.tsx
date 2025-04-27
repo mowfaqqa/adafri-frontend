@@ -23,13 +23,12 @@ const CampaignCard = ({ name, email, role, status }: any) => (
       </div>
       <div className="flex items-center gap-2 border-t border-gray-200">
         <div
-          className={`w-7 h-7 rounded-full ${
-            status === "pending"
+          className={`w-7 h-7 rounded-full ${status === "pending"
               ? "bg-yellow-400"
               : status === "active"
-              ? "bg-green-500"
-              : "bg-green-500"
-          }`}
+                ? "bg-green-500"
+                : "bg-green-500"
+            }`}
         />
       </div>
     </CardContent>
@@ -84,13 +83,12 @@ const SenderCard = ({ name, email, phone, status }: any) => (
           </div>
           <div className="mt-2">
             <span
-              className={`text-xs px-2 py-1 rounded ${
-                status === "verified"
+              className={`text-xs px-2 py-1 rounded ${status === "verified"
                   ? "bg-blue-100 text-blue-600"
                   : status === "unverified"
-                  ? "bg-red-100 text-red-600"
-                  : "bg-gray-100 text-gray-600"
-              }`}
+                    ? "bg-red-100 text-red-600"
+                    : "bg-gray-100 text-gray-600"
+                }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </span>
@@ -105,164 +103,164 @@ const DashboardTabs = () => {
   return (
     <ProtectedRoute>
       <div className="px-6 py-2">
-      <h2 className="text-2xl font-medium pb-2">Mass Mailing</h2>
-      <Tabs defaultValue="campaigns" className="w-full">
-        <div className="flex justify-between items-center mb-6">
-          <TabsList>
-            <TabsTrigger value="campaigns">Status</TabsTrigger>
-            <TabsTrigger value="tags">Tags</TabsTrigger>
-            <TabsTrigger value="senders">Senders</TabsTrigger>
-            <TabsTrigger value="autor">Autor</TabsTrigger>
-          </TabsList>
-          <div className="flex items-center gap-2">
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="w-64"
+        <h2 className="text-2xl font-medium pb-2">Mass Mailing</h2>
+        <Tabs defaultValue="campaigns" className="w-full">
+          <div className="flex justify-between items-center mb-6">
+            <TabsList>
+              <TabsTrigger value="campaigns">Status</TabsTrigger>
+              <TabsTrigger value="tags">Tags</TabsTrigger>
+              <TabsTrigger value="senders">Senders</TabsTrigger>
+              <TabsTrigger value="autor">Autor</TabsTrigger>
+            </TabsList>
+            <div className="flex items-center gap-2">
+              <Input
+                type="search"
+                placeholder="Search..."
+                className="w-64"
               // prefix={<Search className="h-4 w-4 text-gray-500" />}
-            />
+              />
+            </div>
           </div>
-        </div>
 
-        <TabsContent value="campaigns">
-          <div className="grid grid-cols-3 gap-6">
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Pending Campaigns</h2>
-                <button className="text-gray-500">+</button>
+          <TabsContent value="campaigns">
+            <div className="grid grid-cols-3 gap-6">
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-medium">Pending Campaigns</h2>
+                  <button className="text-gray-500">+</button>
+                </div>
+                <CampaignCard
+                  name="Olivia Anderson"
+                  email="olivia@example.com"
+                  role="UI Designer"
+                  status="pending"
+                />
+                <CampaignCard
+                  name="Olivia Anderson"
+                  email="olivia@example.com"
+                  role="UI Designer"
+                  status="pending"
+                />
               </div>
-              <CampaignCard
-                name="Olivia Anderson"
-                email="olivia@example.com"
-                role="UI Designer"
-                status="pending"
-              />
-              <CampaignCard
-                name="Olivia Anderson"
-                email="olivia@example.com"
-                role="UI Designer"
-                status="pending"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Active Campaigns</h2>
-                <button className="text-gray-500">+</button>
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-medium">Active Campaigns</h2>
+                  <button className="text-gray-500">+</button>
+                </div>
+                <CampaignCard
+                  name="Olivia Anderson"
+                  email="olivia@example.com"
+                  role="UI Designer"
+                  status="active"
+                />
               </div>
-              <CampaignCard
-                name="Olivia Anderson"
-                email="olivia@example.com"
-                role="UI Designer"
-                status="active"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Done Campaigns</h2>
-                <button className="text-gray-500">+</button>
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-medium">Done Campaigns</h2>
+                  <button className="text-gray-500">+</button>
+                </div>
+                <CampaignCard
+                  name="Olivia Anderson"
+                  email="olivia@example.com"
+                  role="UI Designer"
+                  status="done"
+                />
               </div>
-              <CampaignCard
-                name="Olivia Anderson"
-                email="olivia@example.com"
-                role="UI Designer"
-                status="done"
-              />
             </div>
-          </div>
-          <Button className="fixed bottom-8 md:right-[90px] shadow-lg" variant="default">
-            <PenSquare className="h-4 w-4 mr-2" />
-            New Campaign
-          </Button>
-        </TabsContent>
+            <Button className="fixed bottom-8 md:right-[90px] shadow-lg" variant="default">
+              <PenSquare className="h-4 w-4 mr-2" />
+              New Campaign
+            </Button>
+          </TabsContent>
 
-        <TabsContent value="tags">
-          <div className="grid grid-cols-3 gap-6">
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Frequently Used</h2>
-                <button className="text-gray-500">+</button>
+          <TabsContent value="tags">
+            <div className="grid grid-cols-3 gap-6">
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-medium">Frequently Used</h2>
+                  <button className="text-gray-500">+</button>
+                </div>
+                <TagCard
+                  title="VIP Customers"
+                  description="High-value customers with frequent activity"
+                  contacts={250}
+                />
               </div>
-              <TagCard
-                title="VIP Customers"
-                description="High-value customers with frequent activity"
-                contacts={250}
-              />
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Used</h2>
-                <button className="text-gray-500">+</button>
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-medium">Used</h2>
+                  <button className="text-gray-500">+</button>
+                </div>
+                <TagCard
+                  title="Newsletter Subscribers"
+                  description="Customers subscribed to weekly updates"
+                  contacts={250}
+                />
               </div>
-              <TagCard
-                title="Newsletter Subscribers"
-                description="Customers subscribed to weekly updates"
-                contacts={250}
-              />
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Recently Added</h2>
-                <button className="text-gray-500">+</button>
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-medium">Recently Added</h2>
+                  <button className="text-gray-500">+</button>
+                </div>
+                <TagCard
+                  title="Holiday Campaign"
+                  description="New Year holiday campaign list"
+                  contacts={250}
+                />
               </div>
-              <TagCard
-                title="Holiday Campaign"
-                description="New Year holiday campaign list"
-                contacts={250}
-              />
             </div>
-          </div>
-          <Button className="fixed bottom-8 md:right-[90px] shadow-lg" variant="default">
-            <PenSquare className="h-4 w-4 mr-2" />
-            Add New Tags
-          </Button>
-        </TabsContent>
+            <Button className="fixed bottom-8 md:right-[90px] shadow-lg" variant="default">
+              <PenSquare className="h-4 w-4 mr-2" />
+              Add New Tags
+            </Button>
+          </TabsContent>
 
-        <TabsContent value="senders">
-          <div className="grid grid-cols-3 gap-6">
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Verified Senders</h2>
-                <button className="text-gray-500">+</button>
+          <TabsContent value="senders">
+            <div className="grid grid-cols-3 gap-6">
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-medium">Verified Senders</h2>
+                  <button className="text-gray-500">+</button>
+                </div>
+                <SenderCard
+                  name="Olivia Anderson"
+                  email="olivia@example.com"
+                  phone="0912345678"
+                  status="verified"
+                />
               </div>
-              <SenderCard
-                name="Olivia Anderson"
-                email="olivia@example.com"
-                phone="0912345678"
-                status="verified"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Unverified Senders</h2>
-                <button className="text-gray-500">+</button>
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-medium">Unverified Senders</h2>
+                  <button className="text-gray-500">+</button>
+                </div>
+                <SenderCard
+                  name="Olivia Anderson"
+                  email="olivia@example.com"
+                  phone="0912345678"
+                  status="unverified"
+                />
               </div>
-              <SenderCard
-                name="Olivia Anderson"
-                email="olivia@example.com"
-                phone="0912345678"
-                status="unverified"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Default Senders</h2>
-                <button className="text-gray-500">+</button>
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-medium">Default Senders</h2>
+                  <button className="text-gray-500">+</button>
+                </div>
+                <SenderCard
+                  name="Olivia Anderson"
+                  email="olivia@example.com"
+                  phone="0912345678"
+                  status="default"
+                />
               </div>
-              <SenderCard
-                name="Olivia Anderson"
-                email="olivia@example.com"
-                phone="0912345678"
-                status="default"
-              />
             </div>
-          </div>
-          <Button className="fixed bottom-8 md:right-[90px] shadow-lg" variant="default">
-            <PenSquare className="h-4 w-4 mr-2" />
-            Add New Sender
-          </Button>
-        </TabsContent>
-      </Tabs>
-    </div>
+            <Button className="fixed bottom-8 md:right-[90px] shadow-lg" variant="default">
+              <PenSquare className="h-4 w-4 mr-2" />
+              Add New Sender
+            </Button>
+          </TabsContent>
+        </Tabs>
+      </div>
     </ProtectedRoute>
   );
 };

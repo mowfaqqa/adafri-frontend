@@ -1,6 +1,4 @@
 import taskApiClient from "./client";
-
-// Type for File Attachment responses
 interface FileAttachment {
   id: string;
   filename: string;
@@ -8,11 +6,15 @@ interface FileAttachment {
   mimetype: string;
   size: number;
   taskId: string;
+  url: string;
+  secureUrl: string;
+  publicId: string;
+  resourceType?: string;
+  format?: string;
   createdAt: string;
   updatedAt?: string;
 }
 
-// Type for API response
 interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -47,9 +49,15 @@ export const getTaskFiles = async (taskId: string) => {
   return response.data.data || [];
 };
 
-// Get file download URL
-export const getFileUrl = (fileId: string) => {
-  return `${taskApiClient.defaults.baseURL}/files/${fileId}`;
+// Get file URL - updated to use Cloudinary's secure URL
+export const getFileUrl = (file: FileAttachment | string) => {
+  // If the file is passed as a string (file ID), return the old-style URL for backward compatibility
+  if (typeof file === "string") {
+    return `${taskApiClient.defaults.baseURL}/files/${file}`;
+  }
+
+  // Use Cloudinary's secure URL if available
+  return file.secureUrl || `${taskApiClient.defaults.baseURL}/files/${file.id}`;
 };
 
 // Delete file

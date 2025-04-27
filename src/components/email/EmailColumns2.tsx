@@ -7,6 +7,8 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Email, EmailSegment } from "@/lib/types/email";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies"; // Import the cookie utilities
+import { createEmailPreview, EmailContentRenderer } from "@/lib/utils/emails/email-content-utils";
+
 
 export const EmailColumns2 = () => {
   const { emails, moveEmail, customSegments, addSegment, addEmail } = useEmailStore();
@@ -15,6 +17,7 @@ export const EmailColumns2 = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [apiInboxEmails, setApiInboxEmails] = useState<Email[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   // Helper function to extract and format email content
   const formatEmailContent = (rawContent: string) => {

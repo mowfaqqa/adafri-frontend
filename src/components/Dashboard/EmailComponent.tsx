@@ -68,7 +68,7 @@ export const sampleEmails = [
     timestamp: '05/12 - 14:48',
     hasAttachment: true,
     status: 'inbox'
-  }
+  },
 ];
 
 

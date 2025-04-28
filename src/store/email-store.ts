@@ -330,7 +330,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     const { token, linkedEmailId } = getAuthFromCookies();
 
     if (token && linkedEmailId) {
-      fetch(`/api/emails/${id}`, {
+      fetch(`https://email-service-latest-agqz.onrender.com/api/emails/drafts/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -358,7 +358,7 @@ saveDraft: (draft: Partial<Email>) => {
     const { token, linkedEmailId } = getAuthFromCookies();
 
     if (token && linkedEmailId) {
-      fetch(`/api/emails/drafts/${draft.id}`, {
+      fetch(`https://email-service-latest-agqz.onrender.com/api/emails/drafts/${draft.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

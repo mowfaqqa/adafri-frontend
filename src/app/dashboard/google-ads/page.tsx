@@ -6,11 +6,11 @@ import React from "react";
 
 const GoogleAds = () => {
   return (
-    <ProtectedRoute>
+    // <ProtectedRoute>
       <GoogleAdsProvider>
         <GoogleAdsOverview />
       </GoogleAdsProvider>
-    </ProtectedRoute>
+    // </ProtectedRoute>
   );
 };
 

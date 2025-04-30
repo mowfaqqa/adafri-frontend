@@ -4,18 +4,19 @@ import { Button } from "@/components/ui/button";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
 import { Paperclip, Upload, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 interface FileUploaderProps {
   taskId: string;
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({ taskId }) => {
+  const { projectId } = useProjectContext();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { useUploadFileMutation } = useTaskManagerApi();
   const uploadFileMutation = useUploadFileMutation();
-
   // Simulate upload progress
   useEffect(() => {
     if (uploadFileMutation.isPending && uploadProgress < 90) {
@@ -39,7 +40,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({ taskId }) => {
   const handleUpload = () => {
     if (selectedFile && taskId) {
       uploadFileMutation.mutate(
-        { taskId, file: selectedFile },
+        {
+          taskId,
+          file: selectedFile,
+          projectId: projectId!,
+        },
         {
           onSuccess: () => {
             setSelectedFile(null);

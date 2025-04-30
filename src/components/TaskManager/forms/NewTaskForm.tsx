@@ -58,7 +58,7 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
     category: "development",
     progress: 0,
     projectId: projectId,
-    milestoneId: "", // Optional - will be populated if user selects a milestone
+    milestoneId: "",
   });
 
   const [selectedCategory, setSelectedCategory] =

@@ -11,6 +11,8 @@ import ProjectMembersPanel from "./ProjectMembersPanel";
 import NoProjectSelected from "./NoProjectSelected";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
+import EpicsPanel from "./EpicsPanel";
+import MilestonesPanel from "./MilestonePanel";
 
 const ProjectDashboard: React.FC = () => {
   const { currentProject, projectId, loading } = useProjectContext();
@@ -126,24 +128,11 @@ const ProjectDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="epics" className="mt-6">
-          <div className="text-center p-8 bg-gray-50 rounded-lg">
-            <h3 className="font-medium mb-2">Epic Management</h3>
-            <p className="text-gray-500 mb-4">
-              Epics help organize related tasks into larger features or
-              initiatives
-            </p>
-            <Button className="bg-teal-600">Create Epic</Button>
-          </div>
+          <EpicsPanel />
         </TabsContent>
 
         <TabsContent value="milestones" className="mt-6">
-          <div className="text-center p-8 bg-gray-50 rounded-lg">
-            <h3 className="font-medium mb-2">Milestone Management</h3>
-            <p className="text-gray-500 mb-4">
-              Milestones help track important project checkpoints and deadlines
-            </p>
-            <Button className="bg-teal-600">Create Milestone</Button>
-          </div>
+          <MilestonesPanel />
         </TabsContent>
 
         <TabsContent value="members" className="mt-6">

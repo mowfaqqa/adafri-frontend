@@ -4,7 +4,6 @@ import {
   SprintTaskFormData,
   StandardTaskFormData,
   Task,
-  TaskStatus,
 } from "@/lib/types/taskManager/types";
 import taskApiClient from "./client";
 

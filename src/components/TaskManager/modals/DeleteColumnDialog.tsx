@@ -17,6 +17,7 @@ interface DeleteColumnDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   column: Column;
+  projectId?: string; // Add projectId as optional parameter
   onConfirm: () => void;
 }
 
@@ -24,17 +25,21 @@ export const DeleteColumnDialog: React.FC<DeleteColumnDialogProps> = ({
   open,
   onOpenChange,
   column,
+  projectId,
   onConfirm,
 }) => {
+  // Use column.name for project statuses, fallback to column.title for backwards compatibility
+  const columnName = column.name || column.title;
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Column</AlertDialogTitle>
+          <AlertDialogTitle>Delete Status</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete the column &quot;{column.title}&quot;
-            and may affect tasks currently assigned to this status. Are you sure
-            you want to continue?
+            This will permanently delete the status &quot;{columnName}&quot; and
+            may affect tasks currently assigned to this status. Are you sure you
+            want to continue?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

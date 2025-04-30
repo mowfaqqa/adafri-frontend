@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { getFileUrl } from "@/lib/api/task-manager/fileApi";
 import { FilePreview } from "./FilePreview";
+import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 interface FileAttachmentListProps {
   taskId: string;
@@ -35,14 +36,15 @@ const getFileIcon = (mimetype: string) => {
 };
 
 const FileAttachmentList: React.FC<FileAttachmentListProps> = ({ taskId }) => {
+  const { currentProject, projectId, loading } = useProjectContext();
   const { useTaskFilesQuery, useDeleteFileMutation } = useTaskManagerApi();
-  const { data: files, isLoading } = useTaskFilesQuery(taskId);
+  const { data: files, isLoading } = useTaskFilesQuery(projectId!, taskId);
   const deleteFileMutation = useDeleteFileMutation();
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
 
   const handleDeleteFile = (fileId: string) => {
     if (confirm("Are you sure you want to delete this file?")) {
-      deleteFileMutation.mutate(fileId);
+      deleteFileMutation.mutate({ projectId: projectId!, fileId });
     }
   };
 

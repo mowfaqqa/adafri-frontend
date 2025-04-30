@@ -13,22 +13,41 @@ import {
   Paperclip,
   Plus,
   AlertTriangle,
+  ListChecks,
+  X,
 } from "lucide-react";
-import { StandardTaskFormData } from "@/lib/types/taskManager/types";
+import { Project, StandardTaskFormData } from "@/lib/types/taskManager/types";
+import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface NewTaskFormProps {
   onSubmit: (data: StandardTaskFormData) => void;
   isSubmitting: boolean;
+  projectId: string;
 }
 
 const NewTaskForm: React.FC<NewTaskFormProps> = ({
   onSubmit,
   isSubmitting,
+  projectId,
 }) => {
-  const [formData, setFormData] = useState({
+  const { useMilestonesQuery, useProjectStatusesQuery, useProjectQuery } =
+    useTaskManagerApi();
+  const { data: project } = useProjectQuery(projectId);
+  const projectMembers = project?.members || [];
+  const { data: milestones = [] } = useMilestonesQuery(projectId);
+  const { data: statuses = [] } = useProjectStatusesQuery(projectId);
+  const [selectedAssignees, setSelectedAssignees] = useState<any[]>([]);
+  const [formData, setFormData] = useState<StandardTaskFormData>({
     title: "",
     description: "",
-    status: "todo",
+    status: statuses.length > 0 ? statuses[0].name : "todo",
     date: new Date().toLocaleDateString("en-US", {
       day: "2-digit",
       month: "short",
@@ -38,17 +57,43 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
     assignees: [],
     category: "development",
     progress: 0,
+    projectId: projectId,
+    milestoneId: "",
   });
 
   const [selectedCategory, setSelectedCategory] =
     useState<string>("development");
   const [priority, setPriority] = useState<string>("medium");
 
+  const addAssignee = (userId: string) => {
+    if (!selectedAssignees.includes(userId)) {
+      const newAssignees = [...selectedAssignees, userId];
+      setSelectedAssignees(newAssignees);
+      setFormData((prev) => ({ ...prev, assignees: newAssignees }));
+    }
+  };
+
+  const removeAssignee = (userId: string) => {
+    const newAssignees = selectedAssignees.filter((id) => id !== userId);
+    setSelectedAssignees(newAssignees);
+    setFormData((prev) => ({ ...prev, assignees: newAssignees }));
+  };
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleStatusChange = (status: string) => {
+    setFormData((prev) => ({ ...prev, status }));
+  };
+
+  const handleMilestoneChange = (milestoneId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      milestoneId: milestoneId === "none" ? "" : milestoneId,
+    }));
   };
 
   const handleSubmitForm = (e: React.FormEvent) => {
@@ -63,6 +108,7 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
     onSubmit({
       ...formData,
       tags,
+      assignees: selectedAssignees,
       category: selectedCategory as any,
     });
   };
@@ -102,13 +148,60 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
               </div>
             </div>
 
+            {/* Status Selection */}
+            <div className="flex items-start gap-3">
+              <ListChecks className="w-5 h-5 mt-2 text-gray-500" />
+              <div className="flex-1">
+                <Label className="mb-2 block">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={handleStatusChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuses.map((status) => (
+                      <SelectItem key={status.id} value={status.name}>
+                        {status.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Milestone Selection (Optional) */}
+            <div className="flex items-start gap-3">
+              <ListChecks className="w-5 h-5 mt-2 text-gray-500" />
+              <div className="flex-1">
+                <Label className="mb-2 block">Milestone (Optional)</Label>
+                <Select
+                  value={formData?.milestoneId}
+                  onValueChange={handleMilestoneChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a milestone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {milestones.map((milestone) => (
+                      <SelectItem key={milestone.id} value={milestone.id}>
+                        {milestone.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {/* Due Date Input */}
             <div className="flex items-start gap-3">
               <Calendar className="w-5 h-5 mt-2 text-gray-500" />
               <div className="flex-1">
                 <Input
                   name="date"
-                  type="text"
+                  type="date"
                   placeholder="Due Date"
                   className="border-gray-200"
                   value={formData.date}
@@ -151,37 +244,69 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
                 </RadioGroup>
               </div>
             </div>
-
-            {/* Assignees */}
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 mt-2">
                 <Plus className="w-full h-full text-gray-500" />
               </div>
               <div className="flex-1">
                 <Label className="mb-2 block">Assignees</Label>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center rounded-full pr-3">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src="/placeholder-avatar.jpg" />
-                      <AvatarFallback>WL</AvatarFallback>
-                    </Avatar>
-                    <span className="ml-2 text-sm ">Williams Lady</span>
-                  </div>
-                  <div className="flex items-center rounded-full pr-3">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src="/placeholder-avatar.jpg" />
-                      <AvatarFallback>AK</AvatarFallback>
-                    </Avatar>
-                    <span className="ml-2 text-sm">Abdou Koli</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-full"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Show selected assignees */}
+                  {selectedAssignees.map((assigneeId) => {
+                    const member = projectMembers.find(
+                      (m) => m.userId === assigneeId
+                    );
+                    return (
+                      <div
+                        key={assigneeId}
+                        className="flex items-center rounded-full pr-3 bg-gray-100"
+                      >
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback>
+                            {member?.name?.charAt(0) || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="ml-2 text-sm">
+                          {member?.name || "Unknown"}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() => removeAssignee(assigneeId)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Member selection dropdown */}
+                  <Select onValueChange={addAssignee}>
+                    <SelectTrigger className="w-auto">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-full"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span className="ml-1">Add Assignee</span>
+                      </Button>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projectMembers.map((member) => (
+                        <SelectItem
+                          key={member.userId}
+                          value={member.userId}
+                          disabled={selectedAssignees.includes(member.userId)}
+                        >
+                          {member.name || member.userId}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

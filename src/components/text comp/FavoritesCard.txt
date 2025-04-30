@@ -1,0 +1,102 @@
+'use client';
+
+import React, { useState } from 'react';
+import { CardHeader, CardTitle } from '@/components/ui/card';
+import FavoritesCardItem from './FavoritesCardItem';
+
+interface Feature {
+    id: string;
+    title: string;
+    subtitle: string;
+    imageUrl: string;
+    link: string;
+}
+
+interface FavoritesCardItemProps {
+    feature: {
+        id: string;
+        title: string;
+        subtitle?: string;
+        imageUrl?: string;
+        link?: string;
+    };
+    className?: string;
+}
+
+const initialFavorites: Feature[] = [
+    {
+        id: "website-builder",
+        title: "Website Builder",
+        subtitle: "Create custom websites",
+        imageUrl: "/icons/website-builder.png",
+        link: "/dashboard/website-builder",
+    },
+    {
+        id: "online-message",
+        title: "Online Message",
+        subtitle: "Connect with customers",
+        imageUrl: "/icons/online-meeting.png",
+        link: "/dashboard/online-message",
+    },
+    {
+        id: "ai-calling",
+        title: "AI Calling",
+        subtitle: "Automated customer calls",
+        imageUrl: "/icons/ai-calling.png",
+        link: "/dashboard/ai-calling",
+    },
+];
+
+const FavoritesCard2: React.FC = () => {
+    const [favorites, setFavorites] = useState<Feature[]>(initialFavorites);
+    
+    // Function to add a new favorite card
+    const addNewFavorite = () => {
+        // This could open a modal or form to collect details
+        // For now, we'll add a placeholder item
+        const newFavorite: Feature = {
+            id: `new-favorite-${Date.now()}`,
+            title: "New Favorite",
+            subtitle: "Click to customize",
+            imageUrl: "/icons/default.png",
+            link: "/dashboard",
+        };
+        
+        setFavorites([...favorites, newFavorite]);
+    };
+
+    return (
+        <div className="p-6 bg-white rounded-xl shadow-md mb-6 relative">
+            <CardHeader className="pb-0 absolute top-2 left-4">
+                <CardTitle className="text-xl">Favourites</CardTitle>
+            </CardHeader>
+            
+            <div className="flex flex-wrap justify-center gap-6 pt-12">
+                {favorites.map((feature, index) => (
+                    <FavoritesCardItem
+                        key={`${feature.id}-${index}`}
+                        feature={feature}
+                        className="flex-shrink-0"
+                    />
+                ))}
+                
+                {/* Add New Button - matches height of cards without text */}
+                <div 
+                    className="flex-shrink-0 cursor-pointer" 
+                    onClick={addNewFavorite}
+                >
+                    <div className="bg-gray-50 w-32 h-32 flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="gray" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default FavoritesCard2;
+
+

@@ -1,0 +1,243 @@
+"use client";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { useEmailStore } from "@/store/email-store";
+import { sendEmail } from "@/app/dashboard/api/emailSend";
+import { saveDraft } from "@/app/dashboard/api/draftEmail";
+
+// import { sendEmailAPI } from "@/app/dashboard/api/email-send";
+
+console.log("sendEmail:", sendEmail);
+
+interface ComposeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const ComposeModal = ({ isOpen, onClose }: ComposeModalProps) => {
+  const { addEmail, draftEmail, updateDraft } = useEmailStore();
+  const [email, setEmail] = useState({
+    to: draftEmail?.to || "",
+    subject: draftEmail?.subject || "",
+    content: draftEmail?.content || "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const autosaveInterval = setInterval(() => {
+      if (isOpen && (email.to || email.subject || email.content)) {
+        updateDraft({
+          to: email.to,
+          subject: email.subject,
+          content: email.content,
+          status: "draft",
+        });
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(autosaveInterval);
+      if (email.to || email.subject || email.content) {
+        addEmail({
+          from: "danielodedara@gmail.com",
+          to: email.to,
+          subject: email.subject,
+          content: email.content,
+          hasAttachment: false,
+          status: "draft",
+        });
+      }
+    };
+  }, [isOpen, email, updateDraft, addEmail]);
+
+
+  // Function for Send Email
+  const handleSend = async () => {
+    // More comprehensive validation
+    if (!email.to.trim()) {
+      setError("Recipient email is required");
+      return;
+    }
+
+    if (!email.subject.trim()) {
+      setError("Subject is required");
+      return;
+    }
+
+    if (!email.content.trim()) {
+      setError("Email content cannot be empty");
+      return;
+    }
+
+    // Email format validation (basic)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.to.trim())) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Create a structured request object
+      const emailData = {
+        to: email.to.trim(),
+        cc: undefined,
+        bcc: undefined,
+        subject: email.subject.trim(),
+        body: email.content.trim(),
+        signature: undefined,
+        email_id: "2e464724-1767-42c8-8017-6151fe7fddda",
+      };
+
+
+      // Send the email
+      const response = await sendEmail(emailData);
+
+      // console.log("API Response:", response);
+
+      // Only add to local state if the API call succeeded
+      addEmail({
+        from: "danielodedara@gmail.com",
+        to: email.to,
+        subject: email.subject,
+        content: email.content,
+        hasAttachment: false,
+        status: "sent",
+        // timestamp: new Date().toISOString(),
+      });
+
+      // This assumes your API returns the saved email in response.data.email
+      addEmail(response.data.email);
+     
+
+
+      // Clear draft if it exists
+      updateDraft(null);
+
+      // Reset form and close modal
+      setEmail({ to: "", subject: "", content: "" });
+      onClose();
+    } catch (error: any) {
+      console.error("Error in handleSend:", error);
+
+      // More descriptive error message
+      if (error.message.includes("401") || error.message.includes("auth")) {
+        setError("Authentication failed. Your session may have expired.");
+      } else if (error.message.includes("429")) {
+        setError("Too many requests. Please try again later.");
+      } else {
+        setError(error.message || "Failed to send email. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  // New function for Send Later
+  const handleSendLater = async () => {
+    if (!email.to.trim() && !email.subject.trim() && !email.content.trim()) {
+      // Don't save empty drafts
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    // Save as draft
+    try {
+      // Create a structured request object
+      const draftData = {
+        to: email.to.trim(),
+        cc: undefined,
+        bcc: undefined,
+        subject: email.subject.trim(),
+        content: email.content.trim(),
+        signature: undefined,
+        email_id: "f121e0d0-5863-44e9-97bf-a45577bb2a2b",
+      };
+
+      // Save to server
+      await saveDraft(draftData);
+
+      // Save as draft locally
+      addEmail({
+        from: "danielodedara@gmail.com",
+        to: email.to,
+        subject: email.subject,
+        content: email.content,
+        hasAttachment: false,
+        status: "draft",
+        // timestamp: new Date().toISOString(),
+      });
+
+      // Update draft in store
+      updateDraft({
+        to: email.to,
+        subject: email.subject,
+        content: email.content,
+        status: "draft",
+      });
+
+      // Close modal
+      setEmail({ to: "", subject: "", content: "" });
+      onClose();
+    } catch (error: any) {
+      console.error("Error saving draft:", error);
+      setError(error.message || "Failed to save draft. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Compose Email</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Input value="danielodedara@gmail.com" disabled className="bg-gray-100" />
+          </div>
+          <div className="flex items-center">
+            <Input
+              placeholder="To"
+              value={email.to}
+              onChange={(e) => setEmail({ ...email, to: e.target.value })}
+            />
+            <Button variant="ghost" className="ml-2">Cc</Button>
+            <Button variant="ghost">Bcc</Button>
+          </div>
+          <Input
+            placeholder="Subject"
+            value={email.subject}
+            onChange={(e) => setEmail({ ...email, subject: e.target.value })}
+          />
+          <textarea
+            className="w-full h-64 p-2 border rounded-md"
+            placeholder="Compose email"
+            value={email.content}
+            onChange={(e) => setEmail({ ...email, content: e.target.value })}
+          />
+          <div className="flex justify-end gap-x-2 items-center">
+            <Button onClick={handleSend}>Send</Button>
+            <Button variant="outline" onClick={handleSendLater} disabled={loading}>Send Later</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

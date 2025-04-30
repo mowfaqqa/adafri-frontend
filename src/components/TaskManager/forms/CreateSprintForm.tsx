@@ -11,34 +11,58 @@ import {
   Plus,
   AlertTriangle,
   Paperclip,
+  ListChecks,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SprintTaskFormData } from "@/lib/types/taskManager/types";
+import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 interface CreateSprintFormProps {
   onSubmit: (data: SprintTaskFormData) => void;
   isSubmitting: boolean;
+  projectId: string;
 }
 
 const CreateSprintForm: React.FC<CreateSprintFormProps> = ({
   onSubmit,
   isSubmitting,
+  projectId,
 }) => {
+  const { currentProject } = useProjectContext();
+  const { useEpicsQuery, useMilestonesQuery, useProjectStatusesQuery } =
+    useTaskManagerApi();
+
+  // Fetch epics, milestones, and statuses for the current project
+  const { data: epics = [] } = useEpicsQuery(projectId);
+  const { data: milestones = [] } = useMilestonesQuery(projectId);
+  const { data: statuses = [] } = useProjectStatusesQuery(projectId);
+
   const [formData, setFormData] = useState<SprintTaskFormData>({
     title: "",
     description: "",
-    status: "todo",
+    status: statuses.length > 0 ? statuses[0].name : "todo",
     date: new Date().toLocaleDateString("en-US", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     }),
     tags: "",
-    assignees: ["/assets/placeholder/32/32"],
+    assignees: [],
     category: "sprints",
     progress: 0,
     storyPoints: 0,
     sprint: "Sprint 1",
+    projectId: projectId,
+    epicId: "", // Will be populated when user selects an epic
+    milestoneId: "", // Optional - will be populated if user selects a milestone
   });
 
   const [priority, setPriority] = useState<string>("medium");
@@ -47,12 +71,24 @@ const CreateSprintForm: React.FC<CreateSprintFormProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleStoryPointsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10) || 0;
-    setFormData((prev: any) => ({ ...prev, storyPoints: value }));
+    setFormData((prev) => ({ ...prev, storyPoints: value }));
+  };
+
+  const handleEpicChange = (epicId: string) => {
+    setFormData((prev) => ({ ...prev, epicId }));
+  };
+
+  const handleMilestoneChange = (milestoneId: string) => {
+    setFormData((prev) => ({ ...prev, milestoneId }));
+  };
+
+  const handleStatusChange = (status: string) => {
+    setFormData((prev) => ({ ...prev, status }));
   };
 
   const handleSubmitForm = (e: React.FormEvent) => {
@@ -73,7 +109,9 @@ const CreateSprintForm: React.FC<CreateSprintFormProps> = ({
     <form onSubmit={handleSubmitForm}>
       <Card className="w-full max-w-xl bg-white rounded-0 border-none">
         <CardHeader className="border-b">
-          <CardTitle className="text-xl font-semibold">Create Sprint</CardTitle>
+          <CardTitle className="text-xl font-semibold">
+            Create Sprint Task
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-6 pt-6">
@@ -105,6 +143,83 @@ const CreateSprintForm: React.FC<CreateSprintFormProps> = ({
                   onChange={handleChange}
                   required
                 />
+              </div>
+            </div>
+
+            {/* Epic Selection */}
+            <div className="flex items-start gap-3">
+              <ListChecks className="w-5 h-5 mt-2 text-gray-500" />
+              <div className="flex-1">
+                <Label className="mb-2 block">Epic</Label>
+                <Select
+                  value={formData.epicId}
+                  onValueChange={handleEpicChange}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an epic" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {epics.length === 0 ? (
+                      <div className="p-2 text-center text-sm text-gray-500">
+                        No epics found. Please create one first.
+                      </div>
+                    ) : (
+                      epics.map((epic) => (
+                        <SelectItem key={epic.id} value={epic.id}>
+                          {epic.title}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Milestone Selection (Optional) */}
+            <div className="flex items-start gap-3">
+              <ListChecks className="w-5 h-5 mt-2 text-gray-500" />
+              <div className="flex-1">
+                <Label className="mb-2 block">Milestone (Optional)</Label>
+                <Select
+                  value={formData?.milestoneId}
+                  onValueChange={handleMilestoneChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a milestone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {milestones.map((milestone) => (
+                      <SelectItem key={milestone.id} value={milestone.id}>
+                        {milestone.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Status Selection */}
+            <div className="flex items-start gap-3">
+              <ListChecks className="w-5 h-5 mt-2 text-gray-500" />
+              <div className="flex-1">
+                <Label className="mb-2 block">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={handleStatusChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuses.map((status) => (
+                      <SelectItem key={status.id} value={status.name}>
+                        {status.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -266,7 +381,7 @@ const CreateSprintForm: React.FC<CreateSprintFormProps> = ({
             <Button
               type="submit"
               className="px-6 bg-teal-600"
-              disabled={isSubmitting}
+              disabled={isSubmitting || epics.length === 0}
             >
               {isSubmitting ? "Creating..." : "+ Add Sprint Task"}
             </Button>

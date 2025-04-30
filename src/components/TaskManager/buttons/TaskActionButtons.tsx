@@ -1,4 +1,3 @@
-// components/TaskManager/buttons/TaskActionButtons.tsx
 
 import React, { useState } from "react";
 import { Eye, Pencil, Trash2 } from "lucide-react";
@@ -6,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Task } from "@/lib/types/taskManager/types";
 import { DeleteConfirmationDialog } from "../modals/DeleteConfirmationDialog";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 interface TaskActionButtonsProps {
   task: Task;
+  projectId?: string; // Allow passing projectId directly
   onView: () => void;
   onEdit: () => void;
   variant?: "card" | "modal";
@@ -16,21 +17,36 @@ interface TaskActionButtonsProps {
 
 export const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
   task,
+  projectId: propProjectId, // Project ID from props
   onView,
   onEdit,
   variant = "card",
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { projectId: contextProjectId } = useProjectContext(); // Get project ID from context as fallback
   const { useDeleteTaskMutation } = useTaskManagerApi();
   const deleteTaskMutation = useDeleteTaskMutation();
 
+  // Use provided projectId or fall back to context
+  const projectId = propProjectId || contextProjectId || "";
+
   const handleDelete = () => {
-    deleteTaskMutation.mutate(task.id as string, {
-      onSuccess: () => {
-        setShowDeleteDialog(false);
+    if (!projectId) {
+      console.error("Project ID is missing");
+      return;
+    }
+
+    deleteTaskMutation.mutate(
+      {
+        projectId,
+        taskId: task.id as string,
       },
-    });
-    setShowDeleteDialog(false);
+      {
+        onSuccess: () => {
+          setShowDeleteDialog(false);
+        },
+      }
+    );
   };
 
   // Different styles based on where the buttons are rendered
@@ -71,7 +87,7 @@ export const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
               className={`${buttonClasses} hover:text-red-500`}
               onClick={() => setShowDeleteDialog(true)}
               title="Delete Task"
-              disabled={deleteTaskMutation.isPending}
+              disabled={deleteTaskMutation.isPending || !projectId}
             >
               <Trash2 className={iconClasses} />
             </Button>
@@ -93,7 +109,7 @@ export const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
               size="sm"
               className={`${buttonClasses} hover:text-red-500 hover:border-red-500`}
               onClick={() => setShowDeleteDialog(true)}
-              disabled={deleteTaskMutation.isPending}
+              disabled={deleteTaskMutation.isPending || !projectId}
             >
               <Trash2 className={iconClasses} />
               {deleteTaskMutation.isPending ? "Deleting..." : "Delete"}
@@ -106,6 +122,7 @@ export const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         task={task}
+        projectId={projectId}
         onConfirm={handleDelete}
       />
     </>

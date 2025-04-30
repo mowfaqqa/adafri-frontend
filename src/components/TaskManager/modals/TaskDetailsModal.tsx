@@ -30,9 +30,19 @@ import {
   FileText,
   Video,
   Music,
+  ListChecks,
 } from "lucide-react";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
 import { getFileUrl } from "@/lib/api/task-manager/fileApi";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 interface TaskDetailsModalProps {
   task: Task;
@@ -60,6 +70,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   isOpen,
   onOpenChange,
 }) => {
+  const { projectId } = useProjectContext();
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
   const [currentProgress, setCurrentProgress] = useState(task.progress);
@@ -73,7 +84,9 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
     useTaskFilesQuery,
     useUploadFileMutation,
     useDeleteFileMutation,
-    useColumnsQuery,
+    useProjectStatusesQuery,
+    useEpicsQuery,
+    useMilestonesQuery,
   } = useTaskManagerApi();
 
   const updateTaskMutation = useUpdateTaskMutation();
@@ -82,12 +95,18 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   const uploadFileMutation = useUploadFileMutation();
   const deleteFileMutation = useDeleteFileMutation();
 
+  // Fetch project-related data
+  const { data: projectStatuses = [] } = useProjectStatusesQuery(
+    projectId || ""
+  );
+  const { data: epics = [] } = useEpicsQuery(projectId || "");
+  const { data: milestones = [] } = useMilestonesQuery(projectId || "");
+
   // Files query
   const { data: taskFiles = [], isLoading: isLoadingFiles } = useTaskFilesQuery(
+    projectId || "",
     task.id as string
   );
-
-  const { data: columnList = [] } = useColumnsQuery();
 
   // Update local state when task changes
   useEffect(() => {
@@ -99,7 +118,11 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
     if (isEditMode && hasChanges()) {
       // If saving changes
       updateTaskMutation.mutate(
-        { id: task.id as string, updates: editedTask },
+        {
+          projectId: projectId || "",
+          taskId: task.id as string,
+          updates: editedTask,
+        },
         {
           onSuccess: () => {
             setIsEditMode(false);
@@ -117,6 +140,8 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
       editedTask.title !== task.title ||
       editedTask.description !== task.description ||
       editedTask.date !== task.date ||
+      editedTask.epicId !== task.epicId ||
+      editedTask.milestoneId !== task.milestoneId ||
       (isSprintTask(editedTask) &&
         isSprintTask(task) &&
         (editedTask?.storyPoints !== task?.storyPoints ||
@@ -144,6 +169,14 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
     }
   };
 
+  const handleEpicChange = (epicId: string) => {
+    setEditedTask((prev) => ({ ...prev, epicId }));
+  };
+
+  const handleMilestoneChange = (milestoneId: string) => {
+    setEditedTask((prev) => ({ ...prev, milestoneId }));
+  };
+
   const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newProgress = parseInt(e.target.value);
     setCurrentProgress(newProgress);
@@ -151,22 +184,25 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
 
   const handleProgressUpdate = () => {
     updateProgressMutation.mutate({
-      id: task.id as string,
+      projectId: projectId || "",
+      taskId: task.id as string,
       progress: currentProgress,
     });
   };
 
   const handleStatusChange = (newStatus: string) => {
     updateStatusMutation.mutate({
-      id: task.id as string,
+      projectId: projectId || "",
+      taskId: task.id as string,
       status: newStatus,
     });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && projectId) {
       uploadFileMutation.mutate({
+        projectId,
         taskId: task.id as string,
         file,
       });
@@ -174,7 +210,21 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   };
 
   const handleDeleteFile = (fileId: string) => {
-    deleteFileMutation.mutate(fileId);
+    if (!projectId) return;
+    deleteFileMutation.mutate({ projectId, fileId });
+  };
+
+  // Helper function to find entity by ID
+  const getEpicTitle = (epicId: string | undefined) => {
+    if (!epicId) return "None";
+    const epic = epics.find((e) => e.id === epicId);
+    return epic ? epic.title : "Unknown Epic";
+  };
+
+  const getMilestoneTitle = (milestoneId: string | undefined) => {
+    if (!milestoneId) return "None";
+    const milestone = milestones.find((m) => m.id === milestoneId);
+    return milestone ? milestone.title : "Unknown Milestone";
   };
 
   return (
@@ -204,6 +254,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             </Button>
             <TaskActionButtons
               task={task}
+              projectId={projectId || ""}
               onView={() => {}}
               onEdit={() => setIsEditMode(true)}
               variant="modal"
@@ -235,6 +286,67 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
               ) : (
                 <p className="text-sm">{task.description}</p>
               )}
+            </div>
+
+            {/* Project Information */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-gray-500">Project</h3>
+              <Badge className="bg-teal-100 text-teal-800 hover:bg-teal-100">
+                {projectId || "Unknown Project"}
+              </Badge>
+            </div>
+
+            {/* Epic and Milestone */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-500">Epic</h3>
+                {isEditMode && isSprintTask(task) ? (
+                  <Select
+                    value={editedTask.epicId || ""}
+                    onValueChange={handleEpicChange}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select an epic" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {epics.map((epic) => (
+                        <SelectItem key={epic.id} value={epic.id}>
+                          {epic.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
+                    {getEpicTitle(task.epicId)}
+                  </Badge>
+                )}
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-500">Milestone</h3>
+                {isEditMode ? (
+                  <Select
+                    value={editedTask.milestoneId || ""}
+                    onValueChange={handleMilestoneChange}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a milestone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {milestones.map((milestone) => (
+                        <SelectItem key={milestone.id} value={milestone.id}>
+                          {milestone.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                    {getMilestoneTitle(task.milestoneId)}
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {/* Sprint-specific fields */}
@@ -301,22 +413,18 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-gray-500">Status</h3>
               <div className="flex gap-2">
-                <select
-                  value={task.status}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  className="p-2 border rounded-md w-full"
-                  disabled={updateStatusMutation.isPending}
-                >
-                  {/* Use the columns from API for status options */}
-                  <option value="" disabled>
-                    Select status
-                  </option>
-                  {columnList?.map((column: any) => (
-                    <option key={column?.id} value={column?.id}>
-                      {column.title}
-                    </option>
-                  ))}
-                </select>
+                <Select value={task.status} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projectStatuses.map((status) => (
+                      <SelectItem key={status.id} value={status.name}>
+                        {status.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {updateStatusMutation.isPending && (
                   <span className="text-sm text-gray-500">Updating...</span>
                 )}
@@ -413,10 +521,11 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                     <div key={log.id} className="border-b pb-2">
                       <p className="text-sm font-medium">
                         {log.action.charAt(0).toUpperCase() +
-                          log.action.slice(1)}
+                          log.action.slice(1).replace(/_/g, " ")}
                       </p>
                       <p className="text-sm text-gray-500">{log.description}</p>
                       <p className="text-xs text-gray-400">
+                        By: {log.userId} |{" "}
                         {new Date(log.timestamp).toLocaleString()}
                       </p>
                     </div>

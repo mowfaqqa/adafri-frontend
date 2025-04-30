@@ -1,4 +1,3 @@
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Task,
@@ -867,13 +866,8 @@ export const useTaskManagerApi = () => {
 
   const useDeleteFileMutation = () => {
     return useMutation({
-      mutationFn: ({
-        projectId,
-        fileId,
-      }: {
-        projectId: string;
-        fileId: string;
-      }) => deleteFile(projectId, fileId),
+      mutationFn: ({ projectId, fileId }: { projectId: any; fileId: string }) =>
+        deleteFile(projectId, fileId),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["taskFiles"] });
         toast("File deleted successfully");

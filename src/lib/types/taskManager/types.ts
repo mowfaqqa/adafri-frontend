@@ -1,6 +1,3 @@
-// types/TaskManager/types.ts
-
-export type TaskStatus = string;
 export type StandardTaskCategory = "marketing" | "sales" | "development";
 export type TaskCategory = StandardTaskCategory | "sprints";
 export type TabType = "viewAll" | TaskCategory;
@@ -79,7 +76,7 @@ interface BaseTask {
   id: string;
   title: string;
   description: string;
-  status: TaskStatus;
+  status: string;
   createdAt: string;
   lastModified: string;
   date: string;
@@ -196,7 +193,7 @@ export interface TaskManagerContextType {
   addTask: (task: NewTaskFormData) => void;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
   deleteTask: (taskId: string) => void;
-  moveTask: (taskId: string, newStatus: TaskStatus) => void;
+  moveTask: (taskId: string, newStatus: string) => void;
   addColumn: (title: string) => void;
 }
 

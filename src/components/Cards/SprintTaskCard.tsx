@@ -35,7 +35,6 @@ const SprintTaskCard: React.FC<SprintTaskCardProps> = ({
               onView={() => setShowDetailsModal(true)}
               onEdit={() => {
                 setShowDetailsModal(true);
-                // The edit mode will be handled within the modal
               }}
               variant="card"
             />

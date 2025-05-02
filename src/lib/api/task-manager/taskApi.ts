@@ -1,9 +1,9 @@
+// src/lib/api/task-manager/taskApi.ts
 import {
   NewTaskFormData,
   SprintTaskFormData,
   StandardTaskFormData,
   Task,
-  TaskStatus,
 } from "@/lib/types/taskManager/types";
 import taskApiClient from "./client";
 
@@ -13,26 +13,54 @@ interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
 const taskApi = taskApiClient;
-//Get all tasks with optional filters
-export const getTasks = async (category?: string, status?: TaskStatus) => {
+
+// Get all tasks for a project with optional filters
+export const getProjectTasks = async (
+  projectId: string,
+  category?: string,
+  status?: string,
+  epicId?: string,
+  milestoneId?: string,
+  assignee?: string
+) => {
   const params: Record<string, string> = {};
+
   if (category && category !== "viewAll") params.category = category;
   if (status) params.status = status;
+  if (epicId) params.epicId = epicId;
+  if (milestoneId) params.milestoneId = milestoneId;
+  if (assignee) params.assignee = assignee;
 
-  const response = await taskApi.get("/tasks", { params });
+  const response = await taskApi.get(`/projects/${projectId}/tasks`, {
+    params,
+  });
   return response.data?.data || [];
 };
 
-//get task by ID
+// Get tasks assigned to the current user across all projects
+export const getMyTasks = async (status?: string) => {
+  const params: Record<string, string> = {};
+  if (status) params.status = status;
+
+  const response = await taskApi.get(`/tasks/my-tasks`, { params });
+  return response.data?.data || [];
+};
+
 // Get task by ID
-export const getTaskById = async (id: string) => {
-  const response = await taskApi.get<ApiResponse<Task>>(`/tasks/${id}`);
+export const getTaskById = async (projectId: string, taskId: string) => {
+  const response = await taskApi.get<ApiResponse<Task>>(
+    `/projects/${projectId}/tasks/${taskId}`
+  );
   return response.data.data;
 };
 
 // Create new task
-export const createTask = async (formData: NewTaskFormData) => {
+export const createTask = async (
+  projectId: string,
+  formData: NewTaskFormData
+) => {
   const baseTask = {
     title: formData.title,
     description: formData.description,
@@ -46,6 +74,9 @@ export const createTask = async (formData: NewTaskFormData) => {
           .filter((tag) => tag !== ""),
     assignees: formData.assignees,
     progress: formData.progress,
+    projectId: projectId,
+    epicId: formData.epicId,
+    milestoneId: formData.milestoneId,
   };
 
   let taskData;
@@ -66,30 +97,66 @@ export const createTask = async (formData: NewTaskFormData) => {
     };
   }
 
-  const response = await taskApi.post("/tasks", taskData);
+  const response = await taskApi.post(`/projects/${projectId}/tasks`, taskData);
   return response.data.data;
 };
 
 // Update task
-export const updateTask = async (id: string, updates: any) => {
-  const response = await taskApi.put(`/tasks/${id}`, updates!);
+export const updateTask = async (
+  projectId: string,
+  taskId: string,
+  updates: any
+) => {
+  const response = await taskApi.put(
+    `/projects/${projectId}/tasks/${taskId}`,
+    updates!
+  );
   return response.data.data;
 };
 
 // Delete task
-export const deleteTask = async (id: string) => {
-  const response = await taskApi.delete(`/tasks/${id}`);
+export const deleteTask = async (projectId: string, taskId: string) => {
+  const response = await taskApi.delete(
+    `/projects/${projectId}/tasks/${taskId}`
+  );
   return response.data.success;
 };
 
 // Update task status
-export const updateTaskStatus = async (id: string, status: string) => {
-  const response = await taskApi.patch(`/tasks/${id}/status`, { status });
+export const updateTaskStatus = async (
+  projectId: string,
+  taskId: string,
+  status: string
+) => {
+  const response = await taskApi.patch(
+    `/projects/${projectId}/tasks/${taskId}/status`,
+    { status }
+  );
   return response.data.data;
 };
 
 // Update task progress
-export const updateTaskProgress = async (id: string, progress: number) => {
-  const response = await taskApi.patch(`/tasks/${id}/progress`, { progress });
+export const updateTaskProgress = async (
+  projectId: string,
+  taskId: string,
+  progress: number
+) => {
+  const response = await taskApi.patch(
+    `/projects/${projectId}/tasks/${taskId}/progress`,
+    { progress }
+  );
+  return response.data.data;
+};
+
+// Update task assignees
+export const updateTaskAssignees = async (
+  projectId: string,
+  taskId: string,
+  assignees: string[]
+) => {
+  const response = await taskApi.patch(
+    `/projects/${projectId}/tasks/${taskId}/assignees`,
+    { assignees }
+  );
   return response.data.data;
 };

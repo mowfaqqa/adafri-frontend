@@ -1,19 +1,6 @@
+// src/lib/api/task-manager/fileApi.ts
 import taskApiClient from "./client";
-interface FileAttachment {
-  id: string;
-  filename: string;
-  originalname: string;
-  mimetype: string;
-  size: number;
-  taskId: string;
-  url: string;
-  secureUrl: string;
-  publicId: string;
-  resourceType?: string;
-  format?: string;
-  createdAt: string;
-  updatedAt?: string;
-}
+import { FileAttachment } from "@/lib/types/taskManager/types";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -22,14 +9,18 @@ interface ApiResponse<T> {
   error?: string;
 }
 
-// Upload file for a task
-export const uploadFile = async (taskId: string, file: File) => {
+// Upload file for a task within a project
+export const uploadFile = async (
+  projectId: string,
+  taskId: string,
+  file: File
+) => {
   const formData = new FormData();
   formData.append("file", file);
 
   // For file uploads, we need to set different headers
   const response = await taskApiClient.post<ApiResponse<FileAttachment>>(
-    `/files/upload/${taskId}`,
+    `/projects/${projectId}/files/${taskId}/upload`,
     formData,
     {
       headers: {
@@ -42,9 +33,9 @@ export const uploadFile = async (taskId: string, file: File) => {
 };
 
 // Get all files for a task
-export const getTaskFiles = async (taskId: string) => {
+export const getTaskFiles = async (projectId: string, taskId: string) => {
   const response = await taskApiClient.get<ApiResponse<FileAttachment[]>>(
-    `/files/task/${taskId}`
+    `/projects/${projectId}/files/${taskId}`
   );
   return response.data.data || [];
 };
@@ -53,17 +44,20 @@ export const getTaskFiles = async (taskId: string) => {
 export const getFileUrl = (file: FileAttachment | string) => {
   // If the file is passed as a string (file ID), return the old-style URL for backward compatibility
   if (typeof file === "string") {
-    return `${taskApiClient.defaults.baseURL}/files/${file}`;
+    return `${taskApiClient.defaults.baseURL}/projects/any/files/file/${file}`;
   }
 
   // Use Cloudinary's secure URL if available
-  return file.secureUrl || `${taskApiClient.defaults.baseURL}/files/${file.id}`;
+  return (
+    file.secureUrl ||
+    `${taskApiClient.defaults.baseURL}/projects/any/files/file/${file.id}`
+  );
 };
 
 // Delete file
-export const deleteFile = async (fileId: string) => {
+export const deleteFile = async (projectId: string, fileId: string) => {
   const response = await taskApiClient.delete<ApiResponse<null>>(
-    `/files/${fileId}`
+    `/projects/${projectId}/files/file/${fileId}`
   );
   return response.data.success;
 };

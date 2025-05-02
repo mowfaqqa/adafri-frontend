@@ -1,15 +1,14 @@
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import TaskManagerOverview from "@/components/TaskManager/TaskManagerOverview";
-import { TaskManagerProvider } from "@/lib/context/TaskmanagerContext";
 import React from "react";
-
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import ProjectDashboard from "@/components/TaskManager/ProjectDashboard";
+import { ProjectProvider } from "@/lib/context/task-manager/ProjectContext";
 
 const TaskManager = () => {
   return (
     <ProtectedRoute>
-      <TaskManagerProvider>
-        <TaskManagerOverview />
-      </TaskManagerProvider>
+      <ProjectProvider>
+        <ProjectDashboard />
+      </ProjectProvider>
     </ProtectedRoute>
   );
 };

@@ -17,12 +17,13 @@ interface DeleteConfirmationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: Task;
+  projectId?: string; // Add projectId as optional parameter
   onConfirm: () => void;
 }
 
 export const DeleteConfirmationDialog: React.FC<
   DeleteConfirmationDialogProps
-> = ({ open, onOpenChange, task, onConfirm }) => {
+> = ({ open, onOpenChange, task, projectId, onConfirm }) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useState } from "react";
@@ -9,34 +8,56 @@ import { DeleteColumnDialog } from "../modals/DeleteColumnDialog";
 import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
 import { EditColumnDialog } from "../modals/EditColumnDialog";
 import { toast } from "sonner";
+import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 interface ColumnActionButtonsProps {
   column: Column;
+  projectId?: string; // Allow passing projectId directly
   onAddTask?: () => void;
 }
 
 export const ColumnActionButtons: React.FC<ColumnActionButtonsProps> = ({
   column,
+  projectId: propProjectId,
   onAddTask,
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const { projectId: contextProjectId } = useProjectContext(); // Get from context as fallback
 
-  const { useDeleteColumnMutation } = useTaskManagerApi();
-  const deleteColumnMutation = useDeleteColumnMutation();
+  // Use provided projectId or fall back to context
+  const projectId = propProjectId || contextProjectId || "";
+
+  const { useDeleteProjectStatusMutation, useUpdateProjectStatusMutation } =
+    useTaskManagerApi();
+  const deleteStatusMutation = useDeleteProjectStatusMutation();
+
   const handleDelete = () => {
-    // Only allow deletion of custom columns, not default ones
-    if (["todo", "in progress", "done"].includes(column.title.toLowerCase())) {
-      toast( "Default columns cannot be deleted.");
+    if (!projectId) {
+      toast("Project ID is missing");
+      return;
+    }
+
+    // Only allow deletion of custom statuses, not default ones
+    if (
+      ["todo", "in progress", "done"].includes(column.name?.toLowerCase() || "")
+    ) {
+      toast("Default statuses cannot be deleted.");
       setShowDeleteDialog(false);
       return;
     }
 
-    deleteColumnMutation.mutate(column.id, {
-      onSuccess: () => {
-        setShowDeleteDialog(false);
+    deleteStatusMutation.mutate(
+      {
+        projectId,
+        statusId: column.id,
       },
-    });
+      {
+        onSuccess: () => {
+          setShowDeleteDialog(false);
+        },
+      }
+    );
   };
 
   return (
@@ -46,7 +67,7 @@ export const ColumnActionButtons: React.FC<ColumnActionButtonsProps> = ({
           size="icon"
           className="h-6 w-6 rounded-full group-hover:opacity-100 transition-opacity"
           onClick={() => setShowEditDialog(true)}
-          title="Edit Column"
+          title="Edit Status"
         >
           <Pencil className="h-4 w-4" />
         </Button>
@@ -54,10 +75,12 @@ export const ColumnActionButtons: React.FC<ColumnActionButtonsProps> = ({
           size="icon"
           className="h-6 w-6 rounded-full group-hover:opacity-100 transition-opacity hover:text-red-500"
           onClick={() => setShowDeleteDialog(true)}
-          title="Delete Column"
+          title="Delete Status"
           disabled={
+            // Disable for default statuses or if we're currently deleting
             ["todo", "inProgress", "done"].includes(column.id) ||
-            deleteColumnMutation.isPending
+            deleteStatusMutation.isPending ||
+            !projectId
           }
         >
           <Trash2 className="h-4 w-4" />
@@ -68,6 +91,7 @@ export const ColumnActionButtons: React.FC<ColumnActionButtonsProps> = ({
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         column={column}
+        projectId={projectId}
         onConfirm={handleDelete}
       />
 
@@ -75,6 +99,7 @@ export const ColumnActionButtons: React.FC<ColumnActionButtonsProps> = ({
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         column={column}
+        projectId={projectId}
       />
     </>
   );

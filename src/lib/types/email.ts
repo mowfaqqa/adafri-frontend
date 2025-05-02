@@ -14,6 +14,8 @@ export interface Email {
   category: string;
   isRead: boolean;
   email_id?: string | null;
+  cc?: string[];
+  bcc?: string[];
 }
 
 

@@ -1,29 +1,19 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Switch } from "@/components/ui/switch";
-// import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { getUserInfo as getServerUserInfo } from "@/lib/utils/cookies";
+import { UnlockedFeatures } from "@/components/Dashboard/UnlockedFeatures";
+import { UnlockLevelCard } from "@/components/Dashboard/UnlockLevelCard";
+import { EmailSection } from "@/components/Dashboard/EmailSection";
+import { StatisticsSection } from "@/components/Dashboard/StatisticsSection";
+import { FeatureUnavailableModal } from "@/components/Dashboard/FeatureUnavailableModal";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 
 // Define proper TypeScript interfaces
 interface UserInfo {
   name: string;
-}
-
-interface FeatureCardProps {
-  title: string;
-  isActive: boolean;
-  imageUrl: string;
-  subtitle?: string;
-  link: string;
-  onClick: (link: string, isActive: boolean) => void;
-}
-  
-interface UnlockedFeaturesProps {
-  activeTabFeatures: Feature[];
-  onFeatureClick: (link: string, isActive: boolean) => void;
 }
 
 interface Feature {
@@ -55,6 +45,7 @@ const getLocalUserInfo = (): UserInfo => {
 const Dashboard: React.FC = () => {
   const [userInfo, setUserInfo] = useState<UserInfo>({ name: "" });
   const [activeTab, setActiveTab] = useState<string>("dashboard");
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -110,8 +101,8 @@ const Dashboard: React.FC = () => {
     if (isActive) {
       router.push(link);
     } else {
-      // Show a message or modal that this feature is not available
-      alert("This feature is currently unavailable. Please upgrade to access it.");
+      // Show modal instead of alert
+      setModalOpen(true);
     }
   };
 
@@ -122,10 +113,10 @@ const Dashboard: React.FC = () => {
       "professional-mail": ["dashboard", "tools"].includes(activeTab),
       "task-manager": ["dashboard", "tools"].includes(activeTab),
       "google-ads": ["dashboard", "advertising"].includes(activeTab),
-      "sms": ["dashboard", "marketing"].includes(activeTab),
+      "sms": ["dashboard", "advertising"].includes(activeTab),
       "dashboard-overview": activeTab === "dashboard",
       "website-builder": false,
-      "mass-mailing": false,
+      "mass-mailing": ["dashboard", "advertising"].includes(activeTab),
       "intern-messages": false,
       "analytics": false,
       "facebook-ads": false,
@@ -162,7 +153,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-   // <ProtectedRoute>
+    <ProtectedRoute>
     <div className="p-6 min-h-screen bg-white overflow-hidden overflow-y-auto">
       {/* App Title */}
       <h1 className="text-2xl font-bold text-gray-900 mb-4">The everything app for work !</h1>
@@ -202,148 +193,23 @@ const Dashboard: React.FC = () => {
           />
 
           {/* Statistics Section */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4">STATISTICS</h3>
-            <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
-              <div className="flex justify-center items-center">
-                <Image
-                  src="/assets/Statistics-image.png"
-                  alt="No statistics yet"
-                  width={200}
-                  height={200}
-                />
-              </div>
-              <p className="text-lg font-medium mt-2">No statistics yet !</p>
-            </div>
-          </div>
+          <StatisticsSection />
         </div>
 
         {/* Right Section (1 column) */}
         <div className="lg:col-span-1">
           {/* Unlock Level Card */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 justify-center">
-            {/* Semi-circular Progress Gauge */}
-            <div className="flex justify-center items-center mb-4">
-              <Image
-                src="/assets/semi-circle-chart.png"
-                alt="Connect emails"
-                width={250}
-                height={250}
-              />
-            </div>
-
-            {/* Title */}
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold">Unlock level 2</h3>
-            </div>
-
-            {/* Features List */}
-            <ul className="space-y-4 mb-8">
-              <li className="flex items-center">
-                <div className="w-3 h-3 bg-gray-300 rounded-full mr-3"></div>
-                <span className="text-gray-700">Collaborative messaging</span>
-              </li>
-              <li className="flex items-center">
-                <div className="w-3 h-3 bg-gray-300 rounded-full mr-3"></div>
-                <span className="text-gray-700">Customer Relationship Manager (CRM)</span>
-              </li>
-            </ul>
-
-            {/* Button */}
-            <button className="w-full py-3 bg-gray-100 text-gray-800 rounded-lg text-center font-medium">
-              Invite team members
-            </button>
-          </div>
+          <UnlockLevelCard />
 
           {/* Email Section */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4 text-center">EMAILS</h3>
-
-            {/* Made buttons responsive and flex-wrap to prevent overflow */}
-            <div className="flex justify-center flex-wrap gap-2 mb-6">
-              <button className="py-2 px-4 bg-gray-100 text-gray-800 rounded-lg">Personal</button>
-              <button className="py-2 px-4 bg-blue-600 text-white rounded-lg">Professional</button>
-            </div>
-
-            <div className="flex justify-center p-6">
-              <div className="text-center">
-                <Image
-                  src="/assets/email-image.png"
-                  alt="Connect emails"
-                  width={150}
-                  height={150}
-                />
-                <p className="mt-4 text-sm font-medium">Connect your email pro</p>
-              </div>
-            </div>
-          </div>
+          <EmailSection />
         </div>
       </div>
+
+      {/* Feature Unavailable Modal */}
+      <FeatureUnavailableModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
-    // </ProtectedRoute>
-  );
-};
-
-// Feature Card Component using shadcn Switch
-const FeatureCard: React.FC<FeatureCardProps> = ({ title, isActive, imageUrl, link, onClick }) => {
-  const handleClick = () => {
-    onClick(link, isActive);
-  };
-
-  return (
-    <div 
-      className={`bg-white rounded-lg shadow-sm border border-gray-100 p-4 transition-all duration-200 ${isActive ? 'cursor-pointer hover:shadow-md' : 'opacity-75'}`}
-      onClick={handleClick}
-    >
-      {/* Top section with toggle */}
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-sm text-gray-500">{isActive ? "ON" : "OFF"}</span>
-        <Switch checked={isActive} />
-      </div>
-
-      {/* Center icon */}
-      <div className="flex justify-center items-center my-6">
-        <Image
-          src={imageUrl}
-          alt={title}
-          width={40}
-          height={40}
-        />
-      </div>
-
-      {/* Title at bottom */}
-      <div className="text-center">
-        <h4 className="text-sm font-medium text-gray-800">{title}</h4>
-      </div>
-    </div>
-  );
-};
-
-// Unlocked Features Component
-const UnlockedFeatures: React.FC<UnlockedFeaturesProps> = ({ activeTabFeatures, onFeatureClick }) => {
-  return (
-    <div className="mb-6">
-      <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4">UNLOCKED FEATURES</h3>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {activeTabFeatures.map((feature) => (
-          <FeatureCard
-            key={feature.id}
-            title={feature.title}
-            isActive={feature.isActive}
-            imageUrl={feature.imageUrl}
-            subtitle={feature.subtitle}
-            link={feature.link}
-            onClick={onFeatureClick}
-          />
-        ))}
-        {activeTabFeatures.length === 0 && (
-          <div className="col-span-full text-center p-6 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">No features available for the selected tab</p>
-          </div>
-        )}
-      </div>
-    </div>
+    </ProtectedRoute>
   );
 };
 
@@ -367,22 +233,6 @@ const exampleData: Tab[] = [
     id: "marketing",
     label: "Marketing", 
     features: [
-      {
-        id: "sms",
-        title: "SMS",
-        subtitle: "Boost Connections, Drive Sales!",
-        imageUrl: "/icons/sms.png",
-        link: "/dashboard/google-ads",
-        isActive: true
-      },
-      {
-        id: "mass-mailing",
-        title: "Mass Mailing",
-        subtitle: "Boost Connections, Drive Sales!",
-        imageUrl: "/icons/mass-mailing.png",
-        link: "/dashboard/mass-mailing",
-        isActive: false
-      },
       {
         id: "crm",
         title: "CRM",
@@ -492,6 +342,22 @@ const exampleData: Tab[] = [
         isActive: true
       },
       {
+        id: "sms",
+        title: "SMS",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/sms.png",
+        link: "/dashboard/google-ads",
+        isActive: true
+      },
+      {
+        id: "mass-mailing",
+        title: "Mass Mailing",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/mass-mailing.png",
+        link: "/dashboard/google-ads",
+        isActive: false
+      },
+      {
         id: "Meta",
         title: "Meta",
         subtitle: "Boost Connections, Drive Sales!",
@@ -542,7 +408,7 @@ const exampleData: Tab[] = [
         title: "WhatsApp Messaging",
         subtitle: "Connect with customers",
         imageUrl: "/icons/whatsapp.png",
-        link: "/externals/whatsapp",
+        link: "/dashboard/whatsapp",
         isActive: true
       }
     ]
@@ -556,7 +422,7 @@ const exampleData: Tab[] = [
         title: "ChatGPT Assistant",
         subtitle: "AI-powered assistance",
         imageUrl: "/icons/chatgpt.png",
-        link: "/externals/chatgpt",
+        link: "/dashboard/chatgpt",
         isActive: true
       }
     ]
@@ -570,7 +436,7 @@ const exampleData: Tab[] = [
         title: "Telegram Messaging",
         subtitle: "Secure communication",
         imageUrl: "/icons/telegram.png", 
-        link: "/externals/telegram",
+        link: "/dashboard/telegram",
         isActive: true
       }
     ]
@@ -578,6 +444,640 @@ const exampleData: Tab[] = [
 ];
 
 export default Dashboard;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// The former code.
+// "use client";
+// import React, { useState, useEffect } from "react";
+// import Image from "next/image";
+// import Link from "next/link";
+// import { useRouter } from "next/navigation";
+// import { Switch } from "@/components/ui/switch";
+// // import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+// import { getUserInfo as getServerUserInfo } from "@/lib/utils/cookies";
+
+// // Define proper TypeScript interfaces
+// interface UserInfo {
+//   name: string;
+// }
+
+// interface FeatureCardProps {
+//   title: string;
+//   isActive: boolean;
+//   imageUrl: string;
+//   subtitle?: string;
+//   link: string;
+//   onClick: (link: string, isActive: boolean) => void;
+// }
+  
+// interface UnlockedFeaturesProps {
+//   activeTabFeatures: Feature[];
+//   onFeatureClick: (link: string, isActive: boolean) => void;
+// }
+
+// interface Feature {
+//   id: string;
+//   title: string;
+//   subtitle: string;
+//   imageUrl: string;
+//   link: string;
+//   isActive: boolean;
+// }
+
+// // Define the Tab interface to fix TypeScript errors
+// interface Tab {
+//   id: string;
+//   label: string;
+//   features: Feature[];
+// }
+
+// // Local function to get user info from localStorage
+// const getLocalUserInfo = (): UserInfo => {
+//   // Only execute on client-side
+//   if (typeof window !== 'undefined') {
+//     const storedName = localStorage.getItem('userName');
+//     return { name: storedName || "User" };
+//   }
+//   return { name: "User" };
+// };
+
+// const Dashboard: React.FC = () => {
+//   const [userInfo, setUserInfo] = useState<UserInfo>({ name: "" });
+//   const [activeTab, setActiveTab] = useState<string>("dashboard");
+//   const router = useRouter();
+
+//   useEffect(() => {
+//     // Try to get user info from cookies first
+//     try {
+//       const cookieInfo = getServerUserInfo();
+//       if (cookieInfo && cookieInfo.name) {
+//         setUserInfo({
+//           name: cookieInfo.name
+//         });
+//       } else {
+//         // Fallback to localStorage if cookie info doesn't have name
+//         const localInfo = getLocalUserInfo();
+//         setUserInfo({
+//           name: localInfo.name
+//         });
+//       }
+//     } catch (error) {
+//       console.log("Error getting user info from cookies, falling back to localStorage");
+//       // Fallback to localStorage
+//       const localInfo = getLocalUserInfo();
+//       setUserInfo({
+//         name: localInfo.name
+//       });
+//     }
+    
+//     // Get active category from localStorage (set by Sidebar)
+//     const savedCategory = localStorage.getItem('activeCategory');
+//     if (savedCategory) {
+//       setActiveTab(savedCategory);
+//     }
+//   }, []);
+
+//   // Listen for changes to activeCategory in localStorage
+//   useEffect(() => {
+//     const handleStorageChange = () => {
+//       const savedCategory = localStorage.getItem('activeCategory');
+//       if (savedCategory) {
+//         setActiveTab(savedCategory);
+//       }
+//     };
+
+//     // Check for activeCategory changes
+//     window.addEventListener('storage', handleStorageChange);
+    
+//     return () => {
+//       window.removeEventListener('storage', handleStorageChange);
+//     };
+//   }, []);
+
+//   // Handle feature card clicks
+//   const handleFeatureClick = (link: string, isActive: boolean) => {
+//     if (isActive) {
+//       router.push(link);
+//     } else {
+//       // Show a message or modal that this feature is not available
+//       alert("This feature is currently unavailable. Please upgrade to access it.");
+//     }
+//   };
+
+//   // Get features for the active tab with required state
+//   const getActiveTabFeatures = (): Feature[] => {
+//     // These are the only features that should be ON by default
+//     const alwaysActiveFeatures = {
+//       "professional-mail": ["dashboard", "tools"].includes(activeTab),
+//       "task-manager": ["dashboard", "tools"].includes(activeTab),
+//       "google-ads": ["dashboard", "advertising"].includes(activeTab),
+//       "sms": ["dashboard", "advertising"].includes(activeTab),
+//       "dashboard-overview": activeTab === "dashboard",
+//       "website-builder": false,
+//       "mass-mailing": ["dashboard", "advertising"].includes(activeTab),
+//       "intern-messages": false,
+//       "analytics": false,
+//       "facebook-ads": false,
+//       "linkedin-ads": false,
+//       "crm": false,
+//       "whatsapp-messaging": activeTab === "whatsapp",
+//       "chatgpt-assistant": activeTab === "chatgpt",
+//       "telegram-messaging": activeTab === "telegram"
+//     };
+
+//     // Get all features for the current tab
+//     const currentTabFeatures = exampleData.find(tab => tab.id === activeTab)?.features || [];
+    
+//     // For dashboard, we want to show specific items from different categories
+//     if (activeTab === "dashboard") {
+//       return [
+//         // Find the professional email feature
+//         ...exampleData.flatMap(tab => 
+//           tab.features.filter(feature => 
+//             ["professional-mail", "task-manager", "google-ads"].includes(feature.id)
+//           )
+//         )
+//       ].map(feature => ({
+//         ...feature,
+//         isActive: !!alwaysActiveFeatures[feature.id as keyof typeof alwaysActiveFeatures]
+//       }));
+//     }
+    
+//     // For other tabs, show their own features with correct active states
+//     return currentTabFeatures.map(feature => ({
+//       ...feature,
+//       isActive: !!alwaysActiveFeatures[feature.id as keyof typeof alwaysActiveFeatures]
+//     }));
+//   };
+
+//   return (
+//    // <ProtectedRoute>
+//     <div className="p-6 min-h-screen bg-white overflow-hidden overflow-y-auto">
+//       {/* App Title */}
+//       <h1 className="text-2xl font-bold text-gray-900 mb-4">The everything app for work !</h1>
+
+//       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+//         {/* Left Section (2 columns) */}
+//         <div className="lg:col-span-2">
+//           {/* Welcome Banner with Image and Quote */}
+//           <div className="relative rounded-lg overflow-hidden bg-gradient-to-r from-gray-800 to-gray-700 mb-6 min-h-[10rem] sm:h-40 md:h-48">
+//             <div className="absolute inset-0">
+//               <Image
+//                 src="/assets/banner-image.png"
+//                 alt="People selfie"
+//                 fill
+//                 className="object-cover opacity-60"
+//               />
+//             </div>
+//             <div className="relative p-5 text-white z-10 h-full flex flex-col justify-between">
+//               <div>
+//                 <p className="text-gray-200">Good Morning,</p>
+//                 <h2 className="text-3xl font-bold">{userInfo.name}</h2>
+//               </div>
+//               <div className="sm:absolute sm:right-5 sm:bottom-5 w-full sm:w-64 bg-white/20 backdrop-blur-sm rounded-lg p-3 mt-4 sm:mt-0">
+//                 <p className="text-xs text-gray-100">Quote of the day</p>
+//                 <p className="text-sm font-medium">
+//                   "Either you run the day, or the day runs you"
+//                 </p>
+//                 <p className="text-xs text-gray-200 mt-1">Jim Rohn</p>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Unlocked Features Section - Shows features based on selected sidebar category */}
+//           <UnlockedFeatures 
+//             activeTabFeatures={getActiveTabFeatures()} 
+//             onFeatureClick={handleFeatureClick}
+//           />
+
+//           {/* Statistics Section */}
+//           <div>
+//             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4">STATISTICS</h3>
+//             <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
+//               <div className="flex justify-center items-center">
+//                 <Image
+//                   src="/assets/Statistics-image.png"
+//                   alt="No statistics yet"
+//                   width={200}
+//                   height={200}
+//                 />
+//               </div>
+//               <p className="text-lg font-medium mt-2">No statistics yet !</p>
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* Right Section (1 column) */}
+//         <div className="lg:col-span-1">
+//           {/* Unlock Level Card */}
+//           <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 justify-center">
+//             {/* Semi-circular Progress Gauge */}
+//             <div className="flex justify-center items-center mb-4">
+//               <Image
+//                 src="/assets/semi-circle-chart.png"
+//                 alt="Connect emails"
+//                 width={250}
+//                 height={250}
+//               />
+//             </div>
+
+//             {/* Title */}
+//             <div className="text-center mb-6">
+//               <h3 className="text-2xl font-bold">Unlock level 2</h3>
+//             </div>
+
+//             {/* Features List */}
+//             <ul className="space-y-4 mb-8">
+//               <li className="flex items-center">
+//                 <div className="w-3 h-3 bg-gray-300 rounded-full mr-3"></div>
+//                 <span className="text-gray-700">Collaborative messaging</span>
+//               </li>
+//               <li className="flex items-center">
+//                 <div className="w-3 h-3 bg-gray-300 rounded-full mr-3"></div>
+//                 <span className="text-gray-700">Customer Relationship Manager (CRM)</span>
+//               </li>
+//             </ul>
+
+//             {/* Button */}
+//             <button className="w-full py-3 bg-gray-100 text-gray-800 rounded-lg text-center font-medium">
+//               Invite team members
+//             </button>
+//           </div>
+
+//           {/* Email Section */}
+//           <div className="bg-white rounded-lg border border-gray-200 p-6">
+//             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4 text-center">EMAILS</h3>
+
+//             {/* Made buttons responsive and flex-wrap to prevent overflow */}
+//             <div className="flex justify-center flex-wrap gap-2 mb-6">
+//               <button className="py-2 px-4 bg-gray-100 text-gray-800 rounded-lg">Personal</button>
+//               <button className="py-2 px-4 bg-blue-600 text-white rounded-lg">Professional</button>
+//             </div>
+
+//             <div className="flex justify-center p-6">
+//               <div className="text-center">
+//                 <Image
+//                   src="/assets/email-image.png"
+//                   alt="Connect emails"
+//                   width={150}
+//                   height={150}
+//                 />
+//                 <p className="mt-4 text-sm font-medium">Connect your email pro</p>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//     // </ProtectedRoute>
+//   );
+// };
+
+// // Feature Card Component using shadcn Switch
+// const FeatureCard: React.FC<FeatureCardProps> = ({ title, isActive, imageUrl, link, onClick }) => {
+//   const handleClick = () => {
+//     onClick(link, isActive);
+//   };
+
+//   return (
+//     <div 
+//       className={`bg-white rounded-lg shadow-sm border border-gray-100 p-4 transition-all duration-200 ${isActive ? 'cursor-pointer hover:shadow-md' : 'opacity-75'}`}
+//       onClick={handleClick}
+//     >
+//       {/* Top section with toggle */}
+//       <div className="flex justify-between items-center mb-4">
+//         <span className="text-sm text-gray-500">{isActive ? "ON" : "OFF"}</span>
+//         <Switch checked={isActive} />
+//       </div>
+
+//       {/* Center icon */}
+//       <div className="flex justify-center items-center my-6">
+//         <Image
+//           src={imageUrl}
+//           alt={title}
+//           width={40}
+//           height={40}
+//         />
+//       </div>
+
+//       {/* Title at bottom */}
+//       <div className="text-center">
+//         <h4 className="text-sm font-medium text-gray-800">{title}</h4>
+//       </div>
+//     </div>
+//   );
+// };
+
+// // Unlocked Features Component
+// const UnlockedFeatures: React.FC<UnlockedFeaturesProps> = ({ activeTabFeatures, onFeatureClick }) => {
+//   return (
+//     <div className="mb-6">
+//       <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4">UNLOCKED FEATURES</h3>
+
+//       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+//         {activeTabFeatures.map((feature) => (
+//           <FeatureCard
+//             key={feature.id}
+//             title={feature.title}
+//             isActive={feature.isActive}
+//             imageUrl={feature.imageUrl}
+//             subtitle={feature.subtitle}
+//             link={feature.link}
+//             onClick={onFeatureClick}
+//           />
+//         ))}
+//         {activeTabFeatures.length === 0 && (
+//           <div className="col-span-full text-center p-6 bg-gray-50 rounded-lg">
+//             <p className="text-gray-500">No features available for the selected tab</p>
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+// // Example data with expanded categories that match sidebar items
+// const exampleData: Tab[] = [
+//   {
+//     id: "dashboard",
+//     label: "Dashboard",
+//     features: [
+//       {
+//         id: "dashboard-overview",
+//         title: "Dashboard Overview",
+//         subtitle: "View all your stats",
+//         imageUrl: "/icons/dashboardnew.png",
+//         link: "/dashboard/overview",
+//         isActive: true
+//       }
+//     ]
+//   },
+//   {
+//     id: "marketing",
+//     label: "Marketing", 
+//     features: [
+//       {
+//         id: "crm",
+//         title: "CRM",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/crm.png",
+//         link: "/dashboard/intern-message",
+//         isActive: false
+//       },
+//       {
+//         id: "social-listening",
+//         title: "Social Listening",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/social.png",
+//         link: "/dashboard/social-listening",
+//         isActive: false
+//       },
+//       {
+//         id: "post-publisher",
+//         title: "Post Publisher",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/post-publisher.png",
+//         link: "/dashboard/post-publisher",
+//         isActive: false
+//       },
+//       {
+//         id: "ai-calling",
+//         title: "AI Calling",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/ai-calling.png",
+//         link: "/dashboard/ai-calling",
+//         isActive: false
+//       },
+//     ]
+//   },
+//   {
+//     id: "tools",
+//     label: "Tools",
+//     features: [
+//       {
+//         id: "professional-mail",
+//         title: "Professional Mail",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/online-meeting.png",
+//         link: "/dashboard/professional-mail",
+//         isActive: true
+//       },
+//       {
+//         id: "task-manager",
+//         title: "Task Manager",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/task-manager.png",
+//         link: "/dashboard/task-manager",
+//         isActive: true
+//       },
+//       {
+//         id: "website-builder",
+//         title: "Website Builder",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/website-builder.png",
+//         link: "/dashboard/website-builder",
+//         isActive: false
+//       },
+//       {
+//         id: "internal-message",
+//         title: "Internal Message",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/internal-message.png",
+//         link: "/dashboard/messaging",
+//         isActive: false
+//       },
+//       {
+//         id: "online-meeting",
+//         title: "Online Meeting",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/online-meeting.png",
+//         link: "/dashboard/online-message",
+//         isActive: false
+//       },
+//       {
+//         id: "e-sign",
+//         title: "E-Sign",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/e-sign.png",
+//         link: "/dashboard/e-sign",
+//         isActive: false
+//       },
+//       {
+//         id: "image-editor",
+//         title: "Image Editor",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/image-editor.png",
+//         link: "/dashboard/image-editor",
+//         isActive: false
+//       },
+//     ],
+//   },
+//   {
+//     id: "advertising",
+//     label: "Advertising",
+//     features: [
+//       {
+//         id: "google-ads",
+//         title: "Google Ads",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/google-ads.png",
+//         link: "/dashboard/google-ads",
+//         isActive: true
+//       },
+//       {
+//         id: "sms",
+//         title: "SMS",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/sms.png",
+//         link: "/dashboard/google-ads",
+//         isActive: true
+//       },
+//       {
+//         id: "mass-mailing",
+//         title: "Mass Mailing",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/mass-mailing.png",
+//         link: "/dashboard/google-ads",
+//         isActive: false
+//       },
+//       {
+//         id: "Meta",
+//         title: "Meta",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/meta.png",
+//         link: "/dashboard/meta",
+//         isActive: false
+//       },
+//       {
+//         id: "twitter",
+//         title: "Twitter",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/twitter.png",
+//         link: "/dashboard/twitter",
+//         isActive: false
+//       },
+//       {
+//         id: "tiktok",
+//         title: "Tiktok",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/tiktok.png",
+//         link: "/dashboard/tiktok",
+//         isActive: false
+//       },
+//       {
+//         id: "linkedIn",
+//         title: "LinkedIn",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/linkedin.png",
+//         link: "/dashboard/linkedin",
+//         isActive: false
+//       },
+//       {
+//         id: "spotify",
+//         title: "Spotify",
+//         subtitle: "Boost Connections, Drive Sales!",
+//         imageUrl: "/icons/spotify.png",
+//         link: "/dashboard/spotify",
+//         isActive: false
+//       },
+//     ],
+//   },
+//   {
+//     id: "whatsapp",
+//     label: "Whatsapp",
+//     features: [
+//       {
+//         id: "whatsapp-messaging",
+//         title: "WhatsApp Messaging",
+//         subtitle: "Connect with customers",
+//         imageUrl: "/icons/whatsapp.png",
+//         link: "/externals/whatsapp",
+//         isActive: true
+//       }
+//     ]
+//   },
+//   {
+//     id: "chatgpt",
+//     label: "ChatGPT", 
+//     features: [
+//       {
+//         id: "chatgpt-assistant",
+//         title: "ChatGPT Assistant",
+//         subtitle: "AI-powered assistance",
+//         imageUrl: "/icons/chatgpt.png",
+//         link: "/externals/chatgpt",
+//         isActive: true
+//       }
+//     ]
+//   },
+//   {
+//     id: "telegram",
+//     label: "Telegram",
+//     features: [
+//       {
+//         id: "telegram-messaging",
+//         title: "Telegram Messaging",
+//         subtitle: "Secure communication",
+//         imageUrl: "/icons/telegram.png", 
+//         link: "/externals/telegram",
+//         isActive: true
+//       }
+//     ]
+//   }
+// ];
+
+// export default Dashboard;
 
 
 

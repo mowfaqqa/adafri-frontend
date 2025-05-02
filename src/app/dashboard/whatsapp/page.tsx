@@ -91,10 +91,10 @@ export default function WhatsAppPage() {
   ) {
     return (
       <div className="h-full flex flex-col">
-        <div className="p-4 bg-white border-b shadow-sm">
+        <div className="p-4 bg-white shadow-sm">
           <h1 className="text-xl font-semibold">WhatsApp Integration</h1>
         </div>
-        <div className="flex-1 flex items-center justify-center p-4 bg-gray-50">
+        <div className="flex-1 flex items-center justify-center p-4">
           <ConnectWhatsApp
             status={status}
             qrCode={qrCode}

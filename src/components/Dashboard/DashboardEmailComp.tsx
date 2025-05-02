@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { cn } from "@/lib/utils";
-import { EmailList, sampleEmails } from "./EmailComponent";
+// import { EmailList, sampleEmails } from "./EmailComponent";
 import { Email } from "@/lib/types/email";
 import { getCookie } from "@/lib/utils/cookies";
 
@@ -54,58 +54,58 @@ const DashboardEmailComp: React.FC<DashboardEmailCompProps> = ({ className }) =>
   // Get linkedEmailId directly from cookie
   const email_id = getCookie('linkedEmailId') || "";
   
-  useEffect(() => {
-    const fetchEmails = async () => {
-      try {
-        setLoading(true);
-        // Get access token directly from cookie
-        const token = getCookie('accessToken');
+  // useEffect(() => {
+  //   const fetchEmails = async () => {
+  //     try {
+  //       setLoading(true);
+  //       // Get access token directly from cookie
+  //       const token = getCookie('accessToken');
         
-        console.log("Fetching emails for:", email_id);
+  //       console.log("Fetching emails for:", email_id);
         
-        if (!token) {
-          console.error("No auth token found");
-          setEmails(sampleEmails);
-          return;
-        }
+  //       if (!token) {
+  //         console.error("No auth token found");
+  //         setEmails(sampleEmails);
+  //         return;
+  //       }
         
-        const response = await fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(email_id)}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+  //       const response = await fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(email_id)}`, {
+  //         headers: {
+  //           'Authorization': `Bearer ${token}`,
+  //           'Content-Type': 'application/json',
+  //         },
+  //       });
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch emails: ${response.status}`);
-        }
+  //       if (!response.ok) {
+  //         throw new Error(`Failed to fetch emails: ${response.status}`);
+  //       }
         
-        const responseData = await response.json();
-        console.log("Raw API Response:", responseData);
+  //       const responseData = await response.json();
+  //       console.log("Raw API Response:", responseData);
         
-        // Try to parse the email data from the response
-        const parsedEmails = parseEmailResponse(responseData);
+  //       // Try to parse the email data from the response
+  //       const parsedEmails = parseEmailResponse(responseData);
         
-        if (parsedEmails.length > 0) {
-          console.log("Successfully parsed emails:", parsedEmails.length);
-          setEmails(parsedEmails);
-        } else {
-          console.warn("No emails found in response, using sample data");
-          setEmails(sampleEmails);
-        }
-      } catch (err) {
-        console.error('Error fetching emails:', err);
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-        setEmails(sampleEmails);
-      } finally {
-        setLoading(false);
-      }
-    };
+  //       if (parsedEmails.length > 0) {
+  //         console.log("Successfully parsed emails:", parsedEmails.length);
+  //         setEmails(parsedEmails);
+  //       } else {
+  //         console.warn("No emails found in response, using sample data");
+  //         setEmails(sampleEmails);
+  //       }
+  //     } catch (err) {
+  //       console.error('Error fetching emails:', err);
+  //       setError(err instanceof Error ? err.message : 'An unknown error occurred');
+  //       setEmails(sampleEmails);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
     
-    fetchEmails();
-    console.log(email_id);
+  //   fetchEmails();
+  //   console.log(email_id);
     
-  }, [email_id]);
+  // }, [email_id]);
   
   if (loading) {
     return (
@@ -123,7 +123,7 @@ const DashboardEmailComp: React.FC<DashboardEmailCompProps> = ({ className }) =>
           <p className="text-xs text-gray-500 mt-1">Using sample data instead</p>
         </div>
       )}
-      <EmailList emails={emails} />
+      {/* <EmailList emails={emails} /> */}
     </div>
   );
 };

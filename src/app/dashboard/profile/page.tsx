@@ -116,10 +116,10 @@ function ProfileContent() {
 // Main page component that wraps ProfileContent in Suspense
 export default function ProfilePage() {
   return (
-    <ProtectedRoute>
+    // <ProtectedRoute>
       <Suspense fallback={<div className="p-6">Loading profile settings...</div>}>
         <ProfileContent />
       </Suspense>
-    </ProtectedRoute>
+    // {/* </ProtectedRoute> */}
   );
 }

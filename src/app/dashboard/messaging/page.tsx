@@ -32,7 +32,7 @@ export default function MessagesPage() {
   // Only render chat layout if authenticated
   if (!isAuthenticated) {
     return (
-      <ProtectedRoute>
+      // <ProtectedRoute>
         <div className="h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-semibold mb-4">Please log in</h1>
@@ -41,7 +41,7 @@ export default function MessagesPage() {
             </p>
           </div>
         </div>
-      </ProtectedRoute>
+      // </ProtectedRoute>
     );
   }
 

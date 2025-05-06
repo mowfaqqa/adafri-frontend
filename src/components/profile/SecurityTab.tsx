@@ -261,7 +261,7 @@ export const SecurityTab: React.FC = () => {
       
       // Format Authorization header - try both with and without "Bearer" prefix
       // Some APIs require "Bearer", others might expect just the token
-      let authHeader = `Bearer ${token}`;
+      const authHeader = `Bearer ${token}`;
       
       // Log to check if token is in expected format
       console.log('Token format check:', {

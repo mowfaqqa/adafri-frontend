@@ -121,7 +121,7 @@ export const SecurityTab: React.FC = () => {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': token // Try without Bearer prefix
+              'Authorization': token
             },
             credentials: 'include'
           });
@@ -413,7 +413,7 @@ export const SecurityTab: React.FC = () => {
       });
       
       // Format Authorization header - try with Bearer prefix
-      let authHeader = `Bearer ${token}`;
+      const authHeader = `Bearer ${token}`;
       
       const url = 'https://be-auth-server.onrender.com/api/v1/accounts/2fa/disable';
       console.log('Sending disable 2FA request to:', url);

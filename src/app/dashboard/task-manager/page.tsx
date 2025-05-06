@@ -5,11 +5,11 @@ import { ProjectProvider } from "@/lib/context/task-manager/ProjectContext";
 
 const TaskManager = () => {
   return (
-    <ProtectedRoute>
+    // <ProtectedRoute>
       <ProjectProvider>
         <ProjectDashboard />
       </ProjectProvider>
-    </ProtectedRoute>
+    // </ProtectedRoute>
   );
 };
 

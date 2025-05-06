@@ -87,7 +87,7 @@ export const SecurityTab: React.FC = () => {
       });
       
       // Format Authorization header - try with Bearer prefix first
-      let authHeader = `Bearer ${token}`;
+      const authHeader = `Bearer ${token}`;
       
       // Log token format to check if it's in expected format
       console.log('Token format check:', {

@@ -162,7 +162,10 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     {statuses.map((status) => (
-                      <SelectItem key={status.id} value={status.name}>
+                      <SelectItem
+                        key={status.id}
+                        value={status.name.toLowerCase()}
+                      >
                         {status.name}
                       </SelectItem>
                     ))}

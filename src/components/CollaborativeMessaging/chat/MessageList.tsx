@@ -3,9 +3,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Hash, Lock, InfoIcon, ChevronDown } from 'lucide-react';
 
-import useChannelStore from '@/store/messaging/channelStore';
-import useMessageStore from '@/store/messaging/messageStore';
-import useAuthStore from '@/store/messaging/authStore';
+import useChannelStore from '@/lib/store/messaging/channelStore';
+import useMessageStore from '@/lib/store/messaging/messageStore';
+import useAuthStore from '@/lib/store/messaging/authStore';
 import Spinner from '@/components/custom-ui/modal/custom-spinner';
 import MessageItem from './MessageItem';
 

@@ -1,4 +1,4 @@
-import { useEmailStore } from "@/store/email-store";
+import { useEmailStore } from "@/lib/store/email-store";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Filter, Trash2, Send, Archive, Edit, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";

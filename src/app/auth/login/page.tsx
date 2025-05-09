@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useContext } from "react";
 import Link from "next/link";
 import Image from 'next/image';
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,9 +14,15 @@ import {
 import { Button } from "@/components/ui/button";
 import InputField from "@/components/auth/InputField";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { AuthContext } from "@/lib/context/auth";
+import { Spinner } from "@awc/react";
 
 // Main component that uses Suspense
-const Login: React.FC = () => {
+function Login({isLoading}: {isLoading: boolean}) {
+    const { isLoading: isLoadingAuth, isAuthenticated, user, tryLogin, login: isRedirecting } = useContext(AuthContext);
+    const login = () => {
+        tryLogin(true);
+    }
     return (
         <AuthLayout>
             <Suspense fallback={
@@ -24,11 +30,38 @@ const Login: React.FC = () => {
                     <div className="animate-pulse">Loading...</div>
                 </div>
             }>
-                <LoginForm />
+                {isLoadingAuth && <div className="w-full max-w-md mx-auto text-white text-center p-6 flex flex-col items-center">
+                    <Spinner width='30px' height='30px' />
+                    <div className="animate-pulse">Loading...</div>
+                    </div>}
+                {!isLoadingAuth && !isAuthenticated && <Button onClick={login}>Log in</Button>}
+                {!isLoadingAuth && isAuthenticated && user && <div className="flex flex-col items-center">
+                    <span className="text-md">Connected as {user.email}</span>
+                    <span className="text-md text-gray-800">or</span>
+                    <Button onClick={login}>Login with another account</Button>
+                </div>}
+                {isRedirecting && <div className="w-full max-w-md mx-auto text-white text-center p-6">
+                    <span className="animate-pulse">Redirecting in a few seconds to authentication page...</span>
+                </div>}
+                {/* {!isLoading && <LoginForm />} */}
             </Suspense>
         </AuthLayout>
     );
-};
+}
+// const Login: React.FC = ({isLoading, children}: {isLoading: boolean}) => {
+//     return (
+//         <AuthLayout>
+//             <Suspense fallback={
+//                 <div className="w-full max-w-md mx-auto text-white text-center p-6">
+//                     <div className="animate-pulse">Loading...</div>
+//                 </div>
+//             }>
+            
+//                 <LoginForm />
+//             </Suspense>
+//         </AuthLayout>
+//     );
+// };
 
 // Define the component that uses useSearchParams
 const LoginForm: React.FC = () => {
@@ -40,10 +73,13 @@ const LoginForm: React.FC = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [showPassword, setShowPassword] = useState(false);
+    const {isAuthenticated, user, isLoading: isVerifying} = useContext(AuthContext);
+
 
     // Function to decode JWT and check expiration
     const isTokenExpired = (token: string): boolean => {
         try {
+            console.log('check expired', token)
             const base64Url = token.split('.')[1];
             const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
             const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
@@ -55,7 +91,6 @@ const LoginForm: React.FC = () => {
             // Get current time in seconds
             const currentTime = Math.floor(Date.now() / 1000);
             
-            // Return true if token is expired
             return exp < currentTime;
         } catch (error) {
             console.error('Error decoding token:', error);
@@ -88,12 +123,15 @@ const LoginForm: React.FC = () => {
 
     // Function to check authentication status
     const checkAuthStatus = async (): Promise<boolean> => {
+        console.log({isAuthenticated, user, isVerifying})
         try {
-            const accessToken = Cookies.get('__frsadfrusrtkn');
+            const _accessToken = Cookies.get('__frsadfrusrtkn');
+            // console.log('t', _accessToken)
             
-            if (!accessToken) {
+            if (!_accessToken) {
                 return false;
             }
+            const accessToken = _accessToken
             
             // Check if token is expired
             if (isTokenExpired(accessToken)) {

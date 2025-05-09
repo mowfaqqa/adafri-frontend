@@ -8,8 +8,8 @@ import { Mail, Lock, User } from "lucide-react";
 import Modal from "@/components/custom-ui/modal/Modal";
 import Button from "@/components/custom-ui/button";
 import Input from "@/components/custom-ui/input";
-import useAuthStore from "@/store/messaging/authStore";
-import useModalStore from "@/store/messaging/modalStore";
+import useAuthStore from "@/lib/store/messaging/authStore";
+import useModalStore from "@/lib/store/messaging/modalStore";
 
 interface RegisterFormValues {
   email: string;

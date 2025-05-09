@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand';
-import * as channelApi from '../../lib/api//messaging/channel';
+import * as channelApi from '../../api/messaging/channel';
 import { Channel, ChannelCreateData, DirectMessageChannel } from '@/lib/types/collab-messaging/channel';
 import socketClient from '@/lib/socket/messagingSocketClient/socketClient';
 

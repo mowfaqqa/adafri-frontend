@@ -1,14 +1,14 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { getUserInfo as getServerUserInfo } from "@/lib/utils/cookies";
 import { UnlockedFeatures } from "@/components/Dashboard/UnlockedFeatures";
 import { UnlockLevelCard } from "@/components/Dashboard/UnlockLevelCard";
 import { EmailSection } from "@/components/Dashboard/EmailSection";
 import { StatisticsSection } from "@/components/Dashboard/StatisticsSection";
 import { FeatureUnavailableModal } from "@/components/Dashboard/FeatureUnavailableModal";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AuthContext } from "@/lib/context/auth";
 
 // Define proper TypeScript interfaces
 interface UserInfo {
@@ -81,12 +81,13 @@ const getLocalUserInfo = (): UserInfo => {
 };
 
 const Dashboard: React.FC = () => {
-  const [userInfo, setUserInfo] = useState<UserInfo>({ name: "" });
+  // const [userInfo, setUserInfo] = useState<UserInfo>({ name: "" });
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [greeting, setGreeting] = useState<string>("Good Day");
   const [quote, setQuote] = useState<typeof quotes[0]>(quotes[0]);
   const router = useRouter();
+  const {user: userInfo} = useContext(AuthContext);
 
   useEffect(() => {
     // Initialize time-based greeting and daily quote
@@ -94,27 +95,27 @@ const Dashboard: React.FC = () => {
     setQuote(getDailyQuote());
     
     // Try to get user info from cookies first
-    try {
-      const cookieInfo = getServerUserInfo();
-      if (cookieInfo && cookieInfo.name) {
-        setUserInfo({
-          name: cookieInfo.name
-        });
-      } else {
-        // Fallback to localStorage if cookie info doesn't have name
-        const localInfo = getLocalUserInfo();
-        setUserInfo({
-          name: localInfo.name
-        });
-      }
-    } catch (error) {
-      console.log("Error getting user info from cookies, falling back to localStorage");
-      // Fallback to localStorage
-      const localInfo = getLocalUserInfo();
-      setUserInfo({
-        name: localInfo.name
-      });
-    }
+    // try {
+    //   const cookieInfo = getServerUserInfo();
+    //   if (cookieInfo && cookieInfo.name) {
+    //     setUserInfo({
+    //       name: cookieInfo.name
+    //     });
+    //   } else {
+    //     // Fallback to localStorage if cookie info doesn't have name
+    //     const localInfo = getLocalUserInfo();
+    //     setUserInfo({
+    //       name: localInfo.name
+    //     });
+    //   }
+    // } catch (error) {
+    //   console.log("Error getting user info from cookies, falling back to localStorage");
+    //   // Fallback to localStorage
+    //   const localInfo = getLocalUserInfo();
+    //   setUserInfo({
+    //     name: localInfo.name
+    //   });
+    // }
     
     // Get active category from localStorage (set by Sidebar)
     const savedCategory = localStorage.getItem('activeCategory');
@@ -225,7 +226,7 @@ const Dashboard: React.FC = () => {
             <div className="relative p-5 text-white z-10 h-full flex flex-col justify-between">
               <div>
                 <h3 className="text-2xl text-gray-200">{greeting},</h3>
-                <h2 className="text-3xl font-bold">{userInfo.name}</h2>
+                <h2 className="text-3xl font-bold">{userInfo?.first_name}&nbsp;{userInfo?.last_name}</h2>
               </div>
               <div className="sm:absolute sm:right-5 sm:bottom-5 w-full sm:w-64 bg-white/20 backdrop-blur-sm rounded-lg p-3 mt-4 sm:mt-0">
                 <p className="text-xs text-gray-100">Quote of the day</p>

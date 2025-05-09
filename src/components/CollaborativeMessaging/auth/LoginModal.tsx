@@ -6,8 +6,8 @@ import { useForm } from 'react-hook-form';
 import { Mail, Lock } from 'lucide-react';
 
 
-import useAuthStore from '@/store/messaging/authStore';
-import useModalStore from '@/store/messaging/modalStore';
+import useAuthStore from '@/lib/store/messaging/authStore';
+import useModalStore from '@/lib/store/messaging/modalStore';
 import Modal from '../../custom-ui/modal/Modal';
 import Input from '@/components/custom-ui/input';
 import Button from '@/components/custom-ui/button';

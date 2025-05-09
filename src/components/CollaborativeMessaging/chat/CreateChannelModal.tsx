@@ -7,8 +7,8 @@ import { Hash, Lock } from "lucide-react";
 import Modal from "@/components/custom-ui/modal/Modal";
 import Button from "@/components/custom-ui/button";
 import Input from "@/components/custom-ui/input";
-import useModalStore from "@/store/messaging/modalStore";
-import useChannelStore from "@/store/messaging/channelStore";
+import useModalStore from "@/lib/store/messaging/modalStore";
+import useChannelStore from "@/lib/store/messaging/channelStore";
 
 interface CreateChannelFormValues {
   name: string;

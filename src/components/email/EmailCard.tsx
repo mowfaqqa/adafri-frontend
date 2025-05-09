@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useEmailStore } from "@/store/email-store";
+import { useEmailStore } from "@/lib/store/email-store";
 import { createEmailPreview, EmailContentRenderer } from "@/lib/utils/emails/email-content-utils";
 
 interface EmailCardProps {

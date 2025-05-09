@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import useAuthStore from "@/store/messaging/authStore";
+import useAuthStore from "@/lib/store/messaging/authStore";
 import LoginModal from "./LoginModal";
-import useModalStore from "@/store/messaging/modalStore";
+import useModalStore from "@/lib/store/messaging/modalStore";
 import RegisterModal from "./RegisterModal";
 
 interface AuthContextType {

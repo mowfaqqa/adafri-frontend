@@ -6,8 +6,8 @@ import { Send, Paperclip, X, Smile } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useDropzone } from 'react-dropzone';
 
-import useMessageStore from '@/store/messaging/messageStore';
-import useChannelStore from '@/store/messaging/channelStore';
+import useMessageStore from '@/lib/store/messaging/messageStore';
+import useChannelStore from '@/lib/store/messaging/channelStore';
 import Button from '@/components/custom-ui/button';
 
 // Dynamically import EmojiPicker to avoid SSR issues

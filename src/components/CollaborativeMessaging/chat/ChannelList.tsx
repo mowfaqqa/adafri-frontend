@@ -2,8 +2,8 @@
 
 import React, { useEffect } from "react";
 import { Hash, Lock, Plus } from "lucide-react";
-import useChannelStore from "@/store/messaging/channelStore";
-import useModalStore from "@/store/messaging/modalStore";
+import useChannelStore from "@/lib/store/messaging/channelStore";
+import useModalStore from "@/lib/store/messaging/modalStore";
 import Badge from "@/components/custom-ui/badge";
 
 const ChannelList = () => {

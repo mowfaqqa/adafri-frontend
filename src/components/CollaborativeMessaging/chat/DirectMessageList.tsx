@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 
-import useChannelStore from "@/store/messaging/channelStore";
-import useAuthStore from "@/store/messaging/authStore";
+import useChannelStore from "@/lib/store/messaging/channelStore";
+import useAuthStore from "@/lib/store/messaging/authStore";
 import Spinner from "@/components/custom-ui/modal/custom-spinner";
 import Avatar from "@/components/custom-ui/avatar";
 import Badge from "@/components/custom-ui/badge";

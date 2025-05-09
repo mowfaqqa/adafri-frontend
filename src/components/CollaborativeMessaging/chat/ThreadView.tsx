@@ -4,8 +4,8 @@ import React, { useEffect, useRef } from 'react';
 import { X, MessageSquare, Users } from 'lucide-react';
 
 import MessageItem from './MessageItem';
-import useMessageStore from '@/store/messaging/messageStore';
-import useAuthStore from '@/store/messaging/authStore';
+import useMessageStore from '@/lib/store/messaging/messageStore';
+import useAuthStore from '@/lib/store/messaging/authStore';
 import Spinner from '@/components/custom-ui/modal/custom-spinner';
 import Avatar from '@/components/custom-ui/avatar';
 import MessageInput from './Messageinput';

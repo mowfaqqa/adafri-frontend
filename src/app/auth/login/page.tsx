@@ -18,7 +18,7 @@ import { AuthContext } from "@/lib/context/auth";
 import { Spinner } from "@awc/react";
 
 // Main component that uses Suspense
-function Login({isLoading}: {isLoading: boolean}) {
+function Login() {
     const { isLoading: isLoadingAuth, isAuthenticated, user, tryLogin, login: isRedirecting } = useContext(AuthContext);
     const login = () => {
         tryLogin(true);

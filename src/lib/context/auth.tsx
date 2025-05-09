@@ -9,6 +9,7 @@ export const AuthContext = createContext<RouteAuthParams>({
     setUser: () => {},
     setIsAuthenticated: () => {},
     tryLogin: () => {},
-    tryLogout: () => {}
+    tryLogout: () => {},
+    setRedirectUri: () => {},
 });
 

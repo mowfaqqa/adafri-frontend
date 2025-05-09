@@ -9,10 +9,10 @@ import MessageList from "./MessageList";
 import MessageInput from "./Messageinput";
 import ThreadView from "./ThreadView";
 import CreateChannelModal from "./CreateChannelModal";
-import useAuthStore from "@/store/messaging/authStore";
-import useMessageStore from "@/store/messaging/messageStore";
-import useChannelStore from "@/store/messaging/channelStore";
-import useModalStore from "@/store/messaging/modalStore";
+import useAuthStore from "@/lib/store/messaging/authStore";
+import useMessageStore from "@/lib/store/messaging/messageStore";
+import useChannelStore from "@/lib/store/messaging/channelStore";
+import useModalStore from "@/lib/store/messaging/modalStore";
 import Avatar from "@/components/custom-ui/avatar";
 
 const ChatLayout = () => {

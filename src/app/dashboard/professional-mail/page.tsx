@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pencil } from "lucide-react";
-import { useEmailStore } from "@/store/email-store";
+import { useEmailStore } from "@/lib/store/email-store";
 import { EmailCategory } from "@/lib/types/email";
 // import { EmailAgenda } from "@/components/EmailAgenda";
 import { EmailColumns2 } from "@/components/email/EmailColumns2";

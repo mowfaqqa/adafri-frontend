@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import socketClient from "@/lib/socket/messagingSocketClient/socketClient";
-import * as authApi from "../../lib/api/messaging/auth";
+import * as authApi from "../../api/messaging/auth";
 import { create } from "zustand";
 
 interface AuthState {

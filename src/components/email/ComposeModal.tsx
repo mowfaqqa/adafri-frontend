@@ -9,7 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { useEmailStore } from "@/store/email-store";
+import { useEmailStore } from "@/lib/store/email-store";
 import { sendEmail } from "@/app/dashboard/api/emailSend";
 import { saveDraft } from "@/app/dashboard/api/draftEmail";
 import { Email, EmailData, EmailSendData, EmailSegment } from '@/lib/types/email';

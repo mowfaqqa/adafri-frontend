@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import ChatLayout from "@/components/CollaborativeMessaging/chat/ChatLayout";
-import useAuthStore from "@/store/messaging/authStore";
-import useModalStore from "@/store/messaging/modalStore";
+import useAuthStore from "@/lib/store/messaging/authStore";
+import useModalStore from "@/lib/store/messaging/modalStore";
 import { useRouter } from "next/navigation";
 import Spinner from "@/components/custom-ui/modal/custom-spinner";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";

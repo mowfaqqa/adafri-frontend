@@ -1,69 +1,13 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
-
-const ACCESS_TOKEN_COOKIE = '__frsadfrusrtkn';
-const REFRESH_TOKEN_COOKIE = '__rfrsadfrusrtkn';
+import { useContext } from 'react';
+import { AuthContext } from '@/lib/context/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
-
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const router = useRouter();
-  const [isVerifying, setIsVerifying] = useState(true);
-
-  useEffect(() => {
-    const verifyAuthentication = async () => {
-      // Check for access token
-      const accessToken = Cookies.get(ACCESS_TOKEN_COOKIE);
-      
-      // Check for refresh token
-      const refreshToken = Cookies.get(REFRESH_TOKEN_COOKIE);
-      
-      if (!accessToken) {
-        // If no access token exists, redirect to login
-        console.log('Missing authentication token');
-        router.replace('/auth/login');
-        return;
-      }
-      
-      // Check for userId as an additional verification
-      const userId = Cookies.get('userId');
-      if (!userId) {
-        console.log('Missing user ID');
-        Cookies.remove(ACCESS_TOKEN_COOKIE);
-        Cookies.remove(REFRESH_TOKEN_COOKIE);
-        router.replace('/auth/login');
-        return;
-      }
-
-      try {
-        // If access token is expired and refresh token exists, try to refresh
-        if (refreshToken && isTokenExpired(accessToken)) {
-          const success = await refreshAccessToken(refreshToken);
-          if (!success) {
-            throw new Error('Failed to refresh token');
-          }
-        }
-        
-        // If we get here, authentication is accepted
-        setIsVerifying(false);
-      } catch (error) {
-        console.error('Error during authentication check:', error);
-        // On error, clear tokens and redirect
-        Cookies.remove(ACCESS_TOKEN_COOKIE);
-        Cookies.remove(REFRESH_TOKEN_COOKIE);
-        router.replace('/auth/login');
-      }
-    };
-    
-    verifyAuthentication();
-  }, [router]);
-  
-  // Helper function to check if a JWT token is expired
+  const {isLoading: isVerifying} = useContext(AuthContext);
   const isTokenExpired = (token: string): boolean => {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
@@ -74,50 +18,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
   };
   
-  // Function to refresh the access token using the refresh token
-  const refreshAccessToken = async (refreshToken: string): Promise<boolean> => {
-    try {
-      const response = await fetch('https://be-auth-server.onrender.com/api/v1/auth/refresh-token', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refreshToken }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to refresh token');
-      }
-      
-      const data = await response.json();
-      
-      // Store the new tokens from meta
-      if (data.meta && data.meta.access_token) {
-        Cookies.set(ACCESS_TOKEN_COOKIE, data.meta.access_token, { 
-          secure: true,
-          sameSite: 'strict',
-          path: '/'
-        });
-      } else {
-        return false;
-      }
-      
-      // Update refresh token if a new one is provided
-      if (data.meta && data.meta.refresh_token) {
-        Cookies.set(REFRESH_TOKEN_COOKIE, data.meta.refresh_token, { 
-          secure: true,
-          sameSite: 'strict',
-          path: '/'
-        });
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      return false;
-    }
-  };
-
   // Show loading state while verifying
   if (isVerifying) {
     return (
@@ -125,13 +25,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="mt-4 text-gray-600">Verifying access...</p>
+          {/* <OAuth2 ref={ref}  {...{setIsLoading: setIsVerifying, onAuthenticate: onAuthenticationValidated, onAccessToken: onAccessTokenReceived, setUser:onUserReceived}}/> */}
         </div>
       </div>
     );
   }
-
-  // Authentication verified, render children
-  return <>{children}</>;
+  return <>
+    {children}
+  </>;
 }
 
 

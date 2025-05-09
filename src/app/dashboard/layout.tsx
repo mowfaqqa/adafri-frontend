@@ -1,28 +1,24 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Bell, MessageSquare, Sun, Moon, User, Settings, LogOut, ChevronDown } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { Bell, MessageSquare, Sun, Moon, Settings, LogOut, ChevronDown, User as UserIcon } from "lucide-react";
+import React, { useState, useEffect, useContext } from "react";
 import Image from "next/image";
-import { getUserInfo, clearAuthCookies } from "@/lib/utils/cookies";
+import { clearAuthCookies } from "@/lib/utils/cookies";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { AuthContext } from "@/lib/context/auth";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [darkMode, setDarkMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [userInfo, setUserInfo] = useState({ name: "", email: "" });
   const router = useRouter();
+
+  const {user: userInfo, setUser, tryLogin, tryLogout} = useContext(AuthContext);
 
   // Load user info from cookies on component mount
   useEffect(() => {
-    const cookieInfo = getUserInfo();
-    setUserInfo({
-      name: cookieInfo.name || "User",
-      email: cookieInfo.email || "user@example.com"
-    });
-
     // Check if dark mode is saved in localStorage
     const savedDarkMode = localStorage.getItem('darkMode');
     if (savedDarkMode) {
@@ -56,16 +52,22 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     clearAuthCookies();
 
     // Reset user state in the component
-    setUserInfo({
-      name: "",
-      email: ""
-    });
+    // setUserInfo(null);
+    setUser(null);
 
     // Close dropdown
     setDropdownOpen(false);
+    tryLogout(true);
 
     // Redirect to login page
     router.push("/auth/login");
+  };
+  // Handle logout
+  const handleLogin = () => {
+    console.log('logging out')
+    // Clear all authentication cookies
+      // dispatch(setLogout(true));
+      tryLogin(true);
   };
 
   // Toggle dark mode
@@ -115,20 +117,20 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
               {/* Profile Button - Redesigned to match image */}
               <div className="relative px-2 py-1">
-                <button
+              <button
                   className="flex items-center gap-3 px-4 py-2 rounded-lg border border-gray-200 cursor-pointer"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                 >
-                  <Image
-                    src="/icons/demo-profile.jpg"
-                    alt="Profile Picture"
-                    width={30}
-                    height={30}
-                    className="rounded-full"
-                  />
+                    <Image
+                      src={userInfo && userInfo.photoURL ? userInfo.photoURL : "/icons/demo-profile.jpg"}
+                      alt="Profile Picture"
+                      width={30}
+                      height={30}
+                      className="rounded-full"
+                    />
                   <div className="flex flex-col items-start">
-                    <p className="text-sm font-medium">{userInfo.name}</p>
-                    <p className="text-xs text-gray-500">{userInfo.email}</p>
+                    <p className="text-sm font-medium">{userInfo?.first_name} {userInfo?.last_name}</p>
+                    <p className="text-xs text-gray-500">{userInfo?.email}</p>
                   </div>
                   <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
                 </button>
@@ -140,7 +142,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                       className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                       onClick={navigateToProfile}
                     >
-                      <User className="w-4 h-4" /> Profile
+                      <UserIcon className="w-4 h-4" /> Profile
                     </div>
                     <div className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
                       <MessageSquare className="w-4 h-4" /> Chat with us
@@ -157,6 +159,12 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                       onClick={navigateToSettings}
                     >
                       <Settings className="w-4 h-4" /> Settings
+                    </div>
+                    <div
+                      className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-500"
+                      onClick={handleLogin}
+                    >
+                      <LogOut className="w-4 h-4" /> Log in
                     </div>
                     <div
                       className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-500"

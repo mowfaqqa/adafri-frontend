@@ -8,8 +8,8 @@ import { formatDistanceToNow } from "date-fns";
 import { Reply, Edit, Trash, Smile } from "lucide-react";
 import dynamic from "next/dynamic";
 
-import useMessageStore from "@/store/messaging/messageStore";
-import useModalStore from "@/store/messaging/modalStore";
+import useMessageStore from "@/lib/store/messaging/messageStore";
+import useModalStore from "@/lib/store/messaging/modalStore";
 import Avatar from "@/components/custom-ui/avatar";
 import { Attachment, Message } from "@/lib/types/collab-messaging/message";
 

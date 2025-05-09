@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "zustand";
-import * as messageApi from "../../lib/api//messaging/messages";
+import * as messageApi from "../../api/messaging/messages";
 import {
   Message,
   Thread,

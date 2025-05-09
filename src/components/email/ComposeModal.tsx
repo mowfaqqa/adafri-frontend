@@ -170,15 +170,24 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
 
   // Parse comma-separated email strings into arrays for API
   const parseEmails = (emailStrings: string[]): string[] => {
-    if (!emailStrings || emailStrings.length === 0) return [];
+    // Check if emailStrings is null, undefined or not an array
+    if (!emailStrings || !Array.isArray(emailStrings) || emailStrings.length === 0) {
+      return [];
+    }
     
+    // Use a standard map and reduce approach instead of flatMap
     return emailStrings
-      .flatMap(emailString => 
-        emailString
-          .split(',')
-          .map(email => email.trim())
-          .filter(email => email !== '')
-      );
+      .reduce((acc: string[], emailString: string) => {
+        if (typeof emailString === 'string') {
+          const emails = emailString
+            .split(',')
+            .map(email => email.trim())
+            .filter(email => email !== '');
+          
+          return [...acc, ...emails];
+        }
+        return acc;
+      }, []);
   };
 
   // Email format validation

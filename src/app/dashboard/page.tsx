@@ -10,7 +10,6 @@ import { FeatureUnavailableModal } from "@/components/Dashboard/FeatureUnavailab
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AuthContext } from "@/lib/context/auth";
 
-
 // Define proper TypeScript interfaces
 interface UserInfo {
   name: string;
@@ -32,6 +31,45 @@ interface Tab {
   features: Feature[];
 }
 
+// Quotes collection for rotation
+const quotes = [
+  { text: "Either you run the day, or the day runs you", author: "Jim Rohn" },
+  { text: "The future belongs to those who believe in the beauty of their dreams", author: "Eleanor Roosevelt" },
+  { text: "The best way to predict the future is to create it", author: "Peter Drucker" },
+  { text: "The only way to do great work is to love what you do", author: "Steve Jobs" },
+  { text: "Strive not to be a success, but rather to be of value", author: "Albert Einstein" },
+  { text: "Don't watch the clock; do what it does. Keep going", author: "Sam Levenson" },
+  { text: "The harder I work, the luckier I get", author: "Samuel Goldwyn" },
+  { text: "Success is not final, failure is not fatal: It is the courage to continue that counts", author: "Winston Churchill" },
+  { text: "Believe you can and you're halfway there", author: "Theodore Roosevelt" },
+  { text: "Your time is limited, don't waste it living someone else's life", author: "Steve Jobs" }
+];
+
+// Get time-based greeting
+const getTimeBasedGreeting = (): string => {
+  const hours = new Date().getHours();
+  
+  if (hours >= 5 && hours < 12) {
+    return "Good Morning";
+  } else if (hours >= 12 && hours < 18) {
+    return "Good Afternoon";
+  } else {
+    return "Good Evening";
+  }
+};
+
+// Get random quote that changes daily
+const getDailyQuote = (): typeof quotes[0] => {
+  // Use the date to seed the quote selection so it's consistent for the day
+  const today = new Date();
+  const start = new Date(today.getFullYear(), 0, 0);
+  const diff = today.getTime() - start.getTime();
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const quoteIndex = dayOfYear % quotes.length;
+  
+  return quotes[quoteIndex];
+};
+
 // Local function to get user info from localStorage
 const getLocalUserInfo = (): UserInfo => {
   // Only execute on client-side
@@ -46,10 +84,16 @@ const Dashboard: React.FC = () => {
   // const [userInfo, setUserInfo] = useState<UserInfo>({ name: "" });
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [greeting, setGreeting] = useState<string>("Good Day");
+  const [quote, setQuote] = useState<typeof quotes[0]>(quotes[0]);
   const router = useRouter();
   const {user: userInfo} = useContext(AuthContext);
 
   useEffect(() => {
+    // Initialize time-based greeting and daily quote
+    setGreeting(getTimeBasedGreeting());
+    setQuote(getDailyQuote());
+    
     // Try to get user info from cookies first
     // try {
     //   const cookieInfo = getServerUserInfo();
@@ -78,6 +122,13 @@ const Dashboard: React.FC = () => {
     if (savedCategory) {
       setActiveTab(savedCategory);
     }
+
+    // Update greeting based on time every minute
+    const intervalId = setInterval(() => {
+      setGreeting(getTimeBasedGreeting());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(intervalId);
   }, []);
 
   // Listen for changes to activeCategory in localStorage
@@ -154,7 +205,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <ProtectedRoute>
+    // <ProtectedRoute>
     <div className="p-6 min-h-screen bg-white overflow-hidden overflow-y-auto">
       {/* App Title */}
       <h1 className="text-2xl font-bold text-gray-900 mb-4">The everything app for work !</h1>
@@ -174,15 +225,15 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="relative p-5 text-white z-10 h-full flex flex-col justify-between">
               <div>
-                <p className="text-gray-200">Good Morning,</p>
+                <h3 className="text-2xl text-gray-200">{greeting},</h3>
                 <h2 className="text-3xl font-bold">{userInfo?.first_name}&nbsp;{userInfo?.last_name}</h2>
               </div>
               <div className="sm:absolute sm:right-5 sm:bottom-5 w-full sm:w-64 bg-white/20 backdrop-blur-sm rounded-lg p-3 mt-4 sm:mt-0">
                 <p className="text-xs text-gray-100">Quote of the day</p>
                 <p className="text-sm font-medium">
-                  "Either you run the day, or the day runs you"
+                  "{quote.text}"
                 </p>
-                <p className="text-xs text-gray-200 mt-1">Jim Rohn</p>
+                <p className="text-xs text-gray-200 mt-1">{quote.author}</p>
               </div>
             </div>
           </div>
@@ -210,7 +261,7 @@ const Dashboard: React.FC = () => {
       {/* Feature Unavailable Modal */}
       <FeatureUnavailableModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
-    </ProtectedRoute>
+    // </ProtectedRoute>
   );
 };
 

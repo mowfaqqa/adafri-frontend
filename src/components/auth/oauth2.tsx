@@ -42,7 +42,7 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
             setRedirectUri(window.location.origin + '/auth/login');
         }
     }, [login, logout]);
-    
+
     return (
         <AuthContext.Provider value={{token, setAccessToken, isLoading, setIsLoading, user, setUser, isAuthenticated, setIsAuthenticated, logout, tryLogout, login, tryLogin, redirectUri, setRedirectUri}}>
             {children}
@@ -68,14 +68,19 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
                         setCookie("userId", e.user.uid, 365);
                         setUser(e.user);
                     }
+                    if(e.user && e.token){
+                        setIsAuthenticated(true);
+                    }
                     if(e.isAuthenticated){
                         setIsAuthenticated(e.isAuthenticated);
                     }
                     if(e.event==='load_end'){
                         setIsLoading(false);
-                        if(!e.isAuthenticated){
+                        if(!e.token || !e.user){
                             // tryLogin(true);
                             router.push('/auth/login');
+                        }else{
+                            router.push('/dashboard');
                         }
                     }
                 }} />}

@@ -18,7 +18,7 @@ interface ModalData {
 
 interface ModalState {
   isOpen: boolean;
-  type: ModalType | null;
+  type: string | null;
   data: ModalData;
 
   // Actions

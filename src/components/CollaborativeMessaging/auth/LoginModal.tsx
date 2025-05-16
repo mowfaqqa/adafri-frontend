@@ -60,7 +60,8 @@ const LoginModal = () => {
   
   const onToggle = () => {
     closeModal();
-    openModal('register', { redirectPath });
+    // openModal('register', { redirectPath });
+    console.log("register")
   };
   
   return (

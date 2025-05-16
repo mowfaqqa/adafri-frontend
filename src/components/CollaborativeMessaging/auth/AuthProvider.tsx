@@ -49,7 +49,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (isMessageRoute && !isAuthenticated) {
         // Open login modal if trying to access messages route without authentication
-        openModal("login", { redirectPath: pathname });
+        // openModal("login", { redirectPath: pathname });
+        console.log("Open login modal");
       }
     }
   }, [isAuthChecking, pathname, isAuthenticated, openModal, router]);

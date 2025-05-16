@@ -1,14 +1,15 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "zustand";
 
 export type ModalType =
-  | "login"
-  | "register"
+  | "createWorkspace"
+  | "editWorkspace"
+  | "workspaceInvite"
+  | "workspaceMembers"
   | "createChannel"
-  | "channelDetails"
+  | "editChannel"
+  | "channelMembers"
   | "editProfile"
   | "userProfile"
-  | "addMembers"
   | "confirmDelete";
 
 interface ModalData {
@@ -17,12 +18,13 @@ interface ModalData {
 
 interface ModalState {
   isOpen: boolean;
-  type: ModalType | null;
+  type: string | null;
   data: ModalData;
 
   // Actions
   openModal: (type: ModalType, data?: ModalData) => void;
   closeModal: () => void;
+  updateModalData: (data: Partial<ModalData>) => void;
 }
 
 const useModalStore = create<ModalState>((set) => ({
@@ -32,6 +34,7 @@ const useModalStore = create<ModalState>((set) => ({
 
   openModal: (type, data = {}) => set({ isOpen: true, type, data }),
   closeModal: () => set({ isOpen: false, type: null, data: {} }),
+  updateModalData: (data) => set((state) => ({ data: { ...state.data, ...data } })),
 }));
 
 export default useModalStore;

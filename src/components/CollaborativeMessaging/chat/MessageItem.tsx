@@ -1,17 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-"use client";
-
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Reply, Edit, Trash, Smile } from "lucide-react";
 import dynamic from "next/dynamic";
 
 import useMessageStore from "@/lib/store/messaging/messageStore";
-import useModalStore from "@/lib/store/messaging/modalStore";
+import useWorkspaceStore from "@/lib/store/messaging/workspaceStore";
 import Avatar from "@/components/custom-ui/avatar";
-import { Attachment, Message } from "@/lib/types/collab-messaging/message";
+import { Message, Attachment } from "@/lib/types/collab-messaging/message";
 
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
@@ -34,6 +29,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
   const [editContent, setEditContent] = useState(message.content);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  const { selectedWorkspaceId } = useWorkspaceStore();
   const {
     updateMessage,
     deleteMessage,
@@ -41,7 +37,6 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
     removeReaction,
     setActiveThread,
   } = useMessageStore();
-  const { openModal } = useModalStore();
 
   // Format time
   const formatTime = (date: Date) => {
@@ -91,7 +86,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
 
   // Handle thread view
   const handleOpenThread = () => {
-    setActiveThread(message.id);
+    if (selectedWorkspaceId) {
+      setActiveThread(selectedWorkspaceId, message.id);
+    }
   };
 
   // Handle emoji reaction
@@ -117,9 +114,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
   const hasUserReacted = (emoji: string) => {
     if (!message.reactions) return false;
 
-    const reaction = message.reactions.find((r: any) => r.emoji === emoji);
+    const reaction = message.reactions.find((r) => r.emoji === emoji);
     return (
-      reaction?.users.some((u: any) => u.id === message.sender.id) || false
+      reaction?.users.some((u) => u.id === message.sender.id) || false
     );
   };
 
@@ -129,7 +126,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
 
     return (
       <div className="mt-2 grid grid-cols-2 gap-2">
-        {message.attachments.map((attachment: any) => (
+        {message.attachments.map((attachment: Attachment) => (
           <AttachmentItem key={attachment.id} attachment={attachment} />
         ))}
       </div>
@@ -199,7 +196,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isOwnMessage }) => {
               {/* Reactions */}
               {message.reactions && message.reactions.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {message.reactions.map((reaction: any) => (
+                  {message.reactions.map((reaction) => (
                     <button
                       key={reaction.emoji}
                       onClick={() =>

@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "zustand";
-import * as messageApi from "../../api/messaging/messages";
+import * as messageApi from "@/lib/api/messaging/messages";
 import {
   Message,
   Thread,
@@ -9,30 +8,42 @@ import {
 import socketClient from "@/lib/socket/messagingSocketClient/socketClient";
 import useChannelStore from "./channelStore";
 import useAuthStore from "./authStore";
+import useWorkspaceStore from "./workspaceStore";
 
 interface MessageState {
-  channelMessages: Record<string, Message[]>;
-  directMessages: Record<string, Message[]>;
-  threads: Record<string, Thread>;
+  // Messages organized by workspace -> channel
+  channelMessages: Record<string, Record<string, Message[]>>;
+  // DMs organized by workspace -> DM
+  directMessages: Record<string, Record<string, Message[]>>;
+  // Threads organized by workspace -> parentMessageId
+  threads: Record<string, Record<string, Thread>>;
+  
   activeThreadId: string | null;
   hasMoreMessages: Record<string, boolean>;
   oldestMessageTimestamp: Record<string, string>;
   isLoading: boolean;
   error: string | null;
   typingUsers: TypingIndicator[];
+  searchResults: {
+    messages: Message[];
+    total: number;
+    query: string;
+  } | null;
 
   // Actions
-  fetchChannelMessages: (channelId: string, limit?: number) => Promise<void>;
-  fetchDirectMessages: (dmId: string, limit?: number) => Promise<void>;
+  fetchChannelMessages: (workspaceId: string, channelId: string, limit?: number) => Promise<void>;
+  fetchDirectMessages: (workspaceId: string, dmId: string, limit?: number) => Promise<void>;
   fetchOlderMessages: (
     type: "channel" | "dm",
+    workspaceId: string,
     id: string,
     limit?: number
   ) => Promise<void>;
-  fetchThreadMessages: (messageId: string) => Promise<void>;
-  sendMessage: (content: string, attachments?: File[]) => Promise<void>;
+  fetchThreadMessages: (workspaceId: string, messageId: string) => Promise<void>;
+  sendMessage: (content: string, workspaceId: string, attachments?: File[]) => Promise<void>;
   sendThreadMessage: (
     content: string,
+    workspaceId: string,
     parentId: string,
     attachments?: File[]
   ) => Promise<void>;
@@ -40,11 +51,12 @@ interface MessageState {
   deleteMessage: (messageId: string) => Promise<void>;
   addReaction: (messageId: string, emoji: string) => Promise<void>;
   removeReaction: (messageId: string, emoji: string) => Promise<void>;
-  setActiveThread: (messageId: string | null) => void;
-  startTyping: () => void;
-  stopTyping: () => void;
+  setActiveThread: (workspaceId: string, messageId: string | null) => void;
+  startTyping: (workspaceId: string) => void;
+  stopTyping: (workspaceId: string) => void;
   addTypingUser: (user: TypingIndicator) => void;
   removeTypingUser: (userId: string) => void;
+  searchMessages: (workspaceId: string, query: string, options?: any) => Promise<void>;
   setupSocketListeners: () => void;
   cleanupSocketListeners: () => void;
   clearMessages: () => void;
@@ -61,15 +73,13 @@ const useMessageStore = create<MessageState>((set, get) => ({
   isLoading: false,
   error: null,
   typingUsers: [],
+  searchResults: null,
 
-  fetchChannelMessages: async (channelId: string, limit = 50) => {
+  fetchChannelMessages: async (workspaceId: string, channelId: string, limit = 50) => {
     try {
       set({ isLoading: true, error: null });
 
-      const { messages, hasMore } = await messageApi.getChannelMessages(
-        channelId,
-        limit
-      );
+      const { messages, hasMore } = await messageApi.getChannelMessages(workspaceId, channelId, limit);
 
       // Get the oldest message timestamp for pagination
       let oldestTimestamp = "";
@@ -78,21 +88,29 @@ const useMessageStore = create<MessageState>((set, get) => ({
         oldestTimestamp = new Date(oldestMessage.createdAt).toISOString();
       }
 
-      set((state) => ({
-        channelMessages: {
-          ...state.channelMessages,
-          [channelId]: messages,
-        },
-        hasMoreMessages: {
-          ...state.hasMoreMessages,
-          [channelId]: hasMore,
-        },
-        oldestMessageTimestamp: {
-          ...state.oldestMessageTimestamp,
-          [channelId]: oldestTimestamp,
-        },
-        isLoading: false,
-      }));
+      set((state) => {
+        // Initialize nested structure if it doesn't exist
+        const workspaceMessages = state.channelMessages[workspaceId] || {};
+        
+        return {
+          channelMessages: {
+            ...state.channelMessages,
+            [workspaceId]: {
+              ...workspaceMessages,
+              [channelId]: messages,
+            },
+          },
+          hasMoreMessages: {
+            ...state.hasMoreMessages,
+            [`${workspaceId}:channel:${channelId}`]: hasMore,
+          },
+          oldestMessageTimestamp: {
+            ...state.oldestMessageTimestamp,
+            [`${workspaceId}:channel:${channelId}`]: oldestTimestamp,
+          },
+          isLoading: false,
+        };
+      });
     } catch (error: any) {
       let errorMessage = "Failed to fetch channel messages";
       if (error.response?.data?.message) {
@@ -102,14 +120,11 @@ const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
-  fetchDirectMessages: async (dmId: string, limit = 50) => {
+  fetchDirectMessages: async (workspaceId: string, dmId: string, limit = 50) => {
     try {
       set({ isLoading: true, error: null });
 
-      const { messages, hasMore } = await messageApi.getDirectMessages(
-        dmId,
-        limit
-      );
+      const { messages, hasMore } = await messageApi.getDirectMessages(workspaceId, dmId, limit);
 
       // Get the oldest message timestamp for pagination
       let oldestTimestamp = "";
@@ -118,21 +133,29 @@ const useMessageStore = create<MessageState>((set, get) => ({
         oldestTimestamp = new Date(oldestMessage.createdAt).toISOString();
       }
 
-      set((state) => ({
-        directMessages: {
-          ...state.directMessages,
-          [dmId]: messages,
-        },
-        hasMoreMessages: {
-          ...state.hasMoreMessages,
-          [dmId]: hasMore,
-        },
-        oldestMessageTimestamp: {
-          ...state.oldestMessageTimestamp,
-          [dmId]: oldestTimestamp,
-        },
-        isLoading: false,
-      }));
+      set((state) => {
+        // Initialize nested structure if it doesn't exist
+        const workspaceDMs = state.directMessages[workspaceId] || {};
+        
+        return {
+          directMessages: {
+            ...state.directMessages,
+            [workspaceId]: {
+              ...workspaceDMs,
+              [dmId]: messages,
+            },
+          },
+          hasMoreMessages: {
+            ...state.hasMoreMessages,
+            [`${workspaceId}:dm:${dmId}`]: hasMore,
+          },
+          oldestMessageTimestamp: {
+            ...state.oldestMessageTimestamp,
+            [`${workspaceId}:dm:${dmId}`]: oldestTimestamp,
+          },
+          isLoading: false,
+        };
+      });
     } catch (error: any) {
       let errorMessage = "Failed to fetch direct messages";
       if (error.response?.data?.message) {
@@ -144,13 +167,15 @@ const useMessageStore = create<MessageState>((set, get) => ({
 
   fetchOlderMessages: async (
     type: "channel" | "dm",
+    workspaceId: string,
     id: string,
     limit = 50
   ) => {
     try {
       set({ isLoading: true, error: null });
 
-      const oldestTimestamp = get().oldestMessageTimestamp[id];
+      const cacheKey = `${workspaceId}:${type}:${id}`;
+      const oldestTimestamp = get().oldestMessageTimestamp[cacheKey];
 
       if (!oldestTimestamp) {
         set({ isLoading: false });
@@ -160,12 +185,18 @@ const useMessageStore = create<MessageState>((set, get) => ({
       let result;
       if (type === "channel") {
         result = await messageApi.getChannelMessages(
+          workspaceId,
           id,
           limit,
           oldestTimestamp
         );
       } else {
-        result = await messageApi.getDirectMessages(id, limit, oldestTimestamp);
+        result = await messageApi.getDirectMessages(
+          workspaceId,
+          id,
+          limit,
+          oldestTimestamp
+        );
       }
 
       const { messages, hasMore } = result;
@@ -183,37 +214,53 @@ const useMessageStore = create<MessageState>((set, get) => ({
 
       // Update the messages list (append to the end since these are older messages)
       set((state) => {
-        const currentMessages =
-          type === "channel"
-            ? state.channelMessages[id] || []
-            : state.directMessages[id] || [];
+        if (type === "channel") {
+          const workspaceChannels = state.channelMessages[workspaceId] || {};
+          const currentMessages = workspaceChannels[id] || [];
+          const updatedMessages = [...currentMessages, ...messages];
 
-        const updatedMessages = [...currentMessages, ...messages];
+          return {
+            channelMessages: {
+              ...state.channelMessages,
+              [workspaceId]: {
+                ...workspaceChannels,
+                [id]: updatedMessages,
+              },
+            },
+            hasMoreMessages: {
+              ...state.hasMoreMessages,
+              [cacheKey]: hasMore,
+            },
+            oldestMessageTimestamp: {
+              ...state.oldestMessageTimestamp,
+              [cacheKey]: newOldestTimestamp,
+            },
+            isLoading: false,
+          };
+        } else {
+          const workspaceDMs = state.directMessages[workspaceId] || {};
+          const currentMessages = workspaceDMs[id] || [];
+          const updatedMessages = [...currentMessages, ...messages];
 
-        return {
-          ...(type === "channel"
-            ? {
-                channelMessages: {
-                  ...state.channelMessages,
-                  [id]: updatedMessages,
-                },
-              }
-            : {
-                directMessages: {
-                  ...state.directMessages,
-                  [id]: updatedMessages,
-                },
-              }),
-          hasMoreMessages: {
-            ...state.hasMoreMessages,
-            [id]: hasMore,
-          },
-          oldestMessageTimestamp: {
-            ...state.oldestMessageTimestamp,
-            [id]: newOldestTimestamp,
-          },
-          isLoading: false,
-        };
+          return {
+            directMessages: {
+              ...state.directMessages,
+              [workspaceId]: {
+                ...workspaceDMs,
+                [id]: updatedMessages,
+              },
+            },
+            hasMoreMessages: {
+              ...state.hasMoreMessages,
+              [cacheKey]: hasMore,
+            },
+            oldestMessageTimestamp: {
+              ...state.oldestMessageTimestamp,
+              [cacheKey]: newOldestTimestamp,
+            },
+            isLoading: false,
+          };
+        }
       });
     } catch (error: any) {
       let errorMessage = "Failed to fetch older messages";
@@ -224,19 +271,26 @@ const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
-  fetchThreadMessages: async (messageId: string) => {
+  fetchThreadMessages: async (workspaceId: string, messageId: string) => {
     try {
       set({ isLoading: true, error: null });
 
-      const thread = await messageApi.getThreadMessages(messageId);
+      const thread = await messageApi.getThreadMessages(workspaceId, messageId);
 
-      set((state) => ({
-        threads: {
-          ...state.threads,
-          [messageId]: thread,
-        },
-        isLoading: false,
-      }));
+      set((state) => {
+        const workspaceThreads = state.threads[workspaceId] || {};
+        
+        return {
+          threads: {
+            ...state.threads,
+            [workspaceId]: {
+              ...workspaceThreads,
+              [messageId]: thread,
+            },
+          },
+          isLoading: false,
+        };
+      });
     } catch (error: any) {
       let errorMessage = "Failed to fetch thread messages";
       if (error.response?.data?.message) {
@@ -246,17 +300,18 @@ const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
-  sendMessage: async (content: string, attachments?: File[]) => {
+  sendMessage: async (content: string, workspaceId: string, attachments?: File[]) => {
     try {
       const channelStore = useChannelStore.getState();
       const { selectedChannelId, selectedDirectMessageId } = channelStore;
 
-      if (!selectedChannelId && !selectedDirectMessageId) {
-        throw new Error("No channel or direct message selected");
+      if (!workspaceId || (!selectedChannelId && !selectedDirectMessageId)) {
+        throw new Error("No workspace, channel or direct message selected");
       }
 
       const messageData = {
         content,
+        workspaceId,
         channelId: selectedChannelId || undefined,
         directMessageId: selectedDirectMessageId || undefined,
         attachments,
@@ -267,21 +322,29 @@ const useMessageStore = create<MessageState>((set, get) => ({
       // Update the appropriate message list
       set((state) => {
         if (selectedChannelId) {
-          const currentMessages =
-            state.channelMessages[selectedChannelId] || [];
+          const workspaceChannels = state.channelMessages[workspaceId] || {};
+          const currentMessages = workspaceChannels[selectedChannelId] || [];
+          
           return {
             channelMessages: {
               ...state.channelMessages,
-              [selectedChannelId]: [newMessage, ...currentMessages],
+              [workspaceId]: {
+                ...workspaceChannels,
+                [selectedChannelId]: [newMessage, ...currentMessages],
+              },
             },
           };
         } else if (selectedDirectMessageId) {
-          const currentMessages =
-            state.directMessages[selectedDirectMessageId] || [];
+          const workspaceDMs = state.directMessages[workspaceId] || {};
+          const currentMessages = workspaceDMs[selectedDirectMessageId] || [];
+          
           return {
             directMessages: {
               ...state.directMessages,
-              [selectedDirectMessageId]: [newMessage, ...currentMessages],
+              [workspaceId]: {
+                ...workspaceDMs,
+                [selectedDirectMessageId]: [newMessage, ...currentMessages],
+              },
             },
           };
         }
@@ -300,6 +363,7 @@ const useMessageStore = create<MessageState>((set, get) => ({
 
   sendThreadMessage: async (
     content: string,
+    workspaceId: string,
     parentId: string,
     attachments?: File[]
   ) => {
@@ -307,12 +371,13 @@ const useMessageStore = create<MessageState>((set, get) => ({
       const channelStore = useChannelStore.getState();
       const { selectedChannelId, selectedDirectMessageId } = channelStore;
 
-      if (!selectedChannelId && !selectedDirectMessageId) {
-        throw new Error("No channel or direct message selected");
+      if (!workspaceId || (!selectedChannelId && !selectedDirectMessageId)) {
+        throw new Error("No workspace, channel or direct message selected");
       }
 
       const messageData = {
         content,
+        workspaceId,
         channelId: selectedChannelId || undefined,
         directMessageId: selectedDirectMessageId || undefined,
         parentId,
@@ -324,15 +389,19 @@ const useMessageStore = create<MessageState>((set, get) => ({
       // Update the thread if it's active
       if (get().activeThreadId === parentId) {
         set((state) => {
-          const thread = state.threads[parentId];
+          const workspaceThreads = state.threads[workspaceId] || {};
+          const thread = workspaceThreads[parentId];
 
           if (thread) {
             return {
               threads: {
                 ...state.threads,
-                [parentId]: {
-                  ...thread,
-                  messages: [...thread.messages, newMessage],
+                [workspaceId]: {
+                  ...workspaceThreads,
+                  [parentId]: {
+                    ...thread,
+                    messages: [...thread.messages, newMessage],
+                  },
                 },
               },
             };
@@ -362,58 +431,76 @@ const useMessageStore = create<MessageState>((set, get) => ({
       // Update message in all relevant stores (channels, DMs, and threads)
       set((state) => {
         const channelStore = useChannelStore.getState();
+        const workspaceStore = useWorkspaceStore.getState();
         const { selectedChannelId, selectedDirectMessageId } = channelStore;
+        const { selectedWorkspaceId } = workspaceStore;
+
+        // Skip if no workspace selected
+        if (!selectedWorkspaceId) return { isLoading: false };
 
         // Update state object to return
         const newState: any = { isLoading: false };
 
         // Update in channel messages if applicable
-        if (selectedChannelId && state.channelMessages[selectedChannelId]) {
-          const updatedChannelMessages = state.channelMessages[
-            selectedChannelId
-          ].map((message) =>
-            message.id === messageId
-              ? { ...message, ...updatedMessage }
-              : message
-          );
+        if (selectedChannelId) {
+          const workspaceChannels = state.channelMessages[selectedWorkspaceId] || {};
+          const channelMessages = workspaceChannels[selectedChannelId] || [];
+          
+          if (channelMessages.length > 0) {
+            const updatedChannelMessages = channelMessages.map((message) =>
+              message.id === messageId
+                ? { ...message, ...updatedMessage }
+                : message
+            );
 
-          newState.channelMessages = {
-            ...state.channelMessages,
-            [selectedChannelId]: updatedChannelMessages,
-          };
+            newState.channelMessages = {
+              ...state.channelMessages,
+              [selectedWorkspaceId]: {
+                ...workspaceChannels,
+                [selectedChannelId]: updatedChannelMessages,
+              },
+            };
+          }
         }
 
         // Update in direct messages if applicable
-        if (
-          selectedDirectMessageId &&
-          state.directMessages[selectedDirectMessageId]
-        ) {
-          const updatedDirectMessages = state.directMessages[
-            selectedDirectMessageId
-          ].map((message) =>
-            message.id === messageId
-              ? { ...message, ...updatedMessage }
-              : message
-          );
+        if (selectedDirectMessageId) {
+          const workspaceDMs = state.directMessages[selectedWorkspaceId] || {};
+          const dmMessages = workspaceDMs[selectedDirectMessageId] || [];
+          
+          if (dmMessages.length > 0) {
+            const updatedDMMessages = dmMessages.map((message) =>
+              message.id === messageId
+                ? { ...message, ...updatedMessage }
+                : message
+            );
 
-          newState.directMessages = {
-            ...state.directMessages,
-            [selectedDirectMessageId]: updatedDirectMessages,
-          };
+            newState.directMessages = {
+              ...state.directMessages,
+              [selectedWorkspaceId]: {
+                ...workspaceDMs,
+                [selectedDirectMessageId]: updatedDMMessages,
+              },
+            };
+          }
         }
 
         // Update in thread if applicable
         if (state.activeThreadId) {
-          const thread = state.threads[state.activeThreadId];
+          const workspaceThreads = state.threads[selectedWorkspaceId] || {};
+          const thread = workspaceThreads[state.activeThreadId];
 
           if (thread) {
             // Check if it's the parent message
             if (thread.parentMessage.id === messageId) {
               newState.threads = {
                 ...state.threads,
-                [state.activeThreadId]: {
-                  ...thread,
-                  parentMessage: { ...thread.parentMessage, ...updatedMessage },
+                [selectedWorkspaceId]: {
+                  ...workspaceThreads,
+                  [state.activeThreadId]: {
+                    ...thread,
+                    parentMessage: { ...thread.parentMessage, ...updatedMessage },
+                  },
                 },
               };
             } else {
@@ -426,9 +513,12 @@ const useMessageStore = create<MessageState>((set, get) => ({
 
               newState.threads = {
                 ...state.threads,
-                [state.activeThreadId]: {
-                  ...thread,
-                  messages: updatedThreadMessages,
+                [selectedWorkspaceId]: {
+                  ...workspaceThreads,
+                  [state.activeThreadId]: {
+                    ...thread,
+                    messages: updatedThreadMessages,
+                  },
                 },
               };
             }
@@ -456,69 +546,87 @@ const useMessageStore = create<MessageState>((set, get) => ({
       // Update state to mark message as deleted
       set((state) => {
         const channelStore = useChannelStore.getState();
+        const workspaceStore = useWorkspaceStore.getState();
         const { selectedChannelId, selectedDirectMessageId } = channelStore;
+        const { selectedWorkspaceId } = workspaceStore;
+
+        // Skip if no workspace selected
+        if (!selectedWorkspaceId) return { isLoading: false };
 
         // Update state object to return
         const newState: any = { isLoading: false };
 
         // Update in channel messages if applicable
-        if (selectedChannelId && state.channelMessages[selectedChannelId]) {
-          const updatedChannelMessages = state.channelMessages[
-            selectedChannelId
-          ].map((message) =>
-            message.id === messageId
-              ? {
-                  ...message,
-                  isDeleted: true,
-                  content: "[This message has been deleted]",
-                }
-              : message
-          );
+        if (selectedChannelId) {
+          const workspaceChannels = state.channelMessages[selectedWorkspaceId] || {};
+          const channelMessages = workspaceChannels[selectedChannelId] || [];
+          
+          if (channelMessages.length > 0) {
+            const updatedChannelMessages = channelMessages.map((message) =>
+              message.id === messageId
+                ? {
+                    ...message,
+                    isDeleted: true,
+                    content: "[This message has been deleted]",
+                  }
+                : message
+            );
 
-          newState.channelMessages = {
-            ...state.channelMessages,
-            [selectedChannelId]: updatedChannelMessages,
-          };
+            newState.channelMessages = {
+              ...state.channelMessages,
+              [selectedWorkspaceId]: {
+                ...workspaceChannels,
+                [selectedChannelId]: updatedChannelMessages,
+              },
+            };
+          }
         }
 
         // Update in direct messages if applicable
-        if (
-          selectedDirectMessageId &&
-          state.directMessages[selectedDirectMessageId]
-        ) {
-          const updatedDirectMessages = state.directMessages[
-            selectedDirectMessageId
-          ].map((message) =>
-            message.id === messageId
-              ? {
-                  ...message,
-                  isDeleted: true,
-                  content: "[This message has been deleted]",
-                }
-              : message
-          );
+        if (selectedDirectMessageId) {
+          const workspaceDMs = state.directMessages[selectedWorkspaceId] || {};
+          const dmMessages = workspaceDMs[selectedDirectMessageId] || [];
+          
+          if (dmMessages.length > 0) {
+            const updatedDMMessages = dmMessages.map((message) =>
+              message.id === messageId
+                ? {
+                    ...message,
+                    isDeleted: true,
+                    content: "[This message has been deleted]",
+                  }
+                : message
+            );
 
-          newState.directMessages = {
-            ...state.directMessages,
-            [selectedDirectMessageId]: updatedDirectMessages,
-          };
+            newState.directMessages = {
+              ...state.directMessages,
+              [selectedWorkspaceId]: {
+                ...workspaceDMs,
+                [selectedDirectMessageId]: updatedDMMessages,
+              },
+            };
+          }
         }
 
         // Update in thread if applicable
         if (state.activeThreadId) {
-          const thread = state.threads[state.activeThreadId];
+          const workspaceThreads = state.threads[selectedWorkspaceId] || {};
+          const thread = workspaceThreads[state.activeThreadId];
 
           if (thread) {
             // Check if it's the parent message
             if (thread.parentMessage.id === messageId) {
               newState.threads = {
                 ...state.threads,
-                [state.activeThreadId]: {
-                  ...thread,
-                  parentMessage: {
-                    ...thread.parentMessage,
-                    isDeleted: true,
-                    content: "[This message has been deleted]",
+                [selectedWorkspaceId]: {
+                  ...workspaceThreads,
+                  [state.activeThreadId]: {
+                    ...thread,
+                    parentMessage: {
+                      ...thread.parentMessage,
+                      isDeleted: true,
+                      content: "[This message has been deleted]",
+                    },
                   },
                 },
               };
@@ -536,9 +644,12 @@ const useMessageStore = create<MessageState>((set, get) => ({
 
               newState.threads = {
                 ...state.threads,
-                [state.activeThreadId]: {
-                  ...thread,
-                  messages: updatedThreadMessages,
+                [selectedWorkspaceId]: {
+                  ...workspaceThreads,
+                  [state.activeThreadId]: {
+                    ...thread,
+                    messages: updatedThreadMessages,
+                  },
                 },
               };
             }
@@ -560,7 +671,6 @@ const useMessageStore = create<MessageState>((set, get) => ({
   addReaction: async (messageId: string, emoji: string) => {
     try {
       await messageApi.addReaction(messageId, { emoji });
-
       // The socket will handle updating the UI with the new reaction
     } catch (error: any) {
       let errorMessage = "Failed to add reaction";
@@ -575,7 +685,6 @@ const useMessageStore = create<MessageState>((set, get) => ({
   removeReaction: async (messageId: string, emoji: string) => {
     try {
       await messageApi.removeReaction(messageId, emoji);
-
       // The socket will handle updating the UI with the removed reaction
     } catch (error: any) {
       let errorMessage = "Failed to remove reaction";
@@ -587,41 +696,53 @@ const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
-  setActiveThread: (messageId: string | null) => {
+  setActiveThread: (workspaceId: string, messageId: string | null) => {
     const { activeThreadId } = get();
 
     // Leave previous thread if any
     if (activeThreadId) {
-      socketClient.leaveThread(activeThreadId);
+      socketClient.leaveThread(workspaceId, activeThreadId);
     }
 
     // Join new thread if any
     if (messageId) {
-      socketClient.joinThread(messageId);
+      socketClient.joinThread(workspaceId, messageId);
     }
 
     set({ activeThreadId: messageId });
   },
 
-  startTyping: () => {
+  startTyping: (workspaceId: string) => {
     const channelStore = useChannelStore.getState();
     const { selectedChannelId, selectedDirectMessageId } = channelStore;
 
     if (selectedChannelId) {
-      socketClient.sendTypingStart({ channelId: selectedChannelId });
+      socketClient.sendTypingStart({ 
+        channelId: selectedChannelId,
+        workspaceId 
+      });
     } else if (selectedDirectMessageId) {
-      socketClient.sendTypingStart({ dmId: selectedDirectMessageId });
+      socketClient.sendTypingStart({ 
+        dmId: selectedDirectMessageId,
+        workspaceId 
+      });
     }
   },
 
-  stopTyping: () => {
+  stopTyping: (workspaceId: string) => {
     const channelStore = useChannelStore.getState();
     const { selectedChannelId, selectedDirectMessageId } = channelStore;
 
     if (selectedChannelId) {
-      socketClient.sendTypingStop({ channelId: selectedChannelId });
+      socketClient.sendTypingStop({ 
+        channelId: selectedChannelId,
+        workspaceId 
+      });
     } else if (selectedDirectMessageId) {
-      socketClient.sendTypingStop({ dmId: selectedDirectMessageId });
+      socketClient.sendTypingStop({ 
+        dmId: selectedDirectMessageId,
+        workspaceId 
+      });
     }
   },
 
@@ -631,6 +752,7 @@ const useMessageStore = create<MessageState>((set, get) => ({
       const userExists = state.typingUsers.some(
         (u) =>
           u.userId === user.userId &&
+          u.workspaceId === user.workspaceId &&
           ((u.channelId && u.channelId === user.channelId) ||
             (u.dmId && u.dmId === user.dmId))
       );
@@ -651,6 +773,29 @@ const useMessageStore = create<MessageState>((set, get) => ({
     }));
   },
 
+  searchMessages: async (workspaceId: string, query: string, options = {}) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      const result = await messageApi.searchMessages(workspaceId, query, options);
+
+      set({
+        searchResults: {
+          messages: result.messages,
+          total: result.total,
+          query,
+        },
+        isLoading: false,
+      });
+    } catch (error: any) {
+      let errorMessage = "Failed to search messages";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      set({ error: errorMessage, isLoading: false });
+    }
+  },
+
   setupSocketListeners: () => {
     // Listen for new messages
     socketClient.on("new_message", (message: Message) => {
@@ -662,24 +807,33 @@ const useMessageStore = create<MessageState>((set, get) => ({
 
       set((state) => {
         const newState: any = {};
+        const workspaceId = message.workspaceId;
 
         // Add to channel messages if applicable
         if (message.channelId) {
-          const currentMessages =
-            state.channelMessages[message.channelId] || [];
+          const workspaceChannels = state.channelMessages[workspaceId] || {};
+          const currentMessages = workspaceChannels[message.channelId] || [];
+          
           newState.channelMessages = {
             ...state.channelMessages,
-            [message.channelId]: [message, ...currentMessages],
+            [workspaceId]: {
+              ...workspaceChannels,
+              [message.channelId]: [message, ...currentMessages],
+            },
           };
         }
 
         // Add to direct messages if applicable
         if (message.directMessageId) {
-          const currentMessages =
-            state.directMessages[message.directMessageId] || [];
+          const workspaceDMs = state.directMessages[workspaceId] || {};
+          const currentMessages = workspaceDMs[message.directMessageId] || [];
+          
           newState.directMessages = {
             ...state.directMessages,
-            [message.directMessageId]: [message, ...currentMessages],
+            [workspaceId]: {
+              ...workspaceDMs,
+              [message.directMessageId]: [message, ...currentMessages],
+            },
           };
         }
 
@@ -696,42 +850,60 @@ const useMessageStore = create<MessageState>((set, get) => ({
     socketClient.on("message_update", (message: Message) => {
       set((state) => {
         const newState: any = {};
+        const workspaceId = message.workspaceId;
 
         // Update in channel messages if applicable
-        if (message.channelId && state.channelMessages[message.channelId]) {
-          newState.channelMessages = {
-            ...state.channelMessages,
-            [message.channelId]: state.channelMessages[message.channelId].map(
-              (msg) => (msg.id === message.id ? message : msg)
-            ),
-          };
+        if (message.channelId) {
+          const workspaceChannels = state.channelMessages[workspaceId] || {};
+          const channelMessages = workspaceChannels[message.channelId] || [];
+          
+          if (channelMessages.length > 0) {
+            newState.channelMessages = {
+              ...state.channelMessages,
+              [workspaceId]: {
+                ...workspaceChannels,
+                [message.channelId]: channelMessages.map(
+                  (msg) => (msg.id === message.id ? message : msg)
+                ),
+              },
+            };
+          }
         }
 
         // Update in direct messages if applicable
-        if (
-          message.directMessageId &&
-          state.directMessages[message.directMessageId]
-        ) {
-          newState.directMessages = {
-            ...state.directMessages,
-            [message.directMessageId]: state.directMessages[
-              message.directMessageId
-            ].map((msg) => (msg.id === message.id ? message : msg)),
-          };
+        if (message.directMessageId) {
+          const workspaceDMs = state.directMessages[workspaceId] || {};
+          const dmMessages = workspaceDMs[message.directMessageId] || [];
+          
+          if (dmMessages.length > 0) {
+            newState.directMessages = {
+              ...state.directMessages,
+              [workspaceId]: {
+                ...workspaceDMs,
+                [message.directMessageId]: dmMessages.map(
+                  (msg) => (msg.id === message.id ? message : msg)
+                ),
+              },
+            };
+          }
         }
 
         // Update in thread if applicable
         if (state.activeThreadId) {
-          const thread = state.threads[state.activeThreadId];
+          const workspaceThreads = state.threads[workspaceId] || {};
+          const thread = workspaceThreads[state.activeThreadId];
 
           if (thread) {
             // Check if it's the parent message
             if (thread.parentMessage.id === message.id) {
               newState.threads = {
                 ...state.threads,
-                [state.activeThreadId]: {
-                  ...thread,
-                  parentMessage: message,
+                [workspaceId]: {
+                  ...workspaceThreads,
+                  [state.activeThreadId]: {
+                    ...thread,
+                    parentMessage: message,
+                  },
                 },
               };
             } else {
@@ -743,11 +915,14 @@ const useMessageStore = create<MessageState>((set, get) => ({
               if (messageExists) {
                 newState.threads = {
                   ...state.threads,
-                  [state.activeThreadId]: {
-                    ...thread,
-                    messages: thread.messages.map((msg) =>
-                      msg.id === message.id ? message : msg
-                    ),
+                  [workspaceId]: {
+                    ...workspaceThreads,
+                    [state.activeThreadId]: {
+                      ...thread,
+                      messages: thread.messages.map((msg) =>
+                        msg.id === message.id ? message : msg
+                      ),
+                    },
                   },
                 };
               }
@@ -762,63 +937,85 @@ const useMessageStore = create<MessageState>((set, get) => ({
     // Listen for message deletions
     socketClient.on(
       "message_delete",
-      (data: { id: string; channelId?: string; directMessageId?: string }) => {
+      (data: { 
+        id: string; 
+        channelId?: string; 
+        directMessageId?: string;
+        workspaceId: string;
+      }) => {
         set((state) => {
           const newState: any = {};
+          const workspaceId = data.workspaceId;
 
           // Update in channel messages if applicable
-          if (data.channelId && state.channelMessages[data.channelId]) {
-            newState.channelMessages = {
-              ...state.channelMessages,
-              [data.channelId]: state.channelMessages[data.channelId].map(
-                (msg) =>
-                  msg.id === data.id
-                    ? {
-                        ...msg,
-                        isDeleted: true,
-                        content: "[This message has been deleted]",
-                      }
-                    : msg
-              ),
-            };
+          if (data.channelId) {
+            const workspaceChannels = state.channelMessages[workspaceId] || {};
+            const channelMessages = workspaceChannels[data.channelId] || [];
+            
+            if (channelMessages.length > 0) {
+              newState.channelMessages = {
+                ...state.channelMessages,
+                [workspaceId]: {
+                  ...workspaceChannels,
+                  [data.channelId]: channelMessages.map(
+                    (msg) =>
+                      msg.id === data.id
+                        ? {
+                            ...msg,
+                            isDeleted: true,
+                            content: "[This message has been deleted]",
+                          }
+                        : msg
+                  ),
+                },
+              };
+            }
           }
 
           // Update in direct messages if applicable
-          if (
-            data.directMessageId &&
-            state.directMessages[data.directMessageId]
-          ) {
-            newState.directMessages = {
-              ...state.directMessages,
-              [data.directMessageId]: state.directMessages[
-                data.directMessageId
-              ].map((msg) =>
-                msg.id === data.id
-                  ? {
-                      ...msg,
-                      isDeleted: true,
-                      content: "[This message has been deleted]",
-                    }
-                  : msg
-              ),
-            };
+          if (data.directMessageId) {
+            const workspaceDMs = state.directMessages[workspaceId] || {};
+            const dmMessages = workspaceDMs[data.directMessageId] || [];
+            
+            if (dmMessages.length > 0) {
+              newState.directMessages = {
+                ...state.directMessages,
+                [workspaceId]: {
+                  ...workspaceDMs,
+                  [data.directMessageId]: dmMessages.map(
+                    (msg) =>
+                      msg.id === data.id
+                        ? {
+                            ...msg,
+                            isDeleted: true,
+                            content: "[This message has been deleted]",
+                          }
+                        : msg
+                  ),
+                },
+              };
+            }
           }
 
           // Update in thread if applicable
           if (state.activeThreadId) {
-            const thread = state.threads[state.activeThreadId];
+            const workspaceThreads = state.threads[workspaceId] || {};
+            const thread = workspaceThreads[state.activeThreadId];
 
             if (thread) {
               // Check if it's the parent message
               if (thread.parentMessage.id === data.id) {
                 newState.threads = {
                   ...state.threads,
-                  [state.activeThreadId]: {
-                    ...thread,
-                    parentMessage: {
-                      ...thread.parentMessage,
-                      isDeleted: true,
-                      content: "[This message has been deleted]",
+                  [workspaceId]: {
+                    ...workspaceThreads,
+                    [state.activeThreadId]: {
+                      ...thread,
+                      parentMessage: {
+                        ...thread.parentMessage,
+                        isDeleted: true,
+                        content: "[This message has been deleted]",
+                      },
                     },
                   },
                 };
@@ -831,17 +1028,20 @@ const useMessageStore = create<MessageState>((set, get) => ({
                 if (messageExists) {
                   newState.threads = {
                     ...state.threads,
-                    [state.activeThreadId]: {
-                      ...thread,
-                      messages: thread.messages.map((msg) =>
-                        msg.id === data.id
-                          ? {
-                              ...msg,
-                              isDeleted: true,
-                              content: "[This message has been deleted]",
-                            }
-                          : msg
-                      ),
+                    [workspaceId]: {
+                      ...workspaceThreads,
+                      [state.activeThreadId]: {
+                        ...thread,
+                        messages: thread.messages.map((msg) =>
+                          msg.id === data.id
+                            ? {
+                                ...msg,
+                                isDeleted: true,
+                                content: "[This message has been deleted]",
+                              }
+                            : msg
+                        ),
+                      },
                     },
                   };
                 }
@@ -857,16 +1057,22 @@ const useMessageStore = create<MessageState>((set, get) => ({
     // Listen for thread messages
     socketClient.on("new_thread_message", (message: Message) => {
       set((state) => {
+        const workspaceId = message.workspaceId;
+        
         if (state.activeThreadId === message.parentId) {
-          const thread = state.threads[state.activeThreadId];
+          const workspaceThreads = state.threads[workspaceId] || {};
+          const thread = workspaceThreads[state.activeThreadId];
 
           if (thread) {
             return {
               threads: {
                 ...state.threads,
-                [state.activeThreadId]: {
-                  ...thread,
-                  messages: [...thread.messages, message],
+                [workspaceId]: {
+                  ...workspaceThreads,
+                  [state.activeThreadId]: {
+                    ...thread,
+                    messages: [...thread.messages, message],
+                  },
                 },
               },
             };
@@ -876,10 +1082,15 @@ const useMessageStore = create<MessageState>((set, get) => ({
         // If the parent message is visible in the current channel/DM,
         // update its thread count
         const channelStore = useChannelStore.getState();
+        const workspaceStore = useWorkspaceStore.getState();
         const { selectedChannelId, selectedDirectMessageId } = channelStore;
+        const { selectedWorkspaceId } = workspaceStore;
 
-        if (selectedChannelId && state.channelMessages[selectedChannelId]) {
-          const parentMessage = state.channelMessages[selectedChannelId].find(
+        if (selectedWorkspaceId && selectedChannelId) {
+          const workspaceChannels = state.channelMessages[selectedWorkspaceId] || {};
+          const channelMessages = workspaceChannels[selectedChannelId] || [];
+          
+          const parentMessage = channelMessages.find(
             (msg) => msg.id === message.parentId
           );
 
@@ -887,43 +1098,45 @@ const useMessageStore = create<MessageState>((set, get) => ({
             return {
               channelMessages: {
                 ...state.channelMessages,
-                [selectedChannelId]: state.channelMessages[
-                  selectedChannelId
-                ].map((msg) =>
-                  msg.id === message.parentId
-                    ? {
-                        ...msg,
-                        hasThread: true,
-                        threadCount: (msg.threadCount || 0) + 1,
-                      }
-                    : msg
-                ),
+                [selectedWorkspaceId]: {
+                  ...workspaceChannels,
+                  [selectedChannelId]: channelMessages.map((msg) =>
+                    msg.id === message.parentId
+                      ? {
+                          ...msg,
+                          hasThread: true,
+                          threadCount: (msg.threadCount || 0) + 1,
+                        }
+                      : msg
+                  ),
+                },
               },
             };
           }
-        } else if (
-          selectedDirectMessageId &&
-          state.directMessages[selectedDirectMessageId]
-        ) {
-          const parentMessage = state.directMessages[
-            selectedDirectMessageId
-          ].find((msg) => msg.id === message.parentId);
+        } else if (selectedWorkspaceId && selectedDirectMessageId) {
+          const workspaceDMs = state.directMessages[selectedWorkspaceId] || {};
+          const dmMessages = workspaceDMs[selectedDirectMessageId] || [];
+          
+          const parentMessage = dmMessages.find(
+            (msg) => msg.id === message.parentId
+          );
 
           if (parentMessage) {
             return {
               directMessages: {
                 ...state.directMessages,
-                [selectedDirectMessageId]: state.directMessages[
-                  selectedDirectMessageId
-                ].map((msg) =>
-                  msg.id === message.parentId
-                    ? {
-                        ...msg,
-                        hasThread: true,
-                        threadCount: (msg.threadCount || 0) + 1,
-                      }
-                    : msg
-                ),
+                [selectedWorkspaceId]: {
+                  ...workspaceDMs,
+                  [selectedDirectMessageId]: dmMessages.map((msg) =>
+                    msg.id === message.parentId
+                      ? {
+                          ...msg,
+                          hasThread: true,
+                          threadCount: (msg.threadCount || 0) + 1,
+                        }
+                      : msg
+                  ),
+                },
               },
             };
           }
@@ -937,51 +1150,66 @@ const useMessageStore = create<MessageState>((set, get) => ({
     socketClient.on("reaction_update", (message: Message) => {
       set((state) => {
         const newState: any = {};
+        const workspaceId = message.workspaceId;
 
         // Update in channel messages if applicable
-        if (message.channelId && state.channelMessages[message.channelId]) {
-          newState.channelMessages = {
-            ...state.channelMessages,
-            [message.channelId]: state.channelMessages[message.channelId].map(
-              (msg) =>
-                msg.id === message.id
-                  ? { ...msg, reactions: message.reactions }
-                  : msg
-            ),
-          };
+        if (message.channelId) {
+          const workspaceChannels = state.channelMessages[workspaceId] || {};
+          const channelMessages = workspaceChannels[message.channelId] || [];
+          
+          if (channelMessages.length > 0) {
+            newState.channelMessages = {
+              ...state.channelMessages,
+              [workspaceId]: {
+                ...workspaceChannels,
+                [message.channelId]: channelMessages.map((msg) =>
+                  msg.id === message.id
+                    ? { ...msg, reactions: message.reactions }
+                    : msg
+                ),
+              },
+            };
+          }
         }
 
         // Update in direct messages if applicable
-        if (
-          message.directMessageId &&
-          state.directMessages[message.directMessageId]
-        ) {
-          newState.directMessages = {
-            ...state.directMessages,
-            [message.directMessageId]: state.directMessages[
-              message.directMessageId
-            ].map((msg) =>
-              msg.id === message.id
-                ? { ...msg, reactions: message.reactions }
-                : msg
-            ),
-          };
+        if (message.directMessageId) {
+          const workspaceDMs = state.directMessages[workspaceId] || {};
+          const dmMessages = workspaceDMs[message.directMessageId] || [];
+          
+          if (dmMessages.length > 0) {
+            newState.directMessages = {
+              ...state.directMessages,
+              [workspaceId]: {
+                ...workspaceDMs,
+                [message.directMessageId]: dmMessages.map((msg) =>
+                  msg.id === message.id
+                    ? { ...msg, reactions: message.reactions }
+                    : msg
+                ),
+              },
+            };
+          }
         }
 
         // Update in thread if applicable
         if (state.activeThreadId) {
-          const thread = state.threads[state.activeThreadId];
+          const workspaceThreads = state.threads[workspaceId] || {};
+          const thread = workspaceThreads[state.activeThreadId];
 
           if (thread) {
             // Check if it's the parent message
             if (thread.parentMessage.id === message.id) {
               newState.threads = {
                 ...state.threads,
-                [state.activeThreadId]: {
-                  ...thread,
-                  parentMessage: {
-                    ...thread.parentMessage,
-                    reactions: message.reactions,
+                [workspaceId]: {
+                  ...workspaceThreads,
+                  [state.activeThreadId]: {
+                    ...thread,
+                    parentMessage: {
+                      ...thread.parentMessage,
+                      reactions: message.reactions,
+                    },
                   },
                 },
               };
@@ -994,13 +1222,16 @@ const useMessageStore = create<MessageState>((set, get) => ({
               if (messageExists) {
                 newState.threads = {
                   ...state.threads,
-                  [state.activeThreadId]: {
-                    ...thread,
-                    messages: thread.messages.map((msg) =>
-                      msg.id === message.id
-                        ? { ...msg, reactions: message.reactions }
-                        : msg
-                    ),
+                  [workspaceId]: {
+                    ...workspaceThreads,
+                    [state.activeThreadId]: {
+                      ...thread,
+                      messages: thread.messages.map((msg) =>
+                        msg.id === message.id
+                          ? { ...msg, reactions: message.reactions }
+                          : msg
+                      ),
+                    },
                   },
                 };
               }
@@ -1041,6 +1272,7 @@ const useMessageStore = create<MessageState>((set, get) => ({
       hasMoreMessages: {},
       oldestMessageTimestamp: {},
       typingUsers: [],
+      searchResults: null,
     });
   },
 

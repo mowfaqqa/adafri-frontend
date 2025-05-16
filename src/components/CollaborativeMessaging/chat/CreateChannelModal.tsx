@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Hash, Lock } from "lucide-react";
@@ -16,13 +14,16 @@ interface CreateChannelFormValues {
   isPrivate: boolean;
 }
 
-const CreateChannelModal = () => {
+const CreateChannelModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { createChannel } = useChannelStore();
-  const { isOpen, type, closeModal } = useModalStore();
+  const { isOpen, type, closeModal, data } = useModalStore();
 
   const showModal = isOpen && type === "createChannel";
+  
+  // Get the workspace ID from the modal data
+  const workspaceId = data?.workspaceId;
 
   const {
     register,
@@ -41,6 +42,11 @@ const CreateChannelModal = () => {
   const isPrivate = watch("isPrivate");
 
   const onSubmit = async (values: CreateChannelFormValues) => {
+    if (!workspaceId) {
+      console.error("No workspace ID provided");
+      return;
+    }
+    
     try {
       setIsLoading(true);
 
@@ -54,6 +60,7 @@ const CreateChannelModal = () => {
         name: formattedName,
         description: values.description,
         isPrivate: values.isPrivate,
+        workspaceId,
       });
 
       closeModal();
@@ -169,4 +176,4 @@ const CreateChannelModal = () => {
   );
 };
 
-export default CreateChannelModal;
+export default CreateChannelModal

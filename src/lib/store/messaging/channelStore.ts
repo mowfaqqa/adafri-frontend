@@ -1,46 +1,55 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand';
-import * as channelApi from '../../api/messaging/channel';
+import * as channelApi from '@/lib/api/messaging/channel';
 import { Channel, ChannelCreateData, DirectMessageChannel } from '@/lib/types/collab-messaging/channel';
 import socketClient from '@/lib/socket/messagingSocketClient/socketClient';
+import useWorkspaceStore from './workspaceStore';
 
 interface ChannelState {
-  channels: Channel[];
-  directMessages: DirectMessageChannel[];
+  // Channels organized by workspace
+  channelsByWorkspace: Record<string, Channel[]>;
+  // DMs organized by workspace
+  directMessagesByWorkspace: Record<string, DirectMessageChannel[]>;
+  
   selectedChannelId: string | null;
   selectedDirectMessageId: string | null;
   isLoading: boolean;
   error: string | null;
   
   // Actions
-  fetchChannels: () => Promise<void>;
-  fetchDirectMessages: () => Promise<void>;
-  selectChannel: (channelId: string) => void;
-  selectDirectMessage: (dmId: string) => void;
+  fetchChannels: (workspaceId: string) => Promise<void>;
+  fetchDirectMessages: (workspaceId: string) => Promise<void>;
+  selectChannel: (workspaceId: string, channelId: string) => void;
+  selectDirectMessage: (workspaceId: string, dmId: string) => void;
   createChannel: (channelData: ChannelCreateData) => Promise<Channel>;
   updateChannel: (channelId: string, channelData: any) => Promise<void>;
   addChannelMember: (channelId: string, userId: string) => Promise<void>;
   removeChannelMember: (channelId: string, userId: string) => Promise<void>;
-  createDirectMessage: (userId: string) => Promise<DirectMessageChannel>;
+  createDirectMessage: (workspaceId: string, userId: string) => Promise<DirectMessageChannel>;
   clearSelection: () => void;
   clearError: () => void;
 }
 
 const useChannelStore = create<ChannelState>((set, get) => ({
-  channels: [],
-  directMessages: [],
+  channelsByWorkspace: {},
+  directMessagesByWorkspace: {},
   selectedChannelId: null,
   selectedDirectMessageId: null,
   isLoading: false,
   error: null,
   
-  fetchChannels: async () => {
+  fetchChannels: async (workspaceId: string) => {
     try {
       set({ isLoading: true, error: null });
       
-      const channels = await channelApi.getChannels();
+      const channels = await channelApi.getChannels(workspaceId);
       
-      set({ channels, isLoading: false });
+      set((state) => ({
+        channelsByWorkspace: {
+          ...state.channelsByWorkspace,
+          [workspaceId]: channels,
+        },
+        isLoading: false,
+      }));
     } catch (error: any) {
       let errorMessage = 'Failed to fetch channels';
       if (error.response?.data?.message) {
@@ -50,13 +59,19 @@ const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
   
-  fetchDirectMessages: async () => {
+  fetchDirectMessages: async (workspaceId: string) => {
     try {
       set({ isLoading: true, error: null });
       
-      const directMessages = await channelApi.getDirectMessages();
+      const directMessages = await channelApi.getDirectMessages(workspaceId);
       
-      set({ directMessages, isLoading: false });
+      set((state) => ({
+        directMessagesByWorkspace: {
+          ...state.directMessagesByWorkspace,
+          [workspaceId]: directMessages,
+        },
+        isLoading: false,
+      }));
     } catch (error: any) {
       let errorMessage = 'Failed to fetch direct messages';
       if (error.response?.data?.message) {
@@ -66,41 +81,53 @@ const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
   
-  selectChannel: (channelId: string) => {
+  selectChannel: (workspaceId: string, channelId: string) => {
     const { selectedChannelId, selectedDirectMessageId } = get();
+    
+    // Check if workspace is selected
+    const currentWorkspace = useWorkspaceStore.getState().selectedWorkspaceId;
+    if (currentWorkspace !== workspaceId) {
+      useWorkspaceStore.getState().selectWorkspace(workspaceId);
+    }
     
     // Leave previous channel if different
     if (selectedChannelId && selectedChannelId !== channelId) {
-      socketClient.leaveChannel(selectedChannelId);
+      socketClient.leaveChannel(currentWorkspace || workspaceId, selectedChannelId);
     }
     
     // Leave previous DM if any
     if (selectedDirectMessageId) {
-      socketClient.leaveDirectMessage(selectedDirectMessageId);
+      socketClient.leaveDirectMessage(currentWorkspace || workspaceId, selectedDirectMessageId);
       set({ selectedDirectMessageId: null });
     }
     
     // Join new channel
-    socketClient.joinChannel(channelId);
+    socketClient.joinChannel(workspaceId, channelId);
     set({ selectedChannelId: channelId });
   },
   
-  selectDirectMessage: (dmId: string) => {
+  selectDirectMessage: (workspaceId: string, dmId: string) => {
     const { selectedChannelId, selectedDirectMessageId } = get();
+    
+    // Check if workspace is selected
+    const currentWorkspace = useWorkspaceStore.getState().selectedWorkspaceId;
+    if (currentWorkspace !== workspaceId) {
+      useWorkspaceStore.getState().selectWorkspace(workspaceId);
+    }
     
     // Leave previous DM if different
     if (selectedDirectMessageId && selectedDirectMessageId !== dmId) {
-      socketClient.leaveDirectMessage(selectedDirectMessageId);
+      socketClient.leaveDirectMessage(currentWorkspace || workspaceId, selectedDirectMessageId);
     }
     
     // Leave previous channel if any
     if (selectedChannelId) {
-      socketClient.leaveChannel(selectedChannelId);
+      socketClient.leaveChannel(currentWorkspace || workspaceId, selectedChannelId);
       set({ selectedChannelId: null });
     }
     
     // Join new DM
-    socketClient.joinDirectMessage(dmId);
+    socketClient.joinDirectMessage(workspaceId, dmId);
     set({ selectedDirectMessageId: dmId });
   },
   
@@ -110,10 +137,17 @@ const useChannelStore = create<ChannelState>((set, get) => ({
       
       const newChannel = await channelApi.createChannel(channelData);
       
-      set((state) => ({
-        channels: [...state.channels, newChannel],
-        isLoading: false,
-      }));
+      set((state) => {
+        const workspaceChannels = state.channelsByWorkspace[channelData.workspaceId] || [];
+        
+        return {
+          channelsByWorkspace: {
+            ...state.channelsByWorkspace,
+            [channelData.workspaceId]: [...workspaceChannels, newChannel],
+          },
+          isLoading: false,
+        };
+      });
       
       return newChannel;
     } catch (error: any) {
@@ -132,12 +166,21 @@ const useChannelStore = create<ChannelState>((set, get) => ({
       
       const updatedChannel = await channelApi.updateChannel(channelId, channelData);
       
-      set((state) => ({
-        channels: state.channels.map((channel) => 
-          channel.id === channelId ? updatedChannel : channel
-        ),
-        isLoading: false,
-      }));
+      set((state) => {
+        // Find the workspace this channel belongs to
+        const workspaceId = updatedChannel.workspaceId;
+        const workspaceChannels = state.channelsByWorkspace[workspaceId] || [];
+        
+        return {
+          channelsByWorkspace: {
+            ...state.channelsByWorkspace,
+            [workspaceId]: workspaceChannels.map((channel) => 
+              channel.id === channelId ? updatedChannel : channel
+            ),
+          },
+          isLoading: false,
+        };
+      });
     } catch (error: any) {
       let errorMessage = 'Failed to update channel';
       if (error.response?.data?.message) {
@@ -157,12 +200,21 @@ const useChannelStore = create<ChannelState>((set, get) => ({
       // Refresh channel to get updated members
       const updatedChannel = await channelApi.getChannelById(channelId);
       
-      set((state) => ({
-        channels: state.channels.map((channel) => 
-          channel.id === channelId ? updatedChannel : channel
-        ),
-        isLoading: false,
-      }));
+      set((state) => {
+        // Find the workspace this channel belongs to
+        const workspaceId = updatedChannel.workspaceId;
+        const workspaceChannels = state.channelsByWorkspace[workspaceId] || [];
+        
+        return {
+          channelsByWorkspace: {
+            ...state.channelsByWorkspace,
+            [workspaceId]: workspaceChannels.map((channel) => 
+              channel.id === channelId ? updatedChannel : channel
+            ),
+          },
+          isLoading: false,
+        };
+      });
     } catch (error: any) {
       let errorMessage = 'Failed to add member to channel';
       if (error.response?.data?.message) {
@@ -182,12 +234,21 @@ const useChannelStore = create<ChannelState>((set, get) => ({
       // Refresh channel to get updated members
       const updatedChannel = await channelApi.getChannelById(channelId);
       
-      set((state) => ({
-        channels: state.channels.map((channel) => 
-          channel.id === channelId ? updatedChannel : channel
-        ),
-        isLoading: false,
-      }));
+      set((state) => {
+        // Find the workspace this channel belongs to
+        const workspaceId = updatedChannel.workspaceId;
+        const workspaceChannels = state.channelsByWorkspace[workspaceId] || [];
+        
+        return {
+          channelsByWorkspace: {
+            ...state.channelsByWorkspace,
+            [workspaceId]: workspaceChannels.map((channel) => 
+              channel.id === channelId ? updatedChannel : channel
+            ),
+          },
+          isLoading: false,
+        };
+      });
     } catch (error: any) {
       let errorMessage = 'Failed to remove member from channel';
       if (error.response?.data?.message) {
@@ -198,22 +259,31 @@ const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
   
-  createDirectMessage: async (userId: string) => {
+  createDirectMessage: async (workspaceId: string, userId: string) => {
     try {
       set({ isLoading: true, error: null });
       
-      const { directMessage } = await channelApi.createDirectMessage(userId);
+      const { directMessage } = await channelApi.createDirectMessage(workspaceId, userId);
       
-      // Check if this DM already exists in our list
-      const dmExists = get().directMessages.find((dm) => dm.id === directMessage.id);
+      set((state) => {
+        const workspaceDMs = state.directMessagesByWorkspace[workspaceId] || [];
+        
+        // Check if this DM already exists in our list
+        const dmExists = workspaceDMs.find((dm) => dm.id === directMessage.id);
+        
+        if (!dmExists) {
+          return {
+            directMessagesByWorkspace: {
+              ...state.directMessagesByWorkspace,
+              [workspaceId]: [...workspaceDMs, directMessage],
+            },
+            isLoading: false,
+          };
+        }
+        
+        return { isLoading: false };
+      });
       
-      if (!dmExists) {
-        set((state) => ({
-          directMessages: [...state.directMessages, directMessage],
-        }));
-      }
-      
-      set({ isLoading: false });
       return directMessage;
     } catch (error: any) {
       let errorMessage = 'Failed to create direct message';
@@ -227,13 +297,16 @@ const useChannelStore = create<ChannelState>((set, get) => ({
   
   clearSelection: () => {
     const { selectedChannelId, selectedDirectMessageId } = get();
+    const workspaceId = useWorkspaceStore.getState().selectedWorkspaceId;
     
-    if (selectedChannelId) {
-      socketClient.leaveChannel(selectedChannelId);
-    }
-    
-    if (selectedDirectMessageId) {
-      socketClient.leaveDirectMessage(selectedDirectMessageId);
+    if (workspaceId) {
+      if (selectedChannelId) {
+        socketClient.leaveChannel(workspaceId, selectedChannelId);
+      }
+      
+      if (selectedDirectMessageId) {
+        socketClient.leaveDirectMessage(workspaceId, selectedDirectMessageId);
+      }
     }
     
     set({ selectedChannelId: null, selectedDirectMessageId: null });

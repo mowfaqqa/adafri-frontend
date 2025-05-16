@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 
@@ -12,28 +10,37 @@ import Badge from "@/components/custom-ui/badge";
 import * as userApi from "@/lib/api/messaging/auth";
 import { User } from "@/lib/types/collab-messaging/auth";
 
-const DirectMessageList = () => {
+interface DirectMessageListProps {
+  workspaceId: string | null;
+}
+
+const DirectMessageList: React.FC<DirectMessageListProps> = ({ workspaceId }) => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
   const {
-    directMessages,
+    directMessagesByWorkspace,
     fetchDirectMessages,
     selectDirectMessage,
     selectedDirectMessageId,
     createDirectMessage,
   } = useChannelStore();
+  
   const { user: currentUser } = useAuthStore();
 
-  // Fetch direct messages on component mount
+  // Fetch direct messages when workspaceId changes
   useEffect(() => {
-    fetchDirectMessages();
-  }, [fetchDirectMessages]);
+    if (workspaceId) {
+      fetchDirectMessages(workspaceId);
+    }
+  }, [workspaceId, fetchDirectMessages]);
 
   // Load online users
   useEffect(() => {
+    if (!workspaceId) return;
+    
     const fetchOnlineUsers = async () => {
       try {
         setIsLoadingUsers(true);
@@ -52,11 +59,19 @@ const DirectMessageList = () => {
     const intervalId = setInterval(fetchOnlineUsers, 60 * 1000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [workspaceId]);
+
+  // If no workspace is selected, don't render anything
+  if (!workspaceId) return null;
+
+  // Get direct messages for the current workspace
+  const directMessages = directMessagesByWorkspace[workspaceId] || [];
 
   // Handle DM selection
   const handleSelectDM = (dmId: string) => {
-    selectDirectMessage(dmId);
+    if (workspaceId) {
+      selectDirectMessage(workspaceId, dmId);
+    }
   };
 
   // Handle starting a new DM
@@ -71,9 +86,11 @@ const DirectMessageList = () => {
 
   // Handle creating a DM with a user
   const handleCreateDM = async (userId: string) => {
+    if (!workspaceId) return;
+    
     try {
-      const directMessage = await createDirectMessage(userId);
-      selectDirectMessage(directMessage.id);
+      const directMessage = await createDirectMessage(workspaceId, userId);
+      selectDirectMessage(workspaceId, directMessage.id);
       setIsSearching(false);
       setSearchQuery("");
     } catch (error) {
@@ -106,7 +123,7 @@ const DirectMessageList = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-gray-400 text-sm">DIRECT MESSAGES</h2>
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Direct Messages</h2>
         <button
           onClick={handleStartNewDM}
           className="text-gray-400 hover:text-gray-600 cursor-pointer p-1 rounded-md hover:bg-gray-100"
@@ -179,7 +196,7 @@ const DirectMessageList = () => {
               flex items-center justify-between p-2 cursor-pointer rounded
               ${
                 selectedDirectMessageId === dm.id
-                  ? "bg-emerald-200"
+                  ? "bg-emerald-100"
                   : "hover:bg-gray-100"
               }
             `}
@@ -187,9 +204,9 @@ const DirectMessageList = () => {
             <div className="flex items-center space-x-2 min-w-0">
               <Avatar
                 src={dm?.otherUser?.avatar}
-                alt={dm?.otherUser?.fullName}
+                alt={dm?.otherUser?.fullName ?? 'User'}
                 size="sm"
-                status={getUserStatus(dm.otherUser?.lastSeen)}
+                status={getUserStatus(dm.otherUser?.lastSeen ?? new Date())}
               />
               <span className="truncate text-sm">{dm.otherUser?.fullName}</span>
             </div>

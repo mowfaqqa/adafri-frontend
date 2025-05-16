@@ -1,26 +1,26 @@
-"use client";
-
 import React, { useEffect, useRef } from 'react';
 import { X, MessageSquare, Users } from 'lucide-react';
 
 import MessageItem from './MessageItem';
 import useMessageStore from '@/lib/store/messaging/messageStore';
 import useAuthStore from '@/lib/store/messaging/authStore';
+import useWorkspaceStore from '@/lib/store/messaging/workspaceStore';
 import Spinner from '@/components/custom-ui/modal/custom-spinner';
 import Avatar from '@/components/custom-ui/avatar';
 import MessageInput from './Messageinput';
 
-const ThreadView = () => {
+const ThreadView: React.FC = () => {
   const { activeThreadId, threads, setActiveThread, fetchThreadMessages } = useMessageStore();
   const { user } = useAuthStore();
+  const { selectedWorkspaceId } = useWorkspaceStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Fetch thread messages when thread changes
   useEffect(() => {
-    if (activeThreadId) {
-      fetchThreadMessages(activeThreadId);
+    if (selectedWorkspaceId && activeThreadId) {
+      fetchThreadMessages(selectedWorkspaceId, activeThreadId);
     }
-  }, [activeThreadId, fetchThreadMessages]);
+  }, [selectedWorkspaceId, activeThreadId, fetchThreadMessages]);
   
   // Scroll to bottom when thread messages change
   useEffect(() => {
@@ -29,16 +29,18 @@ const ThreadView = () => {
   
   // Close thread view
   const handleClose = () => {
-    setActiveThread(null);
+    setActiveThread(selectedWorkspaceId || '', null);
   };
   
-  // If no thread is active, don't render anything
-  if (!activeThreadId) {
+  // If no thread is active or no workspace selected, don't render anything
+  if (!activeThreadId || !selectedWorkspaceId) {
     return null;
   }
   
   // Get current thread data
-  const thread = threads[activeThreadId];
+  const thread = selectedWorkspaceId && threads[selectedWorkspaceId] 
+    ? threads[selectedWorkspaceId][activeThreadId] 
+    : undefined;
   
   return (
     <div className="w-80 flex flex-col border-l border-gray-200 bg-white">
@@ -60,7 +62,7 @@ const ThreadView = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {!thread ? (
           <div className="h-full flex items-center justify-center">
-            <Spinner />
+            <Spinner size="sm" />
           </div>
         ) : (
           <>

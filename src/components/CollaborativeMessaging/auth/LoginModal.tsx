@@ -24,7 +24,7 @@ const LoginModal = () => {
   const { login } = useAuthStore();
   const { isOpen, type, data, closeModal, openModal } = useModalStore();
   
-  const showModal = isOpen && type === 'login';
+  const showModal = isOpen
   const redirectPath = data?.redirectPath as string;
   
   const {
@@ -60,7 +60,8 @@ const LoginModal = () => {
   
   const onToggle = () => {
     closeModal();
-    openModal('register', { redirectPath });
+    // openModal('register', { redirectPath });
+    console.log("register")
   };
   
   return (

@@ -1,50 +1,58 @@
-"use client";
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Hash, Lock, InfoIcon, ChevronDown } from 'lucide-react';
 
 import useChannelStore from '@/lib/store/messaging/channelStore';
 import useMessageStore from '@/lib/store/messaging/messageStore';
 import useAuthStore from '@/lib/store/messaging/authStore';
+import useWorkspaceStore from '@/lib/store/messaging/workspaceStore';
 import Spinner from '@/components/custom-ui/modal/custom-spinner';
 import MessageItem from './MessageItem';
 
-const MessageList = () => {
+const MessageList: React.FC = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   
-  const { selectedChannelId, selectedDirectMessageId, channels, directMessages } = useChannelStore();
+  const { selectedWorkspaceId, workspaces } = useWorkspaceStore();
   const { 
-    channelMessages, directMessages: dmMessages, 
-    hasMoreMessages, fetchChannelMessages, fetchDirectMessages,
-    fetchOlderMessages, typingUsers, setupSocketListeners, cleanupSocketListeners 
-  } = useMessageStore();
-  const { user } = useAuthStore();
+    selectedChannelId, 
+    selectedDirectMessageId, 
+    channelsByWorkspace, 
+    directMessagesByWorkspace 
+  } = useChannelStore();
   
-  // Set up socket listeners
-  useEffect(() => {
-    setupSocketListeners();
-    
-    return () => {
-      cleanupSocketListeners();
-    };
-  }, [setupSocketListeners, cleanupSocketListeners]);
+  const { 
+    channelMessages, 
+    directMessages, 
+    hasMoreMessages, 
+    fetchChannelMessages, 
+    fetchDirectMessages,
+    fetchOlderMessages, 
+    typingUsers
+  } = useMessageStore();
+  
+  const { user } = useAuthStore();
   
   // Fetch messages when channel or DM changes
   useEffect(() => {
-    if (selectedChannelId) {
-      fetchChannelMessages(selectedChannelId);
-    } else if (selectedDirectMessageId) {
-      fetchDirectMessages(selectedDirectMessageId);
+    if (selectedWorkspaceId && selectedChannelId) {
+      fetchChannelMessages(selectedWorkspaceId, selectedChannelId);
+    } else if (selectedWorkspaceId && selectedDirectMessageId) {
+      fetchDirectMessages(selectedWorkspaceId, selectedDirectMessageId);
     }
-  }, [selectedChannelId, selectedDirectMessageId, fetchChannelMessages, fetchDirectMessages]);
+  }, [
+    selectedWorkspaceId, 
+    selectedChannelId, 
+    selectedDirectMessageId, 
+    fetchChannelMessages, 
+    fetchDirectMessages
+  ]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
-  }, [selectedChannelId, selectedDirectMessageId]);
+  }, [selectedWorkspaceId, selectedChannelId, selectedDirectMessageId]);
   
   // Set up scroll listener
   useEffect(() => {
@@ -68,28 +76,38 @@ const MessageList = () => {
     return () => {
       messageList.removeEventListener('scroll', handleScroll);
     };
-  }, [selectedChannelId, selectedDirectMessageId]);
+  }, [selectedWorkspaceId, selectedChannelId, selectedDirectMessageId]);
   
   // Get messages for the selected channel or DM
-  const messages = selectedChannelId 
-    ? (channelMessages[selectedChannelId] || [])
-    : selectedDirectMessageId 
-      ? (dmMessages[selectedDirectMessageId] || [])
-      : [];
+  const messages = 
+    selectedWorkspaceId && selectedChannelId 
+      ? ((channelMessages[selectedWorkspaceId] || {})[selectedChannelId] || [])
+      : selectedWorkspaceId && selectedDirectMessageId 
+        ? ((directMessages[selectedWorkspaceId] || {})[selectedDirectMessageId] || [])
+        : [];
   
   // Get current channel or DM data
-  const currentChannel = selectedChannelId 
-    ? channels.find(c => c.id === selectedChannelId) 
-    : null;
+  const currentChannel = 
+    selectedWorkspaceId && selectedChannelId 
+      ? (channelsByWorkspace[selectedWorkspaceId] || []).find(c => c.id === selectedChannelId) 
+      : null;
   
-  const currentDM = selectedDirectMessageId 
-    ? directMessages.find(dm => dm.id === selectedDirectMessageId) 
+  const currentDM = 
+    selectedWorkspaceId && selectedDirectMessageId 
+      ? (directMessagesByWorkspace[selectedWorkspaceId] || []).find(dm => dm.id === selectedDirectMessageId) 
+      : null;
+  
+  // Get current workspace
+  const currentWorkspace = selectedWorkspaceId 
+    ? workspaces.find((w: any )=> w.id === selectedWorkspaceId)
     : null;
   
   // Get typing users for the current channel or DM
   const currentTypingUsers = typingUsers.filter(tu => 
-    (selectedChannelId && tu.channelId === selectedChannelId) ||
-    (selectedDirectMessageId && tu.dmId === selectedDirectMessageId)
+    tu.workspaceId === selectedWorkspaceId && (
+      (selectedChannelId && tu.channelId === selectedChannelId) ||
+      (selectedDirectMessageId && tu.dmId === selectedDirectMessageId)
+    )
   );
   
   // Scroll to bottom
@@ -99,7 +117,18 @@ const MessageList = () => {
   
   // Handle loading more messages
   const handleLoadMore = async () => {
-    if (isLoadingMore || !hasMoreMessages[selectedChannelId || selectedDirectMessageId || '']) {
+    if (!selectedWorkspaceId) return;
+    
+    let cacheKey = '';
+    if (selectedChannelId) {
+      cacheKey = `${selectedWorkspaceId}:channel:${selectedChannelId}`;
+    } else if (selectedDirectMessageId) {
+      cacheKey = `${selectedWorkspaceId}:dm:${selectedDirectMessageId}`;
+    } else {
+      return;
+    }
+    
+    if (isLoadingMore || !hasMoreMessages[cacheKey]) {
       return;
     }
     
@@ -107,9 +136,9 @@ const MessageList = () => {
     
     try {
       if (selectedChannelId) {
-        await fetchOlderMessages('channel', selectedChannelId);
+        await fetchOlderMessages('channel', selectedWorkspaceId, selectedChannelId);
       } else if (selectedDirectMessageId) {
-        await fetchOlderMessages('dm', selectedDirectMessageId);
+        await fetchOlderMessages('dm', selectedWorkspaceId, selectedDirectMessageId);
       }
     } catch (error) {
       console.log('Error loading more messages:', error);
@@ -149,14 +178,23 @@ const MessageList = () => {
     return null;
   };
   
-  // If no channel or DM is selected
-  if (!selectedChannelId && !selectedDirectMessageId) {
+  // If no workspace, channel or DM is selected
+  if (!selectedWorkspaceId || (!selectedChannelId && !selectedDirectMessageId)) {
     return (
       <div className="flex-1 flex flex-col border border-gray-200 rounded-r-xl">
         <div className="flex h-full items-center justify-center">
           <div className="text-center">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome to messaging</h3>
-            <p className="text-gray-500">Select a channel or conversation to start chatting</p>
+            {currentWorkspace ? (
+              <>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome to {currentWorkspace.name}</h3>
+                <p className="text-gray-500">Select a channel or conversation to start chatting</p>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome to Messaging</h3>
+                <p className="text-gray-500">Select or create a workspace to get started</p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -164,7 +202,7 @@ const MessageList = () => {
   }
   
   return (
-    <div className="flex-1 flex flex-col border border-gray-200 rounded-r-xl">
+    <div className="flex-1 flex flex-col">
       {/* Header */}
       <div className="bg-white p-4 border-b">
         {renderHeader()}
@@ -178,7 +216,7 @@ const MessageList = () => {
         {/* Loading indicator for older messages */}
         {isLoadingMore && (
           <div className="flex justify-center items-center py-4">
-            <Spinner />
+            <Spinner size="sm" />
           </div>
         )}
         
@@ -204,9 +242,9 @@ const MessageList = () => {
           <div className="space-y-4">
             {messages.map((message) => (
               <MessageItem 
-                key={message?.id} 
+                key={message.id} 
                 message={message} 
-                isOwnMessage={message?.sender.id === user?.id}
+                isOwnMessage={message.sender.id === user?.id}
               />
             ))}
           </div>
@@ -217,7 +255,7 @@ const MessageList = () => {
           <div className="mt-2 text-gray-500 text-sm">
             {currentTypingUsers.length === 1 
               ? `${currentTypingUsers[0]?.username} is typing...`
-              : `${currentTypingUsers?.length} people are typing...`
+              : `${currentTypingUsers.length} people are typing...`
             }
           </div>
         )}

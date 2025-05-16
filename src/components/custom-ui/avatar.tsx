@@ -7,6 +7,7 @@ interface AvatarProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   status?: 'online' | 'offline' | 'away' | 'busy';
+  onClick?: () => void;
 }
 
 const Avatar: React.FC<AvatarProps> = ({

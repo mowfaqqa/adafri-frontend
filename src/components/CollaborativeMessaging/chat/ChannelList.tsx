@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useEffect } from "react";
 import { Hash, Lock, Plus } from "lucide-react";
@@ -6,24 +5,43 @@ import useChannelStore from "@/lib/store/messaging/channelStore";
 import useModalStore from "@/lib/store/messaging/modalStore";
 import Badge from "@/components/custom-ui/badge";
 
-const ChannelList = () => {
-  const { channels, fetchChannels, selectChannel, selectedChannelId } =
-    useChannelStore();
+interface ChannelListProps {
+  workspaceId: string | null;
+}
+
+const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
+  const { 
+    channelsByWorkspace, 
+    selectedChannelId, 
+    fetchChannels, 
+    selectChannel 
+  } = useChannelStore();
+  
   const { openModal } = useModalStore();
 
-  // Fetch channels on component mount
+  // Fetch channels when workspaceId changes
   useEffect(() => {
-    fetchChannels();
-  }, [fetchChannels]);
+    if (workspaceId) {
+      fetchChannels(workspaceId);
+    }
+  }, [workspaceId, fetchChannels]);
+
+  // If no workspace is selected, don't render anything
+  if (!workspaceId) return null;
+
+  // Get channels for the current workspace
+  const channels = channelsByWorkspace[workspaceId] || [];
 
   // Handle channel creation
   const handleCreateChannel = () => {
-    openModal("createChannel");
+    openModal("createChannel", { workspaceId });
   };
 
   // Handle channel selection
   const handleSelectChannel = (channelId: string) => {
-    selectChannel(channelId);
+    if (workspaceId) {
+      selectChannel(workspaceId, channelId);
+    }
   };
 
   // Group channels by public and private
@@ -33,7 +51,7 @@ const ChannelList = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-gray-400 text-sm">CHANNELS</h2>
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Channels</h2>
         <button
           onClick={handleCreateChannel}
           className="text-gray-400 hover:text-gray-600 cursor-pointer p-1 rounded-md hover:bg-gray-100"
@@ -52,7 +70,7 @@ const ChannelList = () => {
               flex justify-between items-center p-2 cursor-pointer rounded
               ${
                 selectedChannelId === channel.id
-                  ? "bg-emerald-200"
+                  ? "bg-emerald-100"
                   : "hover:bg-gray-100"
               }
             `}
@@ -74,7 +92,7 @@ const ChannelList = () => {
         {privateChannels.length > 0 && (
           <>
             <div className="mt-4 mb-2">
-              <h3 className="text-gray-400 text-xs">PRIVATE CHANNELS</h3>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Private Channels</h3>
             </div>
 
             {privateChannels.map((channel) => (
@@ -85,7 +103,7 @@ const ChannelList = () => {
                   flex justify-between items-center p-2 cursor-pointer rounded
                   ${
                     selectedChannelId === channel.id
-                      ? "bg-emerald-200"
+                      ? "bg-emerald-100"
                       : "hover:bg-gray-100"
                   }
                 `}

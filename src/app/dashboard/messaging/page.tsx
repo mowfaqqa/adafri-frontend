@@ -1,50 +1,72 @@
 "use client";
 
-import { useEffect } from "react";
-import ChatLayout from "@/components/CollaborativeMessaging/chat/ChatLayout";
-import useAuthStore from "@/lib/store/messaging/authStore";
-import useModalStore from "@/lib/store/messaging/modalStore";
-import { useRouter } from "next/navigation";
-import Spinner from "@/components/custom-ui/modal/custom-spinner";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import useMessagingIntegration from '@/hooks/useMessagingIntegration';
+import Spinner from '@/components/custom-ui/modal/custom-spinner';
+import MessagingLayout from '@/components/CollaborativeMessaging/chat/MessagingLayout';
 
-export default function MessagesPage() {
-  const { isAuthenticated, isLoading } = useAuthStore();
-  const { openModal } = useModalStore();
+const MessagingPage: React.FC = () => {
   const router = useRouter();
-
-  useEffect(() => {
-    // If not authenticated and not loading, redirect to home or show login modal
-    if (!isAuthenticated && !isLoading) {
-      openModal("login", { redirectPath: "/dashboard/messaging" });
-    }
-  }, [isAuthenticated, isLoading, router, openModal]);
-
-  // Show loading spinner while checking authentication
-  if (isLoading) {
+  
+  // Use our integration hook to ensure authentication is properly set up
+  const { 
+    isMessagingInitialized,
+    isMessagingInitializing, 
+    isMessagingAuthenticated,
+    messagingError
+  } = useMessagingIntegration();
+  
+  // If still initializing, show loading spinner
+  if (isMessagingInitializing) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <Spinner size="lg" />
+        <div className="text-center">
+          <Spinner size="lg" />
+          <p className="mt-4 text-gray-600">Initializing messaging...</p>
+        </div>
       </div>
     );
   }
-
-  // Only render chat layout if authenticated
-  if (!isAuthenticated) {
+  
+  // If there was an error initializing, show error message
+  if (messagingError && !isMessagingAuthenticated) {
     return (
-      // <ProtectedRoute>
-        <div className="h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold mb-4">Please log in</h1>
-            <p className="text-gray-500">
-              You need to be logged in to view messages
-            </p>
-          </div>
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-lg">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Authentication Error</h2>
+          <p className="text-gray-700 mb-6">{messagingError}</p>
+          <button
+            onClick={() => router.push('/auth/login')}
+            className="px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600"
+          >
+            Return to Login
+          </button>
         </div>
-      // </ProtectedRoute>
+      </div>
     );
   }
+  
+  // If not authenticated, redirect to login
+  if (!isMessagingAuthenticated) {
+    // Use a React effect for client-side redirect
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    React.useEffect(() => {
+      router.push('/auth/login');
+    }, [router]);
+    
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Spinner size="lg" />
+          <p className="mt-4 text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Authenticated and initialized, render the messaging layout
+  return <MessagingLayout />;
+};
 
-  return <ChatLayout />;
-}
-
+export default MessagingPage;

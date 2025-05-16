@@ -1,12 +1,11 @@
 import axios, { AxiosError, AxiosResponse } from "axios";
 import Cookies from "js-cookie";
-
-// Define the API base URL
-const API_URL = process.env.MESSAGING_API_URL || "http://localhost:5000/api";
+import config from "@/lib/config/messaging";
+import { refreshToken } from "./auth";
 
 // Create an axios instance with default configs
 const axiosInstance = axios.create({
-  baseURL: API_URL,
+  baseURL: config.apiBaseUrl,
   headers: {
     "Content-Type": "application/json",
   },
@@ -14,8 +13,9 @@ const axiosInstance = axios.create({
 
 // Add a request interceptor to attach the JWT token to all requests
 axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = Cookies.get("token");
+  (config: any) => {
+    // Get token from cookie or localStorage (prefer cookie for security)
+    const token = Cookies.get(config?.tokenCookieName) || localStorage.getItem('messaging_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -26,20 +26,50 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle common responses
+// Add a response interceptor to handle common responses and token refresh
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
-  (error: AxiosError) => {
+  async (error: any) => {
+    const originalRequest = error.config!;
     const statusCode = error.response?.status;
 
-    // Handle token expiration or authentication issues
-    if (statusCode === 401) {
-      // If on client side, clear cookie and redirect to login
-      if (typeof window !== "undefined") {
-        Cookies.remove("token");
-        window.location.href = "/";
+    // Handle token expiration (401)
+    if (statusCode === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Attempt to refresh the token
+        const refreshTokenValue = Cookies.get(config.refreshTokenCookieName);
+        
+        if (refreshTokenValue) {
+          const response = await refreshToken(refreshTokenValue);
+          
+          if (response && response.token) {
+            // Store the new tokens
+            Cookies.set(config.tokenCookieName, response.token);
+            if (response.refreshToken) {
+              Cookies.set(config.refreshTokenCookieName, response.refreshToken);
+            }
+            
+            // Update authorization header and retry the request
+            originalRequest.headers.Authorization = `Bearer ${response.token}`;
+            return axiosInstance(originalRequest);
+          }
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        
+        // Clear authentication if refresh fails
+        Cookies.remove(config.tokenCookieName);
+        Cookies.remove(config.refreshTokenCookieName);
+        localStorage.removeItem('messaging_token');
+        
+        // If on client side, redirect to login
+        if (typeof window !== "undefined") {
+          window.location.href = "/auth/login";
+        }
       }
     }
 
@@ -48,73 +78,3 @@ axiosInstance.interceptors.response.use(
 );
 
 export default axiosInstance;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import axios, { AxiosError, AxiosResponse } from "axios";
-
-// // Define the API base URL
-// const API_URL = process.env.MESSAGING_API_URL || "http://localhost:5000/api";
-
-// // Create an axios instance with default configs
-// const axiosInstance = axios.create({
-//   baseURL: API_URL,
-//   headers: {
-//     "Content-Type": "application/json",
-//   },
-// });
-
-// // Add a request interceptor to attach the JWT token to all requests
-// axiosInstance.interceptors.request.use(
-//   (config) => {
-//     const token = localStorage.getItem("token");
-//     if (token && config.headers) {
-//       config.headers.Authorization = `Bearer ${token}`;
-//     }
-//     return config;
-//   },
-//   (error) => {
-//     return Promise.reject(error);
-//   }
-// );
-
-// // Add a response interceptor to handle common responses
-// axiosInstance.interceptors.response.use(
-//   (response: AxiosResponse) => {
-//     return response;
-//   },
-//   (error: AxiosError) => {
-//     const statusCode = error.response?.status;
-
-//     // Handle token expiration or authentication issues
-//     if (statusCode === 401) {
-//       // If on client side, clear local storage and redirect to login
-//       if (typeof window !== "undefined") {
-//         localStorage.removeItem("token");
-//         window.location.href = "/";
-//       }
-//     }
-
-//     return Promise.reject(error);
-//   }
-// );
-
-// export default axiosInstance;

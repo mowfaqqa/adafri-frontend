@@ -80,7 +80,6 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
                     if(e.event==='load_end'){
                         setIsLoading(false);
                         if(!e.token || !e.user){
-                            // tryLogin(true);
                             router.push('/auth/login');
                         }else{
                             if(pathname === "/auth/login"){

@@ -33,7 +33,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
     } else {
       // Fallback to legacy fetch without parameters
       if (typeof fetchChannels === "function" && fetchChannels.length === 0) {
-        fetchChannels();
+        fetchChannels(selectedWorkspaceId!);
       }
     }
   }, [effectiveWorkspaceId, fetchChannels]);
@@ -61,21 +61,21 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
       selectChannel.length === 1
     ) {
       // Fallback to legacy select
-      selectChannel(channelId);
+      selectChannel(selectedWorkspaceId!, channelId);
     }
   };
 
   // Determine which channels to display
   const displayChannels = effectiveWorkspaceId
     ? channelsByWorkspace?.[effectiveWorkspaceId] || []
-    : channels || [];
+    : [];
 
   // Group channels by public and private
   const publicChannels = displayChannels.filter(
-    (channel) => !channel.isPrivate
+    (channel: any) => !channel.isPrivate
   );
   const privateChannels = displayChannels.filter(
-    (channel) => channel.isPrivate
+    (channel: any) => channel.isPrivate
   );
 
   return (

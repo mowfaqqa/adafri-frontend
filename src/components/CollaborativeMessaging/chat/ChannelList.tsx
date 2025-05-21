@@ -1,34 +1,82 @@
-"use client";
-
 import React, { useEffect } from "react";
 import { Hash, Lock, Plus } from "lucide-react";
 import useChannelStore from "@/lib/store/messaging/channelStore";
 import useModalStore from "@/lib/store/messaging/modalStore";
+import useWorkspaceStore from "@/lib/store/messaging/workspaceStore";
 import Badge from "@/components/custom-ui/badge";
 
-const ChannelList = () => {
-  const { channels, fetchChannels, selectChannel, selectedChannelId } =
-    useChannelStore();
+interface ChannelListProps {
+  workspaceId?: string | null;
+}
+
+const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
+  const {
+    channelsByWorkspace,
+    selectedChannelId,
+    fetchChannels,
+    selectChannel,
+  } = useChannelStore();
+
+  const { selectedWorkspaceId } = useWorkspaceStore();
   const { openModal } = useModalStore();
 
-  // Fetch channels on component mount
+  // Determine which workspace ID to use
+  const effectiveWorkspaceId = workspaceId || selectedWorkspaceId;
+
+  // Fetch channels - use workspace-aware fetch if workspaceId is provided
   useEffect(() => {
-    fetchChannels();
-  }, [fetchChannels]);
+    if (effectiveWorkspaceId) {
+      // Use the workspace-aware fetch
+      if (typeof fetchChannels === "function" && fetchChannels.length === 1) {
+        fetchChannels(effectiveWorkspaceId);
+      }
+    } else {
+      // Fallback to legacy fetch without parameters
+      if (typeof fetchChannels === "function" && fetchChannels.length === 0) {
+        fetchChannels(selectedWorkspaceId!);
+      }
+    }
+  }, [effectiveWorkspaceId, fetchChannels]);
 
   // Handle channel creation
   const handleCreateChannel = () => {
-    openModal("createChannel");
+    if (effectiveWorkspaceId) {
+      openModal("createChannel", { workspaceId: effectiveWorkspaceId });
+    } else {
+      openModal("createChannel");
+    }
   };
 
   // Handle channel selection
   const handleSelectChannel = (channelId: string) => {
-    selectChannel(channelId);
+    if (
+      effectiveWorkspaceId &&
+      typeof selectChannel === "function" &&
+      selectChannel.length === 2
+    ) {
+      // Use the workspace-aware select
+      selectChannel(effectiveWorkspaceId, channelId);
+    } else if (
+      typeof selectChannel === "function" &&
+      selectChannel.length === 1
+    ) {
+      // Fallback to legacy select
+      selectChannel(selectedWorkspaceId!, channelId);
+    }
   };
 
+  // Determine which channels to display
+  const displayChannels = effectiveWorkspaceId
+    ? channelsByWorkspace?.[effectiveWorkspaceId] || []
+    : [];
+
   // Group channels by public and private
-  const publicChannels = channels.filter((channel) => !channel.isPrivate);
-  const privateChannels = channels.filter((channel) => channel.isPrivate);
+  const publicChannels = displayChannels.filter(
+    (channel: any) => !channel.isPrivate
+  );
+  const privateChannels = displayChannels.filter(
+    (channel: any) => channel.isPrivate
+  );
 
   return (
     <div>
@@ -106,7 +154,7 @@ const ChannelList = () => {
         )}
 
         {/* Empty state */}
-        {channels.length === 0 && (
+        {displayChannels.length === 0 && (
           <div className="py-4 text-center">
             <p className="text-sm text-gray-500">No channels yet</p>
             <button

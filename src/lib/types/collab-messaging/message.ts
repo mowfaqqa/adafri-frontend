@@ -1,74 +1,93 @@
+import { User } from "./auth";
+
+/**
+ * Message model
+ */
 export interface Message {
   id: string;
   content: string;
-  sender: {
-    id: string;
-    username: string;
-    fullName: string;
-    avatar?: string;
-  };
   channelId?: string;
   directMessageId?: string;
+  workspaceId: string;
   parentId?: string;
+  sender: User;
   createdAt: Date;
   updatedAt: Date;
   isEdited: boolean;
-  isDeleted?: boolean;
+  isDeleted: boolean;
+  reactions?: MessageReaction[];
   attachments?: Attachment[];
-  reactions?: Reaction[];
   hasThread?: boolean;
   threadCount?: number;
 }
 
-export interface Attachment {
-  id: string;
-  filename: string;
-  originalname: string;
-  mimetype: string;
-  size: number;
-  url: string;
+/**
+ * Message creation data
+ */
+export interface MessageCreateData {
+  content: string;
+  channelId?: string;
+  directMessageId?: string;
+  workspaceId: string;
+  parentId?: string;
+  attachments?: File[];
 }
 
-export interface Reaction {
+/**
+ * Message update data
+ */
+export interface MessageUpdateData {
+  content: string;
+}
+
+/**
+ * Message reaction
+ */
+export interface MessageReaction {
   emoji: string;
   count: number;
   users: {
     id: string;
     username: string;
-    fullName: string;
   }[];
 }
 
-export interface Thread {
-  parentMessage: Message;
-  messages: Message[];
-  participants: {
-    id: string;
-    username: string;
-    fullName: string;
-    avatar?: string;
-  }[];
+/**
+ * Message attachment
+ */
+export interface Attachment {
+  id: string;
+  url: string;
+  filename: string;
+  originalname: string;
+  mimetype: string;
+  size: number;
+  createdAt: Date;
 }
 
-export interface MessageCreateData {
-  content: string;
-  channelId?: string;
-  directMessageId?: string;
-  parentId?: string;
-  attachments?: File[];
-}
-
-export interface MessageUpdateData {
-  content: string;
-}
-
+/**
+ * Reaction data
+ */
 export interface ReactionData {
   emoji: string;
 }
 
+/**
+ * Thread data
+ */
+export interface Thread {
+  parentMessage: Message;
+  messages: Message[];
+  participants: User[];
+}
+
+/**
+ * Typing indicator
+ */
 export interface TypingIndicator {
   userId: string;
   username: string;
   channelId?: string;
   dmId?: string;
+  workspaceId: string;
 }

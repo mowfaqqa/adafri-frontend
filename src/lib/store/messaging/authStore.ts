@@ -27,8 +27,8 @@ interface AuthState {
     fullName: string
   ) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (data: any) => Promise<void>;
-  updateAvatar: (file: File) => Promise<void>;
+  // updateProfile: (data: any) => Promise<void>;
+  // updateAvatar: (file: File) => Promise<void>;
   clearError: () => void;
 }
 
@@ -54,14 +54,15 @@ const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       // Authenticate with external token
-      const { token, user } = await authApi.authenticateWithExternalToken(externalToken);
+      const { token, user } =
+        await authApi.authenticateWithExternalToken(externalToken);
 
       // Store token in both localStorage and cookies for different usage contexts
-      localStorage.setItem("messaging_token", token);
-      Cookies.set(config.tokenCookieName, token);
+      localStorage.setItem("messaging_token", externalToken);
+      Cookies.set(config.tokenCookieName, externalToken);
 
       // Initialize socket connection with token
-      socketClient.connect(token);
+      socketClient.connect(externalToken);
 
       set({
         token,
@@ -77,7 +78,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       return true;
     } catch (error: any) {
       console.error("Failed to initialize with external token:", error);
-      
+
       set({
         error: error.message || "Failed to initialize with external token",
         isLoading: false,
@@ -86,7 +87,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
           isExternalAuthenticated: false,
         },
       });
-      
+
       return false;
     }
   },
@@ -99,8 +100,10 @@ const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: true });
 
       // Check for token in both localStorage and cookies
-      const token = localStorage.getItem("messaging_token") || Cookies.get(config.tokenCookieName);
-      
+      const token =
+        localStorage.getItem("messaging_token") ||
+        Cookies.get(config.tokenCookieName);
+
       if (!token) {
         set({ isLoading: false });
         return;
@@ -115,7 +118,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       try {
         // Get current user
         const user = await authApi.getCurrentUser();
-        
+
         set({
           user,
           isAuthenticated: true,
@@ -125,7 +128,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
         // If token is invalid or expired, clear storage
         localStorage.removeItem("messaging_token");
         Cookies.remove(config.tokenCookieName);
-        
+
         set({
           token: null,
           user: null,
@@ -160,7 +163,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       set({ error: errorMessage, isLoading: false });
       throw new Error(errorMessage);
     }
@@ -190,7 +193,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       set({ error: errorMessage, isLoading: false });
       throw new Error(errorMessage);
     }
@@ -226,7 +229,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.removeItem("messaging_token");
       Cookies.remove(config.tokenCookieName);
       socketClient.disconnect();
-      
+
       set({
         token: null,
         user: null,
@@ -240,45 +243,45 @@ const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  updateProfile: async (data) => {
-    try {
-      set({ isLoading: true, error: null });
+  // updateProfile: async (data) => {
+  //   try {
+  //     set({ isLoading: true, error: null });
 
-      const { user } = await authApi.updateProfile(data);
+  //     const { user } = await authApi.updateProfile(data);
 
-      set({ user, isLoading: false });
-    } catch (error: any) {
-      let errorMessage = "Failed to update profile";
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
-      set({ error: errorMessage, isLoading: false });
-      throw new Error(errorMessage);
-    }
-  },
+  //     set({ user, isLoading: false });
+  //   } catch (error: any) {
+  //     let errorMessage = "Failed to update profile";
+  //     if (error.response?.data?.message) {
+  //       errorMessage = error.response.data.message;
+  //     }
 
-  updateAvatar: async (file) => {
-    try {
-      set({ isLoading: true, error: null });
+  //     set({ error: errorMessage, isLoading: false });
+  //     throw new Error(errorMessage);
+  //   }
+  // },
 
-      const { avatar } = await authApi.updateAvatar(file);
+  // updateAvatar: async (file) => {
+  //   try {
+  //     set({ isLoading: true, error: null });
 
-      // Update user with new avatar
-      set((state) => ({
-        user: state.user ? { ...state.user, avatar } : null,
-        isLoading: false,
-      }));
-    } catch (error: any) {
-      let errorMessage = "Failed to update avatar";
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
-      set({ error: errorMessage, isLoading: false });
-      throw new Error(errorMessage);
-    }
-  },
+  //     const { avatar } = await authApi.updateAvatar(file);
+
+  //     // Update user with new avatar
+  //     set((state) => ({
+  //       user: state.user ? { ...state.user, avatar } : null,
+  //       isLoading: false,
+  //     }));
+  //   } catch (error: any) {
+  //     let errorMessage = "Failed to update avatar";
+  //     if (error.response?.data?.message) {
+  //       errorMessage = error.response.data.message;
+  //     }
+
+  //     set({ error: errorMessage, isLoading: false });
+  //     throw new Error(errorMessage);
+  //   }
+  // },
 
   clearError: () => set({ error: null }),
 }));

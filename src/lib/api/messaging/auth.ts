@@ -1,173 +1,98 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import axiosInstance from "./axios";
+import useAxios from "@/hooks/useAxios";
 import {
   AuthResponse,
   LoginCredentials,
   RegisterData,
-  User,
-} from "../../types/collab-messaging/auth";
+} from "@/lib/types/collab-messaging/auth";
+import axiosInstance from "./axios";
 
-/**
- * Login user with credentials
- */
-export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
-  try {
-    const response = await axiosInstance.post<AuthResponse>("/auth/login", credentials);
-    return response.data;
-  } catch (error) {
-    console.error("Login error:", error);
-    throw error;
-  }
+// Non-hook based API functions (for use outside of components)
+export const login = async (
+  credentials: LoginCredentials
+): Promise<AuthResponse> => {
+  const response = await axiosInstance.post("/auth/login", credentials);
+  return response.data;
 };
 
-/**
- * Register a new user
- */
-export const register = async (userData: RegisterData): Promise<AuthResponse> => {
-  try {
-    const response = await axiosInstance.post<AuthResponse>("/auth/register", userData);
-    return response.data;
-  } catch (error) {
-    console.error("Registration error:", error);
-    throw error;
-  }
+export const register = async (
+  userData: RegisterData
+): Promise<AuthResponse> => {
+  const response = await axiosInstance.post("/auth/register", userData);
+  return response.data;
 };
 
-/**
- * Get current user profile from messaging backend
- */
-export const getCurrentUser = async (): Promise<User> => {
-  try {
-    const response = await axiosInstance.get<{ user: User }>("/auth/me");
-    return response.data.user;
-  } catch (error) {
-    console.error("Get current user error:", error);
-    throw error;
-  }
+export const refreshToken = async (
+  refreshToken: string
+): Promise<AuthResponse> => {
+  const response = await axiosInstance.post("/auth/refresh-token", {
+    refreshToken,
+  });
+  return response.data;
 };
 
-/**
- * Logout user
- */
-export const logout = async (): Promise<{ message: string }> => {
-  try {
-    const response = await axiosInstance.post<{ message: string }>("/auth/logout");
-    return response.data;
-  } catch (error) {
-    console.error("Logout error:", error);
-    throw error;
-  }
+export const logout = async () => {
+  return await axiosInstance.post("/auth/logout");
 };
 
-/**
- * Refresh access token using refresh token
- */
-export const refreshToken = async (refreshToken: string): Promise<{ token: string; refreshToken?: string }> => {
-  try {
-    const response = await axiosInstance.post<{ token: string; refreshToken?: string }>("/auth/refresh", {
-      refreshToken,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Token refresh error:", error);
-    throw error;
-  }
+export const getCurrentUser = async () => {
+  const response = await axiosInstance.get("/auth/me");
+  return response.data.user;
 };
 
-/**
- * Update user avatar
- */
-export const updateAvatar = async (file: File): Promise<{ avatar: string }> => {
-  try {
-    const formData = new FormData();
-    formData.append("avatar", file);
-
-    const response = await axiosInstance.put<{ avatar: string }>(
-      "/users/avatar",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    console.error("Update avatar error:", error);
-    throw error;
-  }
+export const authenticateWithExternalToken = async (
+  externalToken: string
+): Promise<AuthResponse> => {
+  const response = await axiosInstance.post("/auth/external-token", {
+    token: externalToken,
+  });
+  return response.data;
 };
-
-/**
- * Update user profile
- */
-export const updateProfile = async (data: any): Promise<{ user: User }> => {
-  try {
-    const response = await axiosInstance.put<{ user: User }>("/users/profile", data);
-    return response.data;
-  } catch (error) {
-    console.error("Update profile error:", error);
-    throw error;
-  }
+export const getOnlineUsers = async () => {
+  const response = await axiosInstance.get(`/users/online`);
+  return response.data.users;
 };
+// Hook-based version (for use inside React components)
+export const useAuthApi = () => {
+  const axios = useAxios();
 
-/**
- * Get user profile by ID
- */
-export const getUserProfile = async (userId: string): Promise<User> => {
-  try {
-    const response = await axiosInstance.get<{ user: User }>(`/users/profile/${userId}`);
-    return response.data.user;
-  } catch (error) {
-    console.error("Get user profile error:", error);
-    throw error;
-  }
-};
+  return {
+    login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+      const response = await axios.post("/auth/login", credentials);
+      return response.data;
+    },
 
-/**
- * Get online users
- */
-export const getOnlineUsers = async (): Promise<User[]> => {
-  try {
-    const response = await axiosInstance.get<{ users: User[] }>("/users/online");
-    return response.data.users;
-  } catch (error) {
-    console.error("Get online users error:", error);
-    throw error;
-  }
-};
+    register: async (userData: RegisterData): Promise<AuthResponse> => {
+      const response = await axios.post("/auth/register", userData);
+      return response.data;
+    },
 
-/**
- * Create a new user in the messaging system
- * This is used when a user from the main auth system
- * needs to be registered in the messaging backend
- */
-export const createMessagingUser = async (userData: {
-  externalId: string;
-  username: string;
-  email: string;
-  fullName: string;
-  avatar?: string;
-}): Promise<User> => {
-  try {
-    const response = await axiosInstance.post<{ user: User }>("/auth/external-user", userData);
-    return response.data.user;
-  } catch (error) {
-    console.error("Create messaging user error:", error);
-    throw error;
-  }
-};
+    refreshToken: async (refreshToken: string): Promise<AuthResponse> => {
+      const response = await axios.post("/auth/refresh-token", {
+        refreshToken,
+      });
+      return response.data;
+    },
 
-/**
- * Authenticate with external token (from main application)
- */
-export const authenticateWithExternalToken = async (token: string): Promise<AuthResponse> => {
-  try {
-    const response = await axiosInstance.post<AuthResponse>("/auth/external-token", { token });
-    return response.data;
-  } catch (error) {
-    console.error("External token authentication error:", error);
-    throw error;
-  }
+    logout: async () => {
+      return await axios.post("/auth/logout");
+    },
+
+    getCurrentUser: async () => {
+      const response = await axios.get("/auth/me");
+      return response.data.user;
+    },
+
+    authenticateWithExternalToken: async (
+      externalToken: string
+    ): Promise<AuthResponse> => {
+      const response = await axios.post("/auth/external-token", {
+        token: externalToken,
+      });
+      return response.data;
+    },
+    getOnlineUsers: async () => {
+      const response = await axios.get(`/users/online`);
+      return response.data.users;
+    },
+  };
 };

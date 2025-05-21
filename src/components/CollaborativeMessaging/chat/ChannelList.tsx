@@ -1,57 +1,87 @@
-
 import React, { useEffect } from "react";
 import { Hash, Lock, Plus } from "lucide-react";
 import useChannelStore from "@/lib/store/messaging/channelStore";
 import useModalStore from "@/lib/store/messaging/modalStore";
+import useWorkspaceStore from "@/lib/store/messaging/workspaceStore";
 import Badge from "@/components/custom-ui/badge";
 
 interface ChannelListProps {
-  workspaceId: string | null;
+  workspaceId?: string | null;
 }
 
 const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
-  const { 
-    channelsByWorkspace, 
-    selectedChannelId, 
-    fetchChannels, 
-    selectChannel 
+  const {
+    channelsByWorkspace,
+    selectedChannelId,
+    fetchChannels,
+    selectChannel,
   } = useChannelStore();
-  
+
+  const { selectedWorkspaceId } = useWorkspaceStore();
   const { openModal } = useModalStore();
 
-  // Fetch channels when workspaceId changes
+  // Determine which workspace ID to use
+  const effectiveWorkspaceId = workspaceId || selectedWorkspaceId;
+
+  // Fetch channels - use workspace-aware fetch if workspaceId is provided
   useEffect(() => {
-    if (workspaceId) {
-      fetchChannels(workspaceId);
+    if (effectiveWorkspaceId) {
+      // Use the workspace-aware fetch
+      if (typeof fetchChannels === "function" && fetchChannels.length === 1) {
+        fetchChannels(effectiveWorkspaceId);
+      }
+    } else {
+      // Fallback to legacy fetch without parameters
+      if (typeof fetchChannels === "function" && fetchChannels.length === 0) {
+        fetchChannels();
+      }
     }
-  }, [workspaceId, fetchChannels]);
-
-  // If no workspace is selected, don't render anything
-  if (!workspaceId) return null;
-
-  // Get channels for the current workspace
-  const channels = channelsByWorkspace[workspaceId] || [];
+  }, [effectiveWorkspaceId, fetchChannels]);
 
   // Handle channel creation
   const handleCreateChannel = () => {
-    openModal("createChannel", { workspaceId });
+    if (effectiveWorkspaceId) {
+      openModal("createChannel", { workspaceId: effectiveWorkspaceId });
+    } else {
+      openModal("createChannel");
+    }
   };
 
   // Handle channel selection
   const handleSelectChannel = (channelId: string) => {
-    if (workspaceId) {
-      selectChannel(workspaceId, channelId);
+    if (
+      effectiveWorkspaceId &&
+      typeof selectChannel === "function" &&
+      selectChannel.length === 2
+    ) {
+      // Use the workspace-aware select
+      selectChannel(effectiveWorkspaceId, channelId);
+    } else if (
+      typeof selectChannel === "function" &&
+      selectChannel.length === 1
+    ) {
+      // Fallback to legacy select
+      selectChannel(channelId);
     }
   };
 
+  // Determine which channels to display
+  const displayChannels = effectiveWorkspaceId
+    ? channelsByWorkspace?.[effectiveWorkspaceId] || []
+    : channels || [];
+
   // Group channels by public and private
-  const publicChannels = channels.filter((channel) => !channel.isPrivate);
-  const privateChannels = channels.filter((channel) => channel.isPrivate);
+  const publicChannels = displayChannels.filter(
+    (channel) => !channel.isPrivate
+  );
+  const privateChannels = displayChannels.filter(
+    (channel) => channel.isPrivate
+  );
 
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Channels</h2>
+        <h2 className="text-gray-400 text-sm">CHANNELS</h2>
         <button
           onClick={handleCreateChannel}
           className="text-gray-400 hover:text-gray-600 cursor-pointer p-1 rounded-md hover:bg-gray-100"
@@ -70,7 +100,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
               flex justify-between items-center p-2 cursor-pointer rounded
               ${
                 selectedChannelId === channel.id
-                  ? "bg-emerald-100"
+                  ? "bg-emerald-200"
                   : "hover:bg-gray-100"
               }
             `}
@@ -92,7 +122,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
         {privateChannels.length > 0 && (
           <>
             <div className="mt-4 mb-2">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Private Channels</h3>
+              <h3 className="text-gray-400 text-xs">PRIVATE CHANNELS</h3>
             </div>
 
             {privateChannels.map((channel) => (
@@ -103,7 +133,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
                   flex justify-between items-center p-2 cursor-pointer rounded
                   ${
                     selectedChannelId === channel.id
-                      ? "bg-emerald-100"
+                      ? "bg-emerald-200"
                       : "hover:bg-gray-100"
                   }
                 `}
@@ -124,7 +154,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
         )}
 
         {/* Empty state */}
-        {channels.length === 0 && (
+        {displayChannels.length === 0 && (
           <div className="py-4 text-center">
             <p className="text-sm text-gray-500">No channels yet</p>
             <button

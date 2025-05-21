@@ -58,8 +58,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return (
     <AuthContext.Provider value={{ isAuthChecking }}>
       {children}
-      <LoginModal />
-      <RegisterModal />
     </AuthContext.Provider>
   );
 };

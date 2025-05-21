@@ -14,7 +14,9 @@ interface DirectMessageListProps {
   workspaceId: string | null;
 }
 
-const DirectMessageList: React.FC<DirectMessageListProps> = ({ workspaceId }) => {
+const DirectMessageList: React.FC<DirectMessageListProps> = ({
+  workspaceId,
+}) => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,7 +29,7 @@ const DirectMessageList: React.FC<DirectMessageListProps> = ({ workspaceId }) =>
     selectedDirectMessageId,
     createDirectMessage,
   } = useChannelStore();
-  
+
   const { user: currentUser } = useAuthStore();
 
   // Fetch direct messages when workspaceId changes
@@ -40,7 +42,7 @@ const DirectMessageList: React.FC<DirectMessageListProps> = ({ workspaceId }) =>
   // Load online users
   useEffect(() => {
     if (!workspaceId) return;
-    
+
     const fetchOnlineUsers = async () => {
       try {
         setIsLoadingUsers(true);
@@ -87,7 +89,7 @@ const DirectMessageList: React.FC<DirectMessageListProps> = ({ workspaceId }) =>
   // Handle creating a DM with a user
   const handleCreateDM = async (userId: string) => {
     if (!workspaceId) return;
-    
+
     try {
       const directMessage = await createDirectMessage(workspaceId, userId);
       selectDirectMessage(workspaceId, directMessage.id);
@@ -123,7 +125,9 @@ const DirectMessageList: React.FC<DirectMessageListProps> = ({ workspaceId }) =>
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Direct Messages</h2>
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Direct Messages
+        </h2>
         <button
           onClick={handleStartNewDM}
           className="text-gray-400 hover:text-gray-600 cursor-pointer p-1 rounded-md hover:bg-gray-100"
@@ -204,7 +208,7 @@ const DirectMessageList: React.FC<DirectMessageListProps> = ({ workspaceId }) =>
             <div className="flex items-center space-x-2 min-w-0">
               <Avatar
                 src={dm?.otherUser?.avatar}
-                alt={dm?.otherUser?.fullName ?? 'User'}
+                alt={dm?.otherUser?.fullName ?? "User"}
                 size="sm"
                 status={getUserStatus(dm.otherUser?.lastSeen ?? new Date())}
               />

@@ -6,7 +6,7 @@ import { AccessToken } from '@/lib/types/auth/types';
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import { User } from '@awc/helpers/user';
 import { AuthContext } from '@/lib/context/auth';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 
 
@@ -30,6 +30,7 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
     const {children} = props
     const reference = useRef<AdfOauth2>(null);
     const router = useRouter();
+    const pathname = usePathname();
     useEffect(() => {
         if(logout){
             console.log('logout triggered', logout)
@@ -41,7 +42,10 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
             // console.log(window.location.origin)
             setRedirectUri(window.location.origin + '/auth/login');
         }
-    }, [login, logout]);
+        if(isAuthenticated && pathname === "/auth/login"){            
+            router.push('/dashboard');
+        }
+    }, [login, logout, isAuthenticated, pathname, router]);
 
     return (
         <AuthContext.Provider value={{token, setAccessToken, isLoading, setIsLoading, user, setUser, isAuthenticated, setIsAuthenticated, logout, tryLogout, login, tryLogin, redirectUri, setRedirectUri}}>
@@ -56,7 +60,6 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
                 prompt="none"
                 tokenEndpoint={process.env.TOKEN_ENDPOINT}
                 auto={false} onChange={(e) => {
-                    console.log(e);
                     if(e.token){
                         setCookie(ACCESS_TOKEN_COOKIE, e.token.access_token, 365);
                         setAccessToken(e.token);
@@ -77,10 +80,11 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
                     if(e.event==='load_end'){
                         setIsLoading(false);
                         if(!e.token || !e.user){
-                            // tryLogin(true);
                             router.push('/auth/login');
                         }else{
-                            router.push('/dashboard');
+                            if(pathname === "/auth/login"){
+                                router.push('/dashboard');
+                            }
                         }
                     }
                 }} />}

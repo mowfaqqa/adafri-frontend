@@ -1,23 +1,12 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useContext, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { AuthContext } from '@/lib/context/auth';
-// import { Spinner } from '@awc/react';
 
 interface AuthLayoutProps {
     children: React.ReactNode;
 }
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
-    const router = useRouter();
-    const {isAuthenticated} = useContext(AuthContext);
-    useEffect(()=>{
-        if(isAuthenticated){            
-            router.push('/dashboard');
-        }
-    }, [isAuthenticated, router])
     return (
         <div
             className="h-screen w-screen flex justify-center items-center bg-center bg-cover px-4 md:px-6">

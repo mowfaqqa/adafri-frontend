@@ -17,6 +17,7 @@ export interface AuthorizationState {
     error: string | null;
     logout?: boolean
     login?: boolean
+    redirectUri?: string
 }
 
 export interface RouteAuthParams extends Partial<AuthorizationState> {
@@ -27,6 +28,7 @@ export interface RouteAuthParams extends Partial<AuthorizationState> {
     setUser: Dispatch<SetStateAction<User | null>>,
     setIsLoading?: Dispatch<SetStateAction<boolean>>,
     setIsAuthenticated: Dispatch<SetStateAction<boolean>>,
+    setRedirectUri: Dispatch<SetStateAction<string>>,
     tryLogout: Dispatch<SetStateAction<boolean>>,
     tryLogin: Dispatch<SetStateAction<boolean>>,
     // onAuthenticate?: () => any,

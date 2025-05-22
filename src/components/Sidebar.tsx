@@ -83,13 +83,13 @@ const externalItems: NavItem[] = [
   }
 ];
 
-const SidebarItem = ({ 
-  item, 
+const SidebarItem = ({
+  item,
   isCollapsed,
   isActive,
   onClick
-}: { 
-  item: NavItem; 
+}: {
+  item: NavItem;
   isCollapsed: boolean;
   isActive: boolean;
   onClick: () => void;
@@ -97,7 +97,7 @@ const SidebarItem = ({
   return (
     <div className="relative">
       <Link href={item.href} passHref>
-        <div 
+        <div
           className={cn(
             "flex items-center p-3 my-2 rounded-lg cursor-pointer",
             isActive ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50",
@@ -125,8 +125,8 @@ const SidebarItem = ({
 };
 
 // Modal component for signing into another workspace
-const WorkspaceModal = ({ isOpen, onClose, onSubmit }: { 
-  isOpen: boolean; 
+const WorkspaceModal = ({ isOpen, onClose, onSubmit }: {
+  isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: { organizationId: string; email: string; password: string }) => void;
 }) => {
@@ -284,7 +284,7 @@ const Sidebar = ({
         name: localInfo.name
       });
     }
-    
+
     // Set active tab based on pathname
     const path = pathname.split('/')[1];
     if (path) {
@@ -301,10 +301,10 @@ const Sidebar = ({
 
   const handleItemClick = (item: NavItem) => {
     setActiveTab(item.id);
-    
+
     // Store the active category in localStorage for dashboard to use
     localStorage.setItem('activeCategory', item.id);
-    
+
     // Trigger localStorage event for dashboard to detect
     window.dispatchEvent(new Event('storage'));
   };
@@ -320,13 +320,13 @@ const Sidebar = ({
       name: data.email.split('@')[0], // Use part of email as name for demo
       icon: data.organizationId.substring(0, 2).toUpperCase() // Use first two letters as icon
     };
-    
+
     const updatedWorkspaces = [...workspaces, newWorkspace];
     setWorkspaces(updatedWorkspaces);
-    
+
     // Store in localStorage
     localStorage.setItem('workspaces', JSON.stringify(updatedWorkspaces));
-    
+
     // Close modal
     setShowModal(false);
   };
@@ -338,9 +338,14 @@ const Sidebar = ({
       name: workspace.name,
       organizationId: workspace.id
     });
-    
+
     // Close dropdown
     setShowDropdown(false);
+  };
+
+  const handleUpgradeClick = () => {
+    // Navigate to the dashboard/transaction page
+    router.push('/dashboard/transaction');
   };
 
   // Generate initials for user's icon
@@ -356,37 +361,41 @@ const Sidebar = ({
       >
         {/* Logo */}
         <div className="p-4 flex items-center justify-center">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex">
-            <Image
-              src="/icons/icon-main.png"
-              width={40}
-              height={40}
-              alt="icon"
-            />
-          </div>
-          {!isCollapsed && (
-            <Image
-              src="/icons/djombi-icon.png"
-              width={140}
-              height={40}
-              alt="icon"
-            />
-          )}
+          
+            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex">
+              <Image
+                src="/icons/icon-main.png"
+                width={40}
+                height={40}
+                alt="icon"
+              />
+            </div>
+            {!isCollapsed && (
+              <Link href="https://www.djombi.com">
+              <Image
+                src="/icons/djombi-icon.png"
+                width={140}
+                height={40}
+                alt="icon"
+              />
+              </Link>
+            )}
+          
         </div>
 
         {/* Toggle button */}
-        <div className="flex justify-center">
+        {/* <div className="flex justify-center">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="p-3 hover:bg-gray-100 rounded-lg items-center"
           >
             <Menu className="h-5 w-5" />
           </button>
-        </div>
+        </div> */}
 
         {/* Company selector with dropdown */}
         <div className="px-4 py-3 relative" ref={dropdownRef}>
-          <div 
+          <div
             className={cn(
               "flex items-center p-2 border rounded-lg cursor-pointer hover:bg-gray-50",
               isCollapsed ? "justify-center" : "justify-between"
@@ -409,7 +418,7 @@ const Sidebar = ({
             <div className="absolute left-4 right-4 mt-2 bg-white border rounded-lg shadow-lg z-10">
               <div className="p-2">
                 <p className="text-xs uppercase text-gray-400 pb-2">Workspaces</p>
-                
+
                 {/* Current workspace */}
                 <div className="flex items-center p-2 bg-blue-50 rounded-md mb-1">
                   <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center text-white font-medium mr-2">
@@ -420,10 +429,10 @@ const Sidebar = ({
                     <p className="text-xs text-gray-500">Current workspace</p>
                   </div>
                 </div>
-                
+
                 {/* Other workspaces */}
                 {workspaces.filter(w => w.id !== userInfo.organizationId).map((workspace) => (
-                  <div 
+                  <div
                     key={workspace.id}
                     className="flex items-center p-2 hover:bg-gray-50 rounded-md cursor-pointer"
                     onClick={() => handleWorkspaceClick(workspace)}
@@ -436,9 +445,9 @@ const Sidebar = ({
                     </div>
                   </div>
                 ))}
-                
+
                 {/* Add workspace button */}
-                <button 
+                <button
                   className="w-full mt-2 p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm font-medium flex items-center justify-center"
                   onClick={() => {
                     setShowDropdown(false);
@@ -462,14 +471,14 @@ const Sidebar = ({
             isActive={activeTab === navItems[0].id}
             onClick={() => handleItemClick(navItems[0])}
           />
-          
+
           {/* Features section */}
           {!isCollapsed && (
             <div className="text-xs uppercase text-gray-400 mt-4 mb-2 px-3">
               FEATURES
             </div>
           )}
-          
+
           {/* Other Menu Items (marketing, advertising, tools) */}
           <div className="mb-6">
             {navItems.slice(1).map((item) => (
@@ -489,7 +498,7 @@ const Sidebar = ({
               EXTERNALS
             </div>
           )}
-          
+
           <div className="mb-6">
             {externalItems.map((item) => (
               <SidebarItem
@@ -529,7 +538,9 @@ const Sidebar = ({
             <>
               <h3 className="text-center font-medium mb-1">Upgrade your potential</h3>
               <p className="text-sm text-center mb-3">you're now using Free plan.</p>
-              <button className="w-full py-2 bg-blue-700 hover:bg-blue-800 rounded-lg font-medium text-center">
+              <button
+                onClick={handleUpgradeClick}
+                className="w-full py-2 bg-blue-700 hover:bg-blue-800 rounded-lg font-medium text-center">
                 UNLOCK NOW !
               </button>
             </>
@@ -538,7 +549,7 @@ const Sidebar = ({
       </div>
 
       {/* Workspace Sign-in Modal */}
-      <WorkspaceModal 
+      <WorkspaceModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         onSubmit={handleSignIntoWorkspace}
@@ -762,10 +773,10 @@ export default Sidebar;
 
 //   const handleItemClick = (item: NavItem) => {
 //     setActiveTab(item.id);
-    
+
 //     // Store the active category in localStorage for dashboard to use
 //     localStorage.setItem('activeCategory', item.id);
-    
+
 //     // Trigger localStorage event for dashboard to detect
 //     window.dispatchEvent(new Event('storage'));
 //   };
@@ -843,7 +854,7 @@ export default Sidebar;
 //               FEATURES
 //             </div>
 //           )}
-          
+
 //           {/* Menu Items */}
 //           <div className="mb-6">
 //             {navItems.map((item) => (
@@ -863,7 +874,7 @@ export default Sidebar;
 //               EXTERNALS
 //             </div>
 //           )}
-          
+
 //           <div className="mb-6">
 //             {externalItems.map((item) => (
 //               <SidebarItem
@@ -1109,7 +1120,7 @@ export default Sidebar;
 
 //   const handleItemClick = (item: NavItem) => {
 //     setActiveTab(item.id);
-    
+
 //     // Store the active category in localStorage for dashboard to use
 //     localStorage.setItem('activeCategory', item.id);
 //   };
@@ -1187,7 +1198,7 @@ export default Sidebar;
 //               FEATURES
 //             </div>
 //           )}
-          
+
 //           {/* Menu Items */}
 //           <div className="mb-6">
 //             {navItems.map((item) => (
@@ -1207,7 +1218,7 @@ export default Sidebar;
 //               EXTERNALS
 //             </div>
 //           )}
-          
+
 //           <div className="mb-6">
 //             {externalItems.map((item) => (
 //               <SidebarItem

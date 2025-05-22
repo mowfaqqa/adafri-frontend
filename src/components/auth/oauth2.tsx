@@ -26,6 +26,7 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
     const [logout, tryLogout] = useState(false);
     const [login, tryLogin] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [redirectUri, setRedirectUri] = useState('');
     const {children} = props
     const reference = useRef<AdfOauth2>(null);
     const router = useRouter();
@@ -36,19 +37,24 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
         if(login && reference.current){
             reference.current?.startOAuthFlow()
         }
+        if(typeof window !== 'undefined'){
+            // console.log(window.location.origin)
+            setRedirectUri(window.location.origin + '/auth/login');
+        }
     }, [login, logout]);
+
     return (
-        <AuthContext.Provider value={{token, setAccessToken, isLoading, setIsLoading, user, setUser, isAuthenticated, setIsAuthenticated, logout, tryLogout, login, tryLogin}}>
+        <AuthContext.Provider value={{token, setAccessToken, isLoading, setIsLoading, user, setUser, isAuthenticated, setIsAuthenticated, logout, tryLogout, login, tryLogin, redirectUri, setRedirectUri}}>
             {children}
-            <Oauth2
+            {redirectUri.length>0 && <Oauth2
                 ref={reference}
-                clientId={process.env.NEXT_PUBLIC_CLIENT_ID}
-                redirectUri={process.env.NEXT_PUBLIC_REDIRECT_URI}
-                authorizationEndpoint={process.env.NEXT_PUBLIC_AUTHORIZATION_ENDPOINT}
-                userEndpoint={process.env.NEXT_PUBLIC_USERINFO_ENDPOINT}
+                clientId={process.env.CLIENT_ID}
+                redirectUri={redirectUri}
+                authorizationEndpoint={process.env.AUTHORIZATION_ENDPOINT}
+                userEndpoint={process.env.USERINFO_ENDPOINT}
                 responseType={'code'}
                 prompt="none"
-                tokenEndpoint={process.env.NEXT_PUBLIC_TOKEN_ENDPOINT}
+                tokenEndpoint={process.env.TOKEN_ENDPOINT}
                 auto={false} onChange={(e) => {
                     console.log(e);
                     if(e.token){
@@ -62,17 +68,22 @@ const OAuth2 = forwardRef<AdfOauth2, AdfDialogProps>((props, ref) => {
                         setCookie("userId", e.user.uid, 365);
                         setUser(e.user);
                     }
+                    if(e.user && e.token){
+                        setIsAuthenticated(true);
+                    }
                     if(e.isAuthenticated){
                         setIsAuthenticated(e.isAuthenticated);
                     }
                     if(e.event==='load_end'){
                         setIsLoading(false);
-                        if(!e.isAuthenticated){
+                        if(!e.token || !e.user){
                             // tryLogin(true);
                             router.push('/auth/login');
+                        }else{
+                            router.push('/dashboard');
                         }
                     }
-                }} />
+                }} />}
         </AuthContext.Provider>
     )
 })

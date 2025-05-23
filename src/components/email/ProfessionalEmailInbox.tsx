@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { EmailCard } from "./EmailCard";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies";
+import { AuthContext } from "@/lib/context/auth";
 
 // Define types
 interface Email {
@@ -43,7 +44,8 @@ const ProfessionalEmailInbox = () => {
     const [newColumnName, setNewColumnName] = useState("");
     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
-
+    
+      const { token, user } = useContext(AuthContext);
     // Fetch emails
     useEffect(() => {
         const fetchEmails = async () => {
@@ -52,8 +54,7 @@ const ProfessionalEmailInbox = () => {
 
             try {
                 // Get token from cookies using the utility function
-                const token = getAuthToken();
-                console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
+                console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
 
                 if (!token) {
                     throw new Error('No access token available');
@@ -75,7 +76,7 @@ const ProfessionalEmailInbox = () => {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token.access_token}`
                     }
                 });
 

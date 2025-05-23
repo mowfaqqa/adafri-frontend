@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-"use client";
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, X, Smile } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -8,7 +5,9 @@ import { useDropzone } from 'react-dropzone';
 
 import useMessageStore from '@/lib/store/messaging/messageStore';
 import useChannelStore from '@/lib/store/messaging/channelStore';
+import useWorkspaceStore from '@/lib/store/messaging/workspaceStore';
 import Button from '@/components/custom-ui/button';
+import config from '@/lib/config/messaging';
 
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
@@ -34,59 +33,52 @@ const MessageInput: React.FC<MessageInputProps> = ({
   
   const { sendMessage, sendThreadMessage, startTyping, stopTyping } = useMessageStore();
   const { selectedChannelId, selectedDirectMessageId } = useChannelStore();
+  const { selectedWorkspaceId } = useWorkspaceStore();
   
   // Set up dropzone for file uploads
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      'image/*': [],
-      'audio/*': [],
-      'video/*': [],
-      'application/pdf': [],
-      'application/msword': [],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [],
-      'application/vnd.ms-excel': [],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [],
-      'text/plain': [],
-      'text/csv': [],
-    },
-    maxFiles: 5,
-    maxSize: 5 * 1024 * 1024, // 5MB
+    accept: config.fileUpload.allowedTypes.reduce((acc, type) => ({ ...acc, [type]: [] }), {}),
+    maxFiles: config.fileUpload.maxFiles,
+    maxSize: config.fileUpload.maxFileSize,
     onDrop: (acceptedFiles) => {
-      // Concat new files to existing ones, up to 5 max
-      const newFiles = [...files, ...acceptedFiles].slice(0, 5);
+      // Concat new files to existing ones, up to max allowed
+      const newFiles = [...files, ...acceptedFiles].slice(0, config.fileUpload.maxFiles);
       setFiles(newFiles);
     },
   });
   
-  // Focus input when component mounts
+  // Focus input when component mounts or selection changes
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, [selectedChannelId, selectedDirectMessageId, threadId]);
   
-  // Handle typing indicator
+  // Clean up typing indicator when component unmounts
   useEffect(() => {
     return () => {
-      // Clean up typing indicator when component unmounts
-      if (isTyping) {
-        stopTyping();
+      // Clean up typing indicator
+      if (isTyping && selectedWorkspaceId) {
+        stopTyping(selectedWorkspaceId);
       }
       
       if (typingTimeout) {
         clearTimeout(typingTimeout);
       }
     };
-  }, [isTyping, stopTyping, typingTimeout]);
+  }, [isTyping, stopTyping, typingTimeout, selectedWorkspaceId]);
   
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessage(e.target.value);
     
+    // Skip typing indicator if no workspace selected
+    if (!selectedWorkspaceId) return;
+    
     // Handle typing indicator
     if (!isTyping) {
       setIsTyping(true);
-      startTyping();
+      startTyping(selectedWorkspaceId);
     }
     
     // Clear previous timeout
@@ -97,7 +89,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
     // Set new timeout to stop typing
     const timeout = setTimeout(() => {
       setIsTyping(false);
-      stopTyping();
+      if (selectedWorkspaceId) {
+        stopTyping(selectedWorkspaceId);
+      }
     }, 2000);
     
     setTypingTimeout(timeout);
@@ -106,14 +100,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
   // Handle sending a message
   const handleSendMessage = async () => {
     if (message.trim() === '' && files.length === 0) return;
+    if (!selectedWorkspaceId) return;
     
     try {
       if (threadId) {
         // Send a thread message
-        await sendThreadMessage(message, threadId, files);
+        await sendThreadMessage(message, selectedWorkspaceId, threadId, files);
       } else {
         // Send a regular message
-        await sendMessage(message, files);
+        await sendMessage(message, selectedWorkspaceId, files);
       }
       
       // Clear input and files
@@ -123,7 +118,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
       // Stop typing indicator
       if (isTyping) {
         setIsTyping(false);
-        stopTyping();
+        if (selectedWorkspaceId) {
+          stopTyping(selectedWorkspaceId);
+        }
       }
       
       // Clear typing timeout
@@ -159,8 +156,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
     setFiles(files.filter((_, i) => i !== index));
   };
   
-  // No channel or DM selected
-  if (!selectedChannelId && !selectedDirectMessageId && !threadId) {
+  // No workspace, channel or DM selected
+  if (!selectedWorkspaceId || (!selectedChannelId && !selectedDirectMessageId && !threadId)) {
     return null;
   }
   

@@ -1,101 +1,98 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import axiosInstance from "./axios";
+import useAxios from "@/hooks/useAxios";
 import {
   AuthResponse,
   LoginCredentials,
   RegisterData,
-  User,
-} from "../../types/collab-messaging/auth";
+} from "@/lib/types/collab-messaging/auth";
+import axiosInstance from "./axios";
 
-/**
- * Login user
- */
+// Non-hook based API functions (for use outside of components)
 export const login = async (
   credentials: LoginCredentials
 ): Promise<AuthResponse> => {
-  const response = await axiosInstance.post<AuthResponse>(
-    "/auth/login",
-    credentials
-  );
+  const response = await axiosInstance.post("/auth/login", credentials);
   return response.data;
 };
 
-/**
- * Register a new user
- */
 export const register = async (
   userData: RegisterData
 ): Promise<AuthResponse> => {
-  const response = await axiosInstance.post<AuthResponse>(
-    "/auth/register",
-    userData
-  );
+  const response = await axiosInstance.post("/auth/register", userData);
   return response.data;
 };
 
-/**
- * Get current user profile
- */
-export const getCurrentUser = async (): Promise<User> => {
-  const response = await axiosInstance.get<{ user: User }>("/auth/me");
+export const refreshToken = async (
+  refreshToken: string
+): Promise<AuthResponse> => {
+  const response = await axiosInstance.post("/auth/refresh-token", {
+    refreshToken,
+  });
+  return response.data;
+};
+
+export const logout = async () => {
+  return await axiosInstance.post("/auth/logout");
+};
+
+export const getCurrentUser = async () => {
+  const response = await axiosInstance.get("/auth/me");
   return response.data.user;
 };
 
-/**
- * Logout user
- */
-export const logout = async (): Promise<{ message: string }> => {
-  const response = await axiosInstance.post<{ message: string }>(
-    "/auth/logout"
-  );
+export const authenticateWithExternalToken = async (
+  externalToken: string
+): Promise<AuthResponse> => {
+  const response = await axiosInstance.post("/auth/external-token", {
+    token: externalToken,
+  });
   return response.data;
 };
-
-/**
- * Update user avatar
- */
-export const updateAvatar = async (file: File): Promise<{ avatar: string }> => {
-  const formData = new FormData();
-  formData.append("avatar", file);
-
-  const response = await axiosInstance.put<{ avatar: string }>(
-    "/users/avatar",
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }
-  );
-
-  return response.data;
-};
-
-/**
- * Update user profile
- */
-export const updateProfile = async (data: any): Promise<{ user: User }> => {
-  const response = await axiosInstance.put<{ user: User }>(
-    "/users/profile",
-    data
-  );
-  return response.data;
-};
-
-/**
- * Get user profile by ID
- */
-export const getUserProfile = async (userId: string): Promise<User> => {
-  const response = await axiosInstance.get<{ user: User }>(
-    `/users/profile/${userId}`
-  );
-  return response.data.user;
-};
-
-/**
- * Get online users
- */
-export const getOnlineUsers = async (): Promise<User[]> => {
-  const response = await axiosInstance.get<{ users: User[] }>("/users/online");
+export const getOnlineUsers = async () => {
+  const response = await axiosInstance.get(`/users/online`);
   return response.data.users;
+};
+// Hook-based version (for use inside React components)
+export const useAuthApi = () => {
+  const axios = useAxios();
+
+  return {
+    login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+      const response = await axios.post("/auth/login", credentials);
+      return response.data;
+    },
+
+    register: async (userData: RegisterData): Promise<AuthResponse> => {
+      const response = await axios.post("/auth/register", userData);
+      return response.data;
+    },
+
+    refreshToken: async (refreshToken: string): Promise<AuthResponse> => {
+      const response = await axios.post("/auth/refresh-token", {
+        refreshToken,
+      });
+      return response.data;
+    },
+
+    logout: async () => {
+      return await axios.post("/auth/logout");
+    },
+
+    getCurrentUser: async () => {
+      const response = await axios.get("/auth/me");
+      return response.data.user;
+    },
+
+    authenticateWithExternalToken: async (
+      externalToken: string
+    ): Promise<AuthResponse> => {
+      const response = await axios.post("/auth/external-token", {
+        token: externalToken,
+      });
+      return response.data;
+    },
+    getOnlineUsers: async () => {
+      const response = await axios.get(`/users/online`);
+      return response.data.users;
+    },
+  };
 };

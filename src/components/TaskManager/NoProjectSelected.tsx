@@ -45,7 +45,7 @@ const NoProjectSelected: React.FC = () => {
         <div className="flex flex-col gap-2">
           <Button
             onClick={() => setShowNewProjectDialog(true)}
-            className="bg-teal-600 w-full"
+            className="bg-blue-600 w-full hover:bg-blue-700 text-white"
           >
             <Plus className="w-4 h-4 mr-2" /> Create New Project
           </Button>

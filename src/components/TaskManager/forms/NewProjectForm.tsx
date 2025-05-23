@@ -87,6 +87,8 @@ const NewProjectForm: React.FC<NewProjectFormProps> = ({ onSuccess }) => {
             value={formData.startDate}
             onChange={handleChange}
             required
+            // className="[&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:mr-2"
+            // style={{ direction: 'rtl', textAlign: 'left' }}
           />
         </div>
 

@@ -54,8 +54,7 @@ const ProfessionalEmailInbox = () => {
 
             try {
                 // Get token from cookies using the utility function
-                const token = token?.access_token;
-                console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
+                console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
 
                 if (!token) {
                     throw new Error('No access token available');
@@ -77,7 +76,7 @@ const ProfessionalEmailInbox = () => {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token.access_token}`
                     }
                 });
 

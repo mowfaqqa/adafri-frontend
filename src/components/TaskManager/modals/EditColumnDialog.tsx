@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Column } from "@/lib/types/taskManager/types";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { toast } from "sonner";
 
 interface EditColumnDialogProps {
@@ -32,7 +32,7 @@ export const EditColumnDialog: React.FC<EditColumnDialogProps> = ({
   const [title, setTitle] = useState(column.name || column.title);
   const [color, setColor] = useState(column.color || "#f3f4f6");
 
-  const { useUpdateProjectStatusMutation } = useTaskManagerApi();
+  const { useUpdateProjectStatusMutation } = useAuthAwareTaskManagerApi();
   const updateStatusMutation = useUpdateProjectStatusMutation();
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { Milestone } from "@/lib/types/taskManager/types";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ interface MilestonesListProps {
 const MilestonesList: React.FC<MilestonesListProps> = ({ onEdit }) => {
   const { projectId } = useProjectContext();
   const { useMilestonesQuery, useDeleteMilestoneMutation } =
-    useTaskManagerApi();
+    useAuthAwareTaskManagerApi();
 
   // Fetch milestones for the current project
   const { data: milestones = [], isLoading } = useMilestonesQuery(

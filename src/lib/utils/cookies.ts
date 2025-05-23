@@ -53,7 +53,7 @@ export function removeCookie(name: string): void {
  * Checks both standard and legacy formats
  */
 export function getAuthToken(): string | null {
-  return getCookie('accessToken') || getCookie('__frsadfrusrtkn');
+  return getCookie('message_token')
 }
 
 /**

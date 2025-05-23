@@ -9,7 +9,7 @@ import {
   ProjectFormData,
   ProjectVisibility,
 } from "@/lib/types/taskManager/types";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface NewProjectFormProps {
@@ -25,7 +25,7 @@ const NewProjectForm: React.FC<NewProjectFormProps> = ({ onSuccess }) => {
     visibility: "private",
   });
 
-  const { useCreateProjectMutation } = useTaskManagerApi();
+  const { useCreateProjectMutation } = useAuthAwareTaskManagerApi();
   const createProjectMutation = useCreateProjectMutation();
 
   const handleChange = (

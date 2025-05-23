@@ -9,7 +9,7 @@ import ProjectSelect from "./ProjectSelect";
 import TaskBoard from "./TaskBoard";
 import ProjectMembersPanel from "./ProjectMembersPanel";
 import NoProjectSelected from "./NoProjectSelected";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 import EpicsPanel from "./EpicsPanel";
 import MilestonesPanel from "./MilestonePanel";
@@ -18,7 +18,7 @@ const ProjectDashboard: React.FC = () => {
   const { currentProject, projectId, loading } = useProjectContext();
   const [activeTab, setActiveTab] = useState("board");
 
-  const { useEpicsQuery, useMilestonesQuery } = useTaskManagerApi();
+  const { useEpicsQuery, useMilestonesQuery } = useAuthAwareTaskManagerApi();
 
   // Only fetch epics and milestones if we have a project selected
   const { data: epics = [] } = useEpicsQuery(projectId || "");

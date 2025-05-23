@@ -14,7 +14,7 @@ import CreateSprintForm from "./forms/CreateSprintForm";
 import MarketingTaskForm from "./forms/MarketingTaskForm";
 import { useState } from "react";
 import { NewTaskFormData, TabType } from "@/lib/types/taskManager/types";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 interface NewTaskModalProps {
@@ -27,7 +27,7 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({
   projectId,
 }) => {
   const [open, setOpen] = useState(false);
-  const { useCreateTaskMutation } = useTaskManagerApi();
+  const { useCreateTaskMutation } = useAuthAwareTaskManagerApi();
   const createTaskMutation = useCreateTaskMutation();
   const { currentProject } = useProjectContext();
 
@@ -65,8 +65,8 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({
           {activeTab === "sprints"
             ? "Sprint Task"
             : activeTab === "marketing"
-            ? "Marketing Task"
-            : "Task"}
+              ? "Marketing Task"
+              : "Task"}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -76,8 +76,8 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({
             {activeTab === "sprints"
               ? "Sprint Task"
               : activeTab === "marketing"
-              ? "Marketing Task"
-              : "Task"}
+                ? "Marketing Task"
+                : "Task"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-4">

@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { Epic } from "@/lib/types/taskManager/types";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 import { Progress } from "@/components/ui/progress";
@@ -22,7 +22,7 @@ interface EpicsListProps {
 
 const EpicsList: React.FC<EpicsListProps> = ({ onEdit }) => {
   const { projectId } = useProjectContext();
-  const { useEpicsQuery, useDeleteEpicMutation } = useTaskManagerApi();
+  const { useEpicsQuery, useDeleteEpicMutation } = useAuthAwareTaskManagerApi();
 
   // Fetch epics for the current project
   const { data: epics = [], isLoading } = useEpicsQuery(projectId || "");
@@ -60,17 +60,17 @@ const EpicsList: React.FC<EpicsListProps> = ({ onEdit }) => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {epics.map((epic) => (
-        <Card key={epic.id} className="overflow-hidden">
+      {epics.map((epic: any) => (
+        <Card key={epic?.id} className="overflow-hidden">
           <CardHeader className="pb-2 flex flex-row justify-between items-start">
             <div>
               <CardTitle className="text-lg font-semibold">
-                {epic.title}
+                {epic?.title}
               </CardTitle>
               <div className="text-xs text-gray-500">
-                {new Date(epic.startDate).toLocaleDateString()} -
-                {epic.endDate
-                  ? new Date(epic.endDate).toLocaleDateString()
+                {new Date(epic?.startDate).toLocaleDateString()} -
+                {epic?.endDate
+                  ? new Date(epic?.endDate).toLocaleDateString()
                   : "Ongoing"}
               </div>
             </div>

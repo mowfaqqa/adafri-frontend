@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SprintTaskFormData } from "@/lib/types/taskManager/types";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import {
   Select,
   SelectContent,
@@ -38,7 +38,7 @@ const CreateSprintForm: React.FC<CreateSprintFormProps> = ({
 }) => {
   const { currentProject } = useProjectContext();
   const { useEpicsQuery, useMilestonesQuery, useProjectStatusesQuery } =
-    useTaskManagerApi();
+    useAuthAwareTaskManagerApi();
 
   // Fetch epics, milestones, and statuses for the current project
   const { data: epics = [] } = useEpicsQuery(projectId);

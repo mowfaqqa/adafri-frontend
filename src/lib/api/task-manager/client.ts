@@ -1,22 +1,35 @@
 import { getAuthToken, removeCookie } from "@/lib/utils/cookies";
 import axios from "axios";
 
-//cretae axios instance wth default config
+// Create axios instance with default config
 const taskApiClient = axios.create({
-  baseURL:
-    "https://task-manager-api-e7mf.onrender.com/api",
+  baseURL: "https://task-manager-api-e7mf.onrender.com/api",
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-//Request intercepto for API calls
+// Function to set the auth token dynamically
+// This will be called from components that have access to AuthContext
+let authToken: string | null = null;
+
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+};
+
+export const getStoredAuthToken = () => authToken;
+
+// Request interceptor for API calls
 taskApiClient.interceptors.request.use(
   (config) => {
-    const token = getAuthToken();
+    // Priority:
+    // 1. Use token from AuthContext (set via setAuthToken)
+    const token = authToken || getAuthToken();
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => {
@@ -24,7 +37,7 @@ taskApiClient.interceptors.request.use(
   }
 );
 
-//responsee interceptor for API calls
+// Response interceptor for API calls
 taskApiClient.interceptors.response.use(
   (response) => {
     return response;
@@ -36,7 +49,11 @@ taskApiClient.interceptors.response.use(
     if (statusCode === 401) {
       // Token expired or invalid - redirect to login
       if (typeof window !== "undefined") {
+        // Clear both cookie and context token
         removeCookie("accessToken");
+        authToken = null;
+
+       
         window.location.href = "/auth/login";
       }
     }

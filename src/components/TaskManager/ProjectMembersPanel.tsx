@@ -30,7 +30,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronDown, MoreHorizontal, Plus, UserPlus } from "lucide-react";
 import { ProjectRole } from "@/lib/types/taskManager/types";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 const ProjectMembersPanel: React.FC = () => {
@@ -43,7 +43,7 @@ const ProjectMembersPanel: React.FC = () => {
     useAddProjectMemberMutation,
     useRemoveProjectMemberMutation,
     useUpdateMemberRoleMutation,
-  } = useTaskManagerApi();
+  } = useAuthAwareTaskManagerApi();
 
   const addMemberMutation = useAddProjectMemberMutation();
   const removeMemberMutation = useRemoveProjectMemberMutation();

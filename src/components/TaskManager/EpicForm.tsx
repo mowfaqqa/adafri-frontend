@@ -12,9 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
 import { Epic, EpicFormData } from "@/lib/types/taskManager/types";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 
 interface EpicFormProps {
   onSubmit: () => void;
@@ -28,7 +28,7 @@ const EpicForm: React.FC<EpicFormProps> = ({
   epicToEdit,
 }) => {
   const { projectId } = useProjectContext();
-  const { useCreateEpicMutation, useUpdateEpicMutation } = useTaskManagerApi();
+  const { useCreateEpicMutation, useUpdateEpicMutation } = useAuthAwareTaskManagerApi();
 
   // Initialize form state
   const [formData, setFormData] = useState<EpicFormData>({

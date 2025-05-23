@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { Paperclip, Upload, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
@@ -15,7 +15,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ taskId }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { useUploadFileMutation } = useTaskManagerApi();
+  const { useUploadFileMutation } = useAuthAwareTaskManagerApi();
   const uploadFileMutation = useUploadFileMutation();
   // Simulate upload progress
   useEffect(() => {

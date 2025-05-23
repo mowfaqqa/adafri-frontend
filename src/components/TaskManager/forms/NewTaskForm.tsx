@@ -17,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { Project, StandardTaskFormData } from "@/lib/types/taskManager/types";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import {
   Select,
   SelectContent,
@@ -38,7 +38,7 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
   projectId,
 }) => {
   const { useMilestonesQuery, useProjectStatusesQuery, useProjectQuery } =
-    useTaskManagerApi();
+    useAuthAwareTaskManagerApi();
   const { data: project } = useProjectQuery(projectId);
   const projectMembers = project?.members || [];
   const { data: milestones = [] } = useMilestonesQuery(projectId);

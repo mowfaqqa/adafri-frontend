@@ -32,7 +32,7 @@ import {
   Music,
   ListChecks,
 } from "lucide-react";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { getFileUrl } from "@/lib/api/task-manager/fileApi";
 
 import {
@@ -87,7 +87,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
     useProjectStatusesQuery,
     useEpicsQuery,
     useMilestonesQuery,
-  } = useTaskManagerApi();
+  } = useAuthAwareTaskManagerApi();
 
   const updateTaskMutation = useUpdateTaskMutation();
   const updateProgressMutation = useUpdateTaskProgressMutation();
@@ -164,7 +164,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
           ({
             ...prev,
             storyPoints: value,
-          } as SprintTask)
+          }) as SprintTask
       );
     }
   };

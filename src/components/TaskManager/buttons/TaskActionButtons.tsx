@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/lib/types/taskManager/types";
 import { DeleteConfirmationDialog } from "../modals/DeleteConfirmationDialog";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 interface TaskActionButtonsProps {
@@ -24,7 +23,7 @@ export const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { projectId: contextProjectId } = useProjectContext(); // Get project ID from context as fallback
-  const { useDeleteTaskMutation } = useTaskManagerApi();
+  const { useDeleteTaskMutation } = useAuthAwareTaskManagerApi();
   const deleteTaskMutation = useDeleteTaskMutation();
 
   // Use provided projectId or fall back to context

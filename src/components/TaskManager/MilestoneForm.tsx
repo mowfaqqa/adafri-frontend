@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -13,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { Milestone, MilestoneFormData } from "@/lib/types/taskManager/types";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
@@ -30,7 +29,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
 }) => {
   const { projectId } = useProjectContext();
   const { useCreateMilestoneMutation, useUpdateMilestoneMutation } =
-    useTaskManagerApi();
+    useAuthAwareTaskManagerApi();
 
   // Initialize form state
   const [formData, setFormData] = useState<MilestoneFormData>({
@@ -173,8 +172,8 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
               ? "Updating..."
               : "Creating..."
             : milestoneToEdit
-            ? "Update Milestone"
-            : "Create Milestone"}
+              ? "Update Milestone"
+              : "Create Milestone"}
         </Button>
       </div>
     </form>

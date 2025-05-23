@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 import NewProjectForm from "./forms/NewProjectForm";
 
@@ -25,7 +25,7 @@ const ProjectSelect: React.FC = () => {
   const { projectId, setProjectId } = useProjectContext();
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
 
-  const { useProjectsQuery } = useTaskManagerApi();
+  const { useProjectsQuery } = useAuthAwareTaskManagerApi();
   const { data: projects = [], isLoading } = useProjectsQuery();
 
   const handleProjectChange = (value: string) => {

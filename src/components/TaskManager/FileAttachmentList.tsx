@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { FileAttachment } from "@/lib/types/taskManager/types";
 import {
   Download,
@@ -37,7 +37,8 @@ const getFileIcon = (mimetype: string) => {
 
 const FileAttachmentList: React.FC<FileAttachmentListProps> = ({ taskId }) => {
   const { currentProject, projectId, loading } = useProjectContext();
-  const { useTaskFilesQuery, useDeleteFileMutation } = useTaskManagerApi();
+  const { useTaskFilesQuery, useDeleteFileMutation } =
+    useAuthAwareTaskManagerApi();
   const { data: files, isLoading } = useTaskFilesQuery(projectId!, taskId);
   const deleteFileMutation = useDeleteFileMutation();
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);

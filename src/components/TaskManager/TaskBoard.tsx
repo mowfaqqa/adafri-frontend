@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { TabType, Task } from "@/lib/types/taskManager/types";
 import { isSprintTask, isStandardTask } from "@/lib/types/taskManager/types";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { toast } from "sonner";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 import SprintTaskCard from "../Cards/SprintTaskCard";
@@ -41,7 +41,7 @@ const TaskBoard: React.FC = () => {
     useProjectStatusesQuery,
     useCreateProjectStatusMutation,
     useUpdateTaskStatusMutation,
-  } = useTaskManagerApi();
+  } = useAuthAwareTaskManagerApi();
 
   // Fetch tasks and statuses for the current project
   const {

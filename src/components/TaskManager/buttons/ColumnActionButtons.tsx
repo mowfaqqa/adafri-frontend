@@ -5,7 +5,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Column } from "@/lib/types/taskManager/types";
 import { DeleteColumnDialog } from "../modals/DeleteColumnDialog";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { EditColumnDialog } from "../modals/EditColumnDialog";
 import { toast } from "sonner";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
@@ -29,7 +29,7 @@ export const ColumnActionButtons: React.FC<ColumnActionButtonsProps> = ({
   const projectId = propProjectId || contextProjectId || "";
 
   const { useDeleteProjectStatusMutation, useUpdateProjectStatusMutation } =
-    useTaskManagerApi();
+    useAuthAwareTaskManagerApi();
   const deleteStatusMutation = useDeleteProjectStatusMutation();
 
   const handleDelete = () => {

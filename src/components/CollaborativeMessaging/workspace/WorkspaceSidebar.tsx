@@ -38,7 +38,7 @@ const WorkspaceSidebar: React.FC = () => {
   };
   
   return (
-    <div className="h-full w-16 border bg-white border-2 rounded-md border-gray-300 flex flex-col items-center py-4">
+    <div className="h-full w-16 border bg-gray-300 border-2 rounded-md border-gray-300 flex flex-col items-center py-4">
       {/* User avatar at the top */}
       <div className="mb-6">
         <Avatar

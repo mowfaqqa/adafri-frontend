@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useTaskManagerApi } from "@/lib/hooks/useTaskmanagerApi";
+import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { Plus, FolderPlus } from "lucide-react";
 import NewProjectForm from "./forms/NewProjectForm";
 import ProjectSelect from "./ProjectSelect";
@@ -16,7 +16,7 @@ import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 const NoProjectSelected: React.FC = () => {
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
-  const { useProjectsQuery } = useTaskManagerApi();
+  const { useProjectsQuery } = useAuthAwareTaskManagerApi();
   const { data: projects = [], isLoading } = useProjectsQuery();
   const { setProjectId } = useProjectContext();
 

@@ -276,7 +276,7 @@ const exampleData: Tab[] = [
         title: "Dashboard Overview",
         subtitle: "View all your stats",
         imageUrl: "/icons/dashboardnew.png",
-        link: "/dashboard/overview",
+        link: "/dashboard",
         isActive: true
       }
     ]

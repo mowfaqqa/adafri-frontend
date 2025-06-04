@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { EmailCard } from "./EmailCard";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies";
+import { AuthContext } from "@/lib/context/auth";
 
 // Define types
 interface Email {
@@ -44,6 +45,7 @@ const ProfessionalEmailInbox = () => {
     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
+    const { token, user } = useContext(AuthContext);
     // Fetch emails
     useEffect(() => {
         const fetchEmails = async () => {
@@ -52,8 +54,7 @@ const ProfessionalEmailInbox = () => {
 
             try {
                 // Get token from cookies using the utility function
-                const token = getAuthToken();
-                console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
+                console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
 
                 if (!token) {
                     throw new Error('No access token available');
@@ -75,7 +76,7 @@ const ProfessionalEmailInbox = () => {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token.access_token}`
                     }
                 });
 
@@ -228,7 +229,7 @@ const ProfessionalEmailInbox = () => {
     // Handle drag end
     const handleDragEnd = (result: DropResult) => {
         setIsDragging(false);
-        
+
         // Check if there's no destination or if the item was dropped outside a droppable
         if (!result.destination) {
             return;
@@ -267,13 +268,14 @@ const ProfessionalEmailInbox = () => {
     // Optional: Save updated email status to backend
     const saveEmailStatus = async (emailId: string, newStatus: string) => {
         try {
-            const token = getAuthToken();
+            // const token = getAuthToken();
+            const { token, user } = useContext(AuthContext);
             if (!token) return;
 
             // Implement API call to update email status
             // This is a placeholder for where you'd implement the actual API call
             console.log(`Updating email ${emailId} status to ${newStatus}`);
-            
+
             // Example API call implementation:
             /*
             await fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails/update-status', {
@@ -303,7 +305,31 @@ const ProfessionalEmailInbox = () => {
     }
 
     // Error state
+    // if (error) {
+    //     return (
+    //         <div className="p-4 text-red-500">
+    //             <p>Error loading emails: {error}</p>
+    //             <button
+    //                 className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+    //                 onClick={() => window.location.reload()}
+    //             >
+    //                 Try Again
+    //             </button>
+    //         </div>
+    //     );
+    // }
+
     if (error) {
+        if (error === 'No linked email ID found') {
+            console.error('Error loading emails: No linked email ID found');
+            return (
+                <div className="flex flex-col justify-center items-center h-full py-10 text-center space-y-4">
+                    <img src="/icons/emailnew.png" alt="No Linked Email" className="w-100 h-70" />
+                    <p className="text-gray-600 text-lg">Please link an email to continue</p>
+                </div>
+            );
+        }
+
         return (
             <div className="p-4 text-red-500">
                 <p>Error loading emails: {error}</p>
@@ -317,6 +343,7 @@ const ProfessionalEmailInbox = () => {
         );
     }
 
+
     return (
         <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
             <div className="relative w-full h-full overflow-x-auto pb-4">
@@ -327,11 +354,10 @@ const ProfessionalEmailInbox = () => {
                                 <div
                                     ref={provided.innerRef}
                                     {...provided.droppableProps}
-                                    className={`min-w-[350px] w-[350px] max-w-[350px] p-4 rounded-lg border ${
-                                        snapshot.isDraggingOver 
-                                            ? "border-blue-400 bg-blue-50" 
+                                    className={`min-w-[350px] w-[350px] max-w-[350px] p-4 rounded-lg border ${snapshot.isDraggingOver
+                                            ? "border-blue-400 bg-blue-50"
                                             : "border-gray-200"
-                                    } transition-colors duration-200`}
+                                        } transition-colors duration-200`}
                                 >
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-semibold">{column.title}</h3>

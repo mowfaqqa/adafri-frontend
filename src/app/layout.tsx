@@ -6,6 +6,7 @@ import QueryProvider from "@/components/providers/QueryProviders";
 import { Toaster } from "@/components/ui/sonner";
 import { HotjarInitializer } from "@/components/HotjarInitializer";
 import OAuth2 from "@/components/auth/oauth2";
+import SearchProvider from "@/components/FeaturesSearch/SearchProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +36,9 @@ export default function RootLayout({
               <QueryProvider>
                 <HotjarInitializer />
                 <OAuth2>
-                  {children}
+                  <SearchProvider>
+                    {children}
+                  </SearchProvider>
                 </OAuth2>
                 <Toaster richColors />
               </QueryProvider>

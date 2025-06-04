@@ -1,13 +1,14 @@
 import { useEmailStore } from "@/lib/store/email-store";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Filter, Trash2, Send, Archive, Edit, RefreshCw } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Email, EmailCategory } from "@/lib/types/email";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies"; // Import cookie functions
 import { ComposeModal } from "./ComposeModal"; // Import ComposeModal
 import axios from "axios";
+import { AuthContext } from "@/lib/context/auth";
 
 interface EmailDraftProps {
   onBack?: () => void;
@@ -48,8 +49,9 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
 
     try {
       // Get token from cookies
-      const token = getAccessToken();
-      console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
+      // const token = getAccessToken();
+      const { token, user } = useContext(AuthContext);
+      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
 
       if (!token) {
         throw new Error('No access token available');
@@ -71,7 +73,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
         const response = await axios.get(apiEndpoint, {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token.access_token}`
           }
         });
 
@@ -90,7 +92,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
             {
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token.access_token}`
               }
             }
           );
@@ -202,8 +204,8 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
     if (selectedEmails.length === 0) return;
 
     try {
-      const token = getAccessToken();
-
+      // const token = getAccessToken();
+      const { token, user } = useContext(AuthContext);
       if (!token) {
         throw new Error('No access token found');
       }
@@ -212,7 +214,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       const deletePromises = selectedEmails.map(id =>
         axios.delete(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${id}`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${token.access_token}`,
             'Content-Type': 'application/json'
           }
         }).catch(error => {
@@ -235,7 +237,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
             { draft_id: id },  // FIXED: Only send draft_id without email_id
             {
               headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${token.access_token}`,
                 'Content-Type': 'application/json'
               }
             }
@@ -287,8 +289,8 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   // Update draft using axios instead of fetch
   const updateDraftInApi = async (draftId: string, updatedData: any) => {
     try {
-      const token = getAuthToken();
-
+      // const token = getAuthToken();
+      const { token, user } = useContext(AuthContext);
       if (!token) {
         throw new Error('No access token found');
       }
@@ -299,7 +301,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
         updatedData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${token.access_token}`,
             'Content-Type': 'application/json'
           }
         }

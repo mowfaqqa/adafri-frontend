@@ -3,12 +3,12 @@ import { useEmailStore } from "@/lib/store/email-store";
 import { EmailCard } from "./EmailCard";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Input } from "@/components/ui/input";
 import { Email, EmailSegment } from "@/lib/types/email";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies"; // Import the cookie utilities
 import { createEmailPreview, EmailContentRenderer } from "@/lib/utils/emails/email-content-utils";
-
+import { AuthContext } from "@/lib/context/auth";
 
 export const EmailColumns2 = () => {
   const { emails, moveEmail, customSegments, addSegment, addEmail } = useEmailStore();
@@ -61,8 +61,9 @@ export const EmailColumns2 = () => {
 
       try {
         // Get token from cookies using the utility function
-        const token = getAuthToken();
-        console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
+        // const token = getAuthToken();
+        const { token, user } = useContext(AuthContext);
+        console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
 
         if (!token) {
           throw new Error('No access token available');

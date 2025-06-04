@@ -50,7 +50,7 @@ const ProjectSelect: React.FC = () => {
   return (
     <div className="flex items-center gap-2">
       <Select value={projectId || ""} onValueChange={handleProjectChange}>
-        <SelectTrigger className="w-60">
+        <SelectTrigger className="w-60 bg-gradient-to-r from-blue-400 to-blue-500 text-white">
           <SelectValue placeholder="Select a project" />
         </SelectTrigger>
         <SelectContent>
@@ -74,6 +74,7 @@ const ProjectSelect: React.FC = () => {
       >
         <DialogTrigger asChild>
           <Button
+            className="bg-gradient-to-r from-blue-400 to-blue-500 text-white"
             variant="outline"
             size="icon"
             onClick={handleCreateNewProject}

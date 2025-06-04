@@ -8,12 +8,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useEmailStore } from "@/lib/store/email-store";
 import { sendEmail } from "@/app/dashboard/api/emailSend";
 import { saveDraft } from "@/app/dashboard/api/draftEmail";
 import { Email, EmailData, EmailSendData, EmailSegment } from '@/lib/types/email';
 import { getCookie, getUserInfo, getAuthToken } from "@/lib/utils/cookies";
+import { AuthContext } from "@/lib/context/auth";
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -198,7 +199,8 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
 
   // Function for Send Email
   const handleSend = async () => {
-    const accessToken = getAuthToken();
+    // const accessToken = getAuthToken();
+    const { token, user } = useContext(AuthContext);
     console.log("handleSend function called");
 
     // Get the linked email ID from cookies
@@ -281,13 +283,14 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       if (editMode && email.id) {
         try {
           console.log("Edit mode: deleting existing draft before sending", email.id);
-          const token = getAuthToken();
+          // const token = getAuthToken();
+          const { token, user } = useContext(AuthContext);
           
           if (token && emailId) {
             await fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${email.id}?email_id=${encodeURIComponent(emailId)}`, {
               method: 'DELETE',
               headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${token.access_token}`,
                 'Content-Type': 'application/json'
               }
             });

@@ -15,6 +15,23 @@ const TransactionsPage: React.FC = () => {
     const router = useRouter();
     const { user: userInfo } = useContext(AuthContext);
 
+    const FLUTTERWAVE_PUBLIC_KEY = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || "FLWPUBK-your-public-key-here";
+
+    const handlePaymentSuccess = (data: any) => {
+        console.log('Payment successful:', data);
+        // Handle successful payment (e.g., update UI, show success message)
+    };
+
+    const handlePaymentError = (error: any) => {
+        console.error('Payment error:', error);
+        // Handle payment error (e.g., show error message)
+    };
+
+    const handlePaymentInitiated = (data: any) => {
+        console.log('Payment initiated:', data);
+        // Handle payment initiation (e.g., track analytics)
+    };
+
     return (
         <div className="p-4 sm:p-6 min-h-screen bg-white overflow-hidden overflow-y-auto">
             {/* App Title */}
@@ -38,13 +55,18 @@ const TransactionsPage: React.FC = () => {
                     {/* Recent Transactions Section */}
                     <RecentTransactionsSection className="h-[375px]" />
                     {/* Mobile Money Section */}
-                    <MobileMoneySection/>
+                    <MobileMoneySection
+                         publicKey={FLUTTERWAVE_PUBLIC_KEY}
+                        onPaymentSuccess={handlePaymentSuccess}
+                        onPaymentError={handlePaymentError}
+                        onPaymentInitiated={handlePaymentInitiated}
+                    />
                 </div>
 
                 {/* Right Section - Payment Methods */}
                 <div className="space-y-4 sm:space-y-6 sm:col-span-2 lg:col-span-1">
                     {/* Mercury Wire Transfer Card */}
-                    <div className="bg-blue-500 rounded-lg shadow-sm p-4 sm:p-6 flex flex-col items-center justify-center h-[150px]">
+                    <div className="bg-gray-50 rounded-lg shadow-sm p-4 sm:p-6 flex flex-col items-center justify-center h-[150px]">
                         <Image
                             src="/icons/mercury.png"
                             alt="Mercury"
@@ -52,11 +74,11 @@ const TransactionsPage: React.FC = () => {
                             height={50}
                             className="object-contain mb-4"
                         />
-                        <p className="text-xs lg:text-lg text-white">Wire Transfer</p>
+                        <p className="text-xs lg:text-lg text-black">Wire Transfer</p>
                     </div>
 
                     {/* Card Payment Methods */}
-                    <div className="bg-blue-500 rounded-lg shadow-sm p-4 sm:p-6 h-[210px] flex items-center justify-center">
+                    <div className="bg-gray-50 rounded-lg shadow-sm p-4 sm:p-6 h-[200px] flex items-center justify-center">
                         <div className="flex flex-row sm:flex-col items-center justify-center sm:justify-start space-x-4 sm:space-x-0 sm:space-y-4">
                             <Image
                                 src="/icons/visa.png"
@@ -83,7 +105,7 @@ const TransactionsPage: React.FC = () => {
                     </div>
 
                     {/* PayPal Section */}
-                    <div className="bg-blue-500 rounded-lg shadow-sm p-4 sm:p-6 h-[150px] flex items-center justify-center">
+                    <div className="bg-gray-50 rounded-lg shadow-sm p-4 sm:p-6 h-[170px] flex items-center justify-center">
                         <div className="flex justify-center">
                             <Image
                                 src="/icons/paypal.png"

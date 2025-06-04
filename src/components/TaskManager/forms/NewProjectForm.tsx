@@ -116,15 +116,15 @@ const NewProjectForm: React.FC<NewProjectFormProps> = ({ onSuccess }) => {
         >
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="private" id="private" />
-            <Label htmlFor="private">Private (Only members can access)</Label>
+            <Label htmlFor="private" className="text-gray-600 font-normal">Private (Only members can access)</Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="team" id="team" />
-            <Label htmlFor="team">Team (Available to all team members)</Label>
+            <Label htmlFor="team" className="text-gray-600 font-normal">Team (Available to all team members)</Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="public" id="public" />
-            <Label htmlFor="public">Public (Anyone can access)</Label>
+            <Label htmlFor="public" className="text-gray-600 font-normal">Public (Anyone can access)</Label>
           </div>
         </RadioGroup>
       </div>

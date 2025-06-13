@@ -15,6 +15,7 @@ import { saveDraft } from "@/app/dashboard/api/draftEmail";
 import { Email, EmailData, EmailSendData, EmailSegment } from '@/lib/types/email';
 import { getCookie, getUserInfo, getAuthToken } from "@/lib/utils/cookies";
 import { AuthContext } from "@/lib/context/auth";
+import { useCombinedAuth } from "../providers/useCombinedAuth";
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -60,6 +61,9 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
 
   const [accessToken, setAccessToken] = useState('');
   const [linkedEmailId, setLinkedEmailId] = useState<string | null>(null);
+
+  const { djombi } = useCombinedAuth()
+  const djombiTokens = djombi.token || ""
 
   // Combined useEffect for initialization
   useEffect(() => {
@@ -290,7 +294,7 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
             await fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${email.id}?email_id=${encodeURIComponent(emailId)}`, {
               method: 'DELETE',
               headers: {
-                'Authorization': `Bearer ${token.access_token}`,
+                'Authorization': `Bearer ${djombiTokens}`,
                 'Content-Type': 'application/json'
               }
             });

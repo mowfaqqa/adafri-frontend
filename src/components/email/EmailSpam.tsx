@@ -15,6 +15,7 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { AuthContext } from "@/lib/context/auth";
+import { useCombinedAuth } from "../providers/useCombinedAuth";
 
 
 interface EmailSpamProps {
@@ -48,6 +49,9 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
       // const token = getAuthToken();
       const { token, user } = useContext(AuthContext);
       console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+      const { djombi } = useCombinedAuth()
+      const djombiTokens = djombi.token || ""
       
       if (!token) {
         throw new Error('No access token available');
@@ -68,7 +72,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
       const response = await axios.get(apiEndpoint, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.access_token}`
+          'Authorization': `Bearer ${djombiTokens}`
         }
       });
       

@@ -15,18 +15,13 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { AuthContext } from "@/lib/context/auth";
-
-interface DjombiTokens {
-  accessTokenAdafri: string;
-  accessTokenDjombi: string;
-}
+import { useCombinedAuth } from "../providers/useCombinedAuth";
 
 interface EmailSentProps {
   onBack?: () => void;
-  djombiTokens?: DjombiTokens | null;
 }
 
-export const EmailSent = ({ onBack, djombiTokens }: EmailSentProps) => {
+export const EmailSent = ({ onBack }: EmailSentProps) => {
   const { emails, addEmail } = useEmailStore();
   const [apiSentEmails, setApiSentEmails] = useState<Email[]>([]);
   const [filterDate, setFilterDate] = useState<string | null>(null);
@@ -49,24 +44,15 @@ export const EmailSent = ({ onBack, djombiTokens }: EmailSentProps) => {
     setError(null);
     
     try {
-      // First check if we have Djombi tokens
-      if (!djombiTokens) {
-        throw new Error('Djombi tokens not available');
-      }
-
-      console.log("Using Djombi tokens for sent emails:", {
-        adafri: djombiTokens.accessTokenAdafri ? `${djombiTokens.accessTokenAdafri.substring(0, 10)}...` : 'No token',
-        djombi: djombiTokens.accessTokenDjombi ? `${djombiTokens.accessTokenDjombi.substring(0, 10)}...` : 'No token'
-      });
-
-      // Get token from context as fallback
+      // Get token from cookies
+      // const token = getAuthToken();
       const { token, user } = useContext(AuthContext);
-      console.log("Context token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+      const { djombi } = useCombinedAuth()
+      const djombiTokens = djombi.token || ""
       
-      // Use Djombi token for authentication, fallback to context token
-      const authToken = djombiTokens.accessTokenDjombi || token?.access_token;
-      
-      if (!authToken) {
+      if (!token) {
         throw new Error('No access token available');
       }
       
@@ -78,21 +64,18 @@ export const EmailSent = ({ onBack, djombiTokens }: EmailSentProps) => {
         throw new Error('No linked email ID found');
       }
       
-      // Use Djombi-enhanced API endpoint
+      // Use axios instead of fetch
       const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}`;
-      console.log("Fetching from API endpoint with Djombi integration:", apiEndpoint);
+      console.log("Fetching from API endpoint:", apiEndpoint);
       
       const response = await axios.get(apiEndpoint, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-          // Add Djombi-specific headers if needed
-          'X-Djombi-Token': djombiTokens.accessTokenDjombi,
-          'X-Adafri-Token': djombiTokens.accessTokenAdafri,
+          'Authorization': `Bearer ${djombiTokens}`,
         }
       });
       
-      console.log("GET response data with Djombi:", response.data);
+      console.log("GET response data:", response.data);
       
       // Check for success/error in response
       if (response.data.success === false) {
@@ -173,7 +156,7 @@ export const EmailSent = ({ onBack, djombiTokens }: EmailSentProps) => {
       };
     });
     
-    console.log(`Processed ${formattedEmails.length} sent emails with Djombi integration`);
+    console.log(`Processed ${formattedEmails.length} sent emails`);
     
     // Add to email store first
     formattedEmails.forEach(email => {
@@ -189,37 +172,10 @@ export const EmailSent = ({ onBack, djombiTokens }: EmailSentProps) => {
     
     setApiSentEmails(formattedEmails);
   };
-
-  // Function to make Djombi-specific API calls (example usage)
-  const performDjombiAction = async (emailId: string, action: string) => {
-    if (!djombiTokens) {
-      console.error('Djombi tokens not available for action:', action);
-      return;
-    }
-
-    try {
-      const response = await axios.post(`https://be-auth-server.onrender.com/api/v1/emails/sent?email_id`, {
-        emailId,
-        action
-      }, {
-        headers: {
-          'Authorization': `Bearer ${djombiTokens.accessTokenDjombi}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('Djombi action completed:', response.data);
-    } catch (error) {
-      console.error('Djombi action failed:', error);
-    }
-  };
   
   useEffect(() => {
-    // Only fetch when djombiTokens are available
-    if (djombiTokens) {
-      fetchSentEmails();
-    }
-  }, [emails, addEmail, djombiTokens]);
+    fetchSentEmails();
+  }, [emails, addEmail]);
   
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -272,24 +228,7 @@ export const EmailSent = ({ onBack, djombiTokens }: EmailSentProps) => {
   const handleRowClick = (email: Email) => {
     setSelectedEmail(email);
     setShowDialog(true);
-    
-    // Example: Track email view with Djombi
-    if (djombiTokens && email.id) {
-      performDjombiAction(email.id, 'view');
-    }
   };
-
-  // Show loading state if Djombi tokens are not yet available
-  if (!djombiTokens) {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Initializing Djombi integration...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full h-full overflow-y-auto pb-4">
@@ -302,14 +241,7 @@ export const EmailSent = ({ onBack, djombiTokens }: EmailSentProps) => {
       <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]">
         <div className="sticky top-0 bg-background z-10 p-4 border-b">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold">Sent</h2>
-              {/* Djombi status indicator */}
-              <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                Djombi
-              </div>
-            </div>
+            <h2 className="text-xl font-semibold">Sent</h2>
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline" 
@@ -429,28 +361,6 @@ export const EmailSent = ({ onBack, djombiTokens }: EmailSentProps) => {
                   {mounted && <EmailContentRenderer content={selectedEmail.content} />}
                 </div>
               </div>
-
-              {/* Djombi-powered actions */}
-              {djombiTokens && (
-                <div className="mt-4 border-t pt-4">
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => selectedEmail.id && performDjombiAction(selectedEmail.id, 'archive')}
-                    >
-                      Archive
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => selectedEmail.id && performDjombiAction(selectedEmail.id, 'mark-important')}
-                    >
-                      Mark Important
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
@@ -543,11 +453,17 @@ export default EmailSent;
 // } from "@/components/ui/dialog";
 // import { AuthContext } from "@/lib/context/auth";
 
-// interface EmailSentProps {
-//   onBack?: () => void;
+// interface DjombiTokens {
+//   accessTokenAdafri: string;
+//   accessTokenDjombi: string;
 // }
 
-// export const EmailSent = ({ onBack }: EmailSentProps) => {
+// interface EmailSentProps {
+//   onBack?: () => void;
+//   djombiTokens?: DjombiTokens | null;
+// }
+
+// export const EmailSent = ({ onBack, djombiTokens }: EmailSentProps) => {
 //   const { emails, addEmail } = useEmailStore();
 //   const [apiSentEmails, setApiSentEmails] = useState<Email[]>([]);
 //   const [filterDate, setFilterDate] = useState<string | null>(null);
@@ -570,12 +486,24 @@ export default EmailSent;
 //     setError(null);
     
 //     try {
-//       // Get token from cookies
-//       // const token = getAuthToken();
+//       // First check if we have Djombi tokens
+//       if (!djombiTokens) {
+//         throw new Error('Djombi tokens not available');
+//       }
+
+//       console.log("Using Djombi tokens for sent emails:", {
+//         adafri: djombiTokens.accessTokenAdafri ? `${djombiTokens.accessTokenAdafri.substring(0, 10)}...` : 'No token',
+//         djombi: djombiTokens.accessTokenDjombi ? `${djombiTokens.accessTokenDjombi.substring(0, 10)}...` : 'No token'
+//       });
+
+//       // Get token from context as fallback
 //       const { token, user } = useContext(AuthContext);
-//       console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+//       console.log("Context token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
       
-//       if (!token) {
+//       // Use Djombi token for authentication, fallback to context token
+//       const authToken = djombiTokens.accessTokenDjombi || token?.access_token;
+      
+//       if (!authToken) {
 //         throw new Error('No access token available');
 //       }
       
@@ -587,18 +515,21 @@ export default EmailSent;
 //         throw new Error('No linked email ID found');
 //       }
       
-//       // Use axios instead of fetch
+//       // Use Djombi-enhanced API endpoint
 //       const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}`;
-//       console.log("Fetching from API endpoint:", apiEndpoint);
+//       console.log("Fetching from API endpoint with Djombi integration:", apiEndpoint);
       
 //       const response = await axios.get(apiEndpoint, {
 //         headers: {
 //           'Content-Type': 'application/json',
-//           'Authorization': `Bearer ${token.access_token}`,
+//           'Authorization': `Bearer ${authToken}`,
+//           // Add Djombi-specific headers if needed
+//           'X-Djombi-Token': djombiTokens.accessTokenDjombi,
+//           'X-Adafri-Token': djombiTokens.accessTokenAdafri,
 //         }
 //       });
       
-//       console.log("GET response data:", response.data);
+//       console.log("GET response data with Djombi:", response.data);
       
 //       // Check for success/error in response
 //       if (response.data.success === false) {
@@ -679,7 +610,7 @@ export default EmailSent;
 //       };
 //     });
     
-//     console.log(`Processed ${formattedEmails.length} sent emails`);
+//     console.log(`Processed ${formattedEmails.length} sent emails with Djombi integration`);
     
 //     // Add to email store first
 //     formattedEmails.forEach(email => {
@@ -695,10 +626,37 @@ export default EmailSent;
     
 //     setApiSentEmails(formattedEmails);
 //   };
+
+//   // Function to make Djombi-specific API calls (example usage)
+//   const performDjombiAction = async (emailId: string, action: string) => {
+//     if (!djombiTokens) {
+//       console.error('Djombi tokens not available for action:', action);
+//       return;
+//     }
+
+//     try {
+//       const response = await axios.post(`https://be-auth-server.onrender.com/api/v1/emails/sent?email_id`, {
+//         emailId,
+//         action
+//       }, {
+//         headers: {
+//           'Authorization': `Bearer ${djombiTokens.accessTokenDjombi}`,
+//           'Content-Type': 'application/json'
+//         }
+//       });
+
+//       console.log('Djombi action completed:', response.data);
+//     } catch (error) {
+//       console.error('Djombi action failed:', error);
+//     }
+//   };
   
 //   useEffect(() => {
-//     fetchSentEmails();
-//   }, [emails, addEmail]);
+//     // Only fetch when djombiTokens are available
+//     if (djombiTokens) {
+//       fetchSentEmails();
+//     }
+//   }, [emails, addEmail, djombiTokens]);
   
 //   const handleRefresh = () => {
 //     setIsRefreshing(true);
@@ -751,7 +709,24 @@ export default EmailSent;
 //   const handleRowClick = (email: Email) => {
 //     setSelectedEmail(email);
 //     setShowDialog(true);
+    
+//     // Example: Track email view with Djombi
+//     if (djombiTokens && email.id) {
+//       performDjombiAction(email.id, 'view');
+//     }
 //   };
+
+//   // Show loading state if Djombi tokens are not yet available
+//   if (!djombiTokens) {
+//     return (
+//       <div className="w-full h-full flex items-center justify-center">
+//         <div className="text-center">
+//           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 mx-auto mb-4"></div>
+//           <p className="text-muted-foreground">Initializing Djombi integration...</p>
+//         </div>
+//       </div>
+//     );
+//   }
 
 //   return (
 //     <div className="w-full h-full overflow-y-auto pb-4">
@@ -764,7 +739,14 @@ export default EmailSent;
 //       <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]">
 //         <div className="sticky top-0 bg-background z-10 p-4 border-b">
 //           <div className="flex justify-between items-center">
-//             <h2 className="text-xl font-semibold">Sent</h2>
+//             <div className="flex items-center gap-2">
+//               <h2 className="text-xl font-semibold">Sent</h2>
+//               {/* Djombi status indicator */}
+//               <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+//                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+//                 Djombi
+//               </div>
+//             </div>
 //             <div className="flex items-center gap-2">
 //               <Button 
 //                 variant="outline" 
@@ -884,6 +866,28 @@ export default EmailSent;
 //                   {mounted && <EmailContentRenderer content={selectedEmail.content} />}
 //                 </div>
 //               </div>
+
+//               {/* Djombi-powered actions */}
+//               {djombiTokens && (
+//                 <div className="mt-4 border-t pt-4">
+//                   <div className="flex gap-2">
+//                     <Button 
+//                       variant="outline" 
+//                       size="sm"
+//                       onClick={() => selectedEmail.id && performDjombiAction(selectedEmail.id, 'archive')}
+//                     >
+//                       Archive
+//                     </Button>
+//                     <Button 
+//                       variant="outline" 
+//                       size="sm"
+//                       onClick={() => selectedEmail.id && performDjombiAction(selectedEmail.id, 'mark-important')}
+//                     >
+//                       Mark Important
+//                     </Button>
+//                   </div>
+//                 </div>
+//               )}
 //             </div>
 //           )}
 //         </DialogContent>
@@ -893,3 +897,68 @@ export default EmailSent;
 // };
 
 // export default EmailSent;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

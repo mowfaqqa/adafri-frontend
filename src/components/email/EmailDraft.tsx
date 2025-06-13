@@ -9,6 +9,7 @@ import { getCookie, getAuthToken } from "@/lib/utils/cookies"; // Import cookie 
 import { ComposeModal } from "./ComposeModal"; // Import ComposeModal
 import axios from "axios";
 import { AuthContext } from "@/lib/context/auth";
+import { useCombinedAuth } from "../providers/useCombinedAuth";
 
 interface EmailDraftProps {
   onBack?: () => void;
@@ -53,6 +54,9 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       const { token, user } = useContext(AuthContext);
       console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
 
+      const { djombi } = useCombinedAuth()
+      const djombiTokens = djombi.token || ""
+
       if (!token) {
         throw new Error('No access token available');
       }
@@ -73,7 +77,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
         const response = await axios.get(apiEndpoint, {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token.access_token}`
+            'Authorization': `Bearer ${djombiTokens}`
           }
         });
 

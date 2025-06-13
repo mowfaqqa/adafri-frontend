@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { EmailCard } from "./EmailCard";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies";
 import { AuthContext } from "@/lib/context/auth";
-import { DjombiProfileService, DjombiTokens, DjombiServiceResult } from "@/lib/services/DjombiProfileService"; // Update path as needed
+import { useCombinedAuth } from "../providers/useCombinedAuth";
 
 // Define types
 interface Email {
@@ -32,13 +32,7 @@ interface EmailColumn {
     title: string;
 }
 
-// Add interface for component props
-interface ProfessionalEmailInboxProps {
-    // Optional: You can make djombiTokens optional since we're fetching it internally
-    djombiTokens?: DjombiTokens;
-}
-
-const ProfessionalEmailInbox = ({ djombiTokens }: ProfessionalEmailInboxProps) => {
+const ProfessionalEmailInbox = () => {
     // State
     const [emails, setEmails] = useState<Email[]>([]);
     const [columns, setColumns] = useState<EmailColumn[]>([
@@ -51,56 +45,10 @@ const ProfessionalEmailInbox = ({ djombiTokens }: ProfessionalEmailInboxProps) =
     const [newColumnName, setNewColumnName] = useState("");
     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
-    const [fetchedDjombiTokens, setFetchedDjombiTokens] = useState<DjombiTokens | null>(null);
 
     const { token, user } = useContext(AuthContext);
-
-    // Use either passed djombiTokens or fetched ones
-    const activeDjombiTokens = djombiTokens || fetchedDjombiTokens;
-
-    // Fetch Djombi tokens if not provided as props
-    useEffect(() => {
-        const fetchDjombiTokens = async () => {
-            // Skip fetching if tokens are already provided as props
-            if (djombiTokens) {
-                console.log("Using provided djombiTokens:", djombiTokens);
-                return;
-            }
-
-            // Check if user is authenticated and has a valid token
-            if (!token) {
-                console.log("User not authenticated or no token available");
-                return;
-            }
-
-            try {
-                console.log("Fetching Djombi tokens...");
-                const result: DjombiServiceResult = await DjombiProfileService.getDjombiProfile(token.access_token);
-
-                if (result.success && result.tokens) {
-                    console.log("Djombi tokens fetched successfully:", result.tokens);
-                    setFetchedDjombiTokens(result.tokens);
-
-                    // Optionally store the profile data as well
-                    if (result.profile) {
-                        console.log("Djombi profile data:", result.profile);
-                        // You might want to store this in state: setDjombiProfile(result.profile);
-                    }
-                } else {
-                    console.error("Failed to fetch Djombi tokens:", result.error);
-                    // Optionally set an error state
-                    // setError(result.error);
-                }
-            } catch (error) {
-                console.error("Error fetching Djombi tokens:", error);
-                // Optionally set an error state
-                // setError("An unexpected error occurred while fetching Djombi tokens");
-            }
-        };
-
-        fetchDjombiTokens();
-    }, [ token, djombiTokens]); // Added isAuthenticated to dependencies
-
+    const { djombi } = useCombinedAuth()
+    const djombiTokens = djombi.token || ""
     // Fetch emails
     useEffect(() => {
         const fetchEmails = async () => {
@@ -110,7 +58,6 @@ const ProfessionalEmailInbox = ({ djombiTokens }: ProfessionalEmailInboxProps) =
             try {
                 // Get token from cookies using the utility function
                 console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
-                console.log("Active Djombi tokens:", activeDjombiTokens);
 
                 if (!token) {
                     throw new Error('No access token available');
@@ -132,9 +79,54 @@ const ProfessionalEmailInbox = ({ djombiTokens }: ProfessionalEmailInboxProps) =
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token.access_token}`
+                        'Authorization': `Bearer ${djombiTokens}`
                     }
                 });
+
+                // If the GET request fails, try with POST instead
+                // if (!response.ok) {
+                //     console.log("GET request failed with status:", response.status);
+
+                //     // Alternative: Use POST if the API requires sending data in the body
+                //     const postEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox';
+                //     console.log("Trying POST request to:", postEndpoint);
+
+                //     const postResponse = await fetch(postEndpoint, {
+                //         method: 'POST',
+                //         headers: {
+                //             'Content-Type': 'application/json',
+                //             'Authorization': `Bearer ${token}`
+                //         },
+                //         body: JSON.stringify({
+                //             email_id: linkedEmailId
+                //         })
+                //     });
+
+                //     // Process the POST response
+                //     const postResponseText = await postResponse.text();
+                //     console.log("POST raw response:", postResponseText);
+
+                //     let postData;
+                //     try {
+                //         postData = JSON.parse(postResponseText);
+                //         console.log("POST parsed response data:", postData);
+                //     } catch (e) {
+                //         console.error("Failed to parse POST response as JSON:", e);
+                //         throw new Error(`Invalid POST response format: ${postResponseText.substring(0, 100)}...`);
+                //     }
+
+                //     // Check for success/error in POST response
+                //     if (!postResponse.ok || postData.success === false) {
+                //         const errorMessage = postData.message || postResponse.statusText;
+                //         console.error("API POST error:", errorMessage);
+                //         throw new Error(`API POST error: ${errorMessage}`);
+                //     }
+
+                //     // Process the successful POST response
+                //     const formattedEmails = processEmailData(postData);
+                //     setEmails(formattedEmails);
+                //     return;
+                // }
 
                 // Process the successful GET response
                 const responseText = await response.text();
@@ -167,7 +159,7 @@ const ProfessionalEmailInbox = ({ djombiTokens }: ProfessionalEmailInboxProps) =
         };
 
         fetchEmails();
-    }, [token, activeDjombiTokens]); // Add activeDjombiTokens as dependency
+    }, []);
 
     // Process email data from API response
     const processEmailData = (data: any): Email[] => {
@@ -316,6 +308,20 @@ const ProfessionalEmailInbox = ({ djombiTokens }: ProfessionalEmailInboxProps) =
     }
 
     // Error state
+    // if (error) {
+    //     return (
+    //         <div className="p-4 text-red-500">
+    //             <p>Error loading emails: {error}</p>
+    //             <button
+    //                 className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+    //                 onClick={() => window.location.reload()}
+    //             >
+    //                 Try Again
+    //             </button>
+    //         </div>
+    //     );
+    // }
+
     if (error) {
         if (error === 'No linked email ID found') {
             console.error('Error loading emails: No linked email ID found');
@@ -339,6 +345,7 @@ const ProfessionalEmailInbox = ({ djombiTokens }: ProfessionalEmailInboxProps) =
             </div>
         );
     }
+
 
     return (
         <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
@@ -483,6 +490,25 @@ export default ProfessionalEmailInbox;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // /* eslint-disable @typescript-eslint/no-explicit-any */
 // "use client";
 // import { useState, useEffect, useContext } from "react";
@@ -495,6 +521,8 @@ export default ProfessionalEmailInbox;
 // import { EmailCard } from "./EmailCard";
 // import { getCookie, getAuthToken } from "@/lib/utils/cookies";
 // import { AuthContext } from "@/lib/context/auth";
+// import { DjombiProfileService, DjombiTokens, DjombiServiceResult } from "@/lib/services/DjombiProfileService"; // Update path as needed
+// import { useCombinedAuth } from "../providers/useCombinedAuth";
 
 // // Define types
 // interface Email {
@@ -516,7 +544,13 @@ export default ProfessionalEmailInbox;
 //     title: string;
 // }
 
-// const ProfessionalEmailInbox = () => {
+// // Add interface for component props
+// interface ProfessionalEmailInboxProps {
+//     // Optional: You can make djombiTokens optional since we're fetching it internally
+//     djombiTokens?: DjombiTokens;
+// }
+
+// const ProfessionalEmailInbox = ({ djombiTokens }: ProfessionalEmailInboxProps) => {
 //     // State
 //     const [emails, setEmails] = useState<Email[]>([]);
 //     const [columns, setColumns] = useState<EmailColumn[]>([
@@ -529,8 +563,58 @@ export default ProfessionalEmailInbox;
 //     const [newColumnName, setNewColumnName] = useState("");
 //     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
 //     const [isDragging, setIsDragging] = useState(false);
+//     const [fetchedDjombiTokens, setFetchedDjombiTokens] = useState<DjombiTokens | null>(null);
 
 //     const { token, user } = useContext(AuthContext);
+//     const { djombi } = useCombinedAuth()
+//     const djombiTokens = djombi.token || ""
+
+//     // Use either passed djombiTokens or fetched ones
+//     const activeDjombiTokens = djombiTokens || fetchedDjombiTokens;
+
+//     // Fetch Djombi tokens if not provided as props
+//     useEffect(() => {
+//         const fetchDjombiTokens = async () => {
+//             // Skip fetching if tokens are already provided as props
+//             if (djombiTokens) {
+//                 console.log("Using provided djombiTokens:", djombiTokens);
+//                 return;
+//             }
+
+//             // Check if user is authenticated and has a valid token
+//             if (!token) {
+//                 console.log("User not authenticated or no token available");
+//                 return;
+//             }
+
+//             try {
+//                 console.log("Fetching Djombi tokens...");
+//                 const result: DjombiServiceResult = await DjombiProfileService.getDjombiProfile(token.access_token);
+
+//                 if (result.success && result.tokens) {
+//                     console.log("Djombi tokens fetched successfully:", result.tokens);
+//                     setFetchedDjombiTokens(result.tokens);
+
+//                     // Optionally store the profile data as well
+//                     if (result.profile) {
+//                         console.log("Djombi profile data:", result.profile);
+//                         // You might want to store this in state: setDjombiProfile(result.profile);
+//                     }
+//                 } else {
+//                     console.error("Failed to fetch Djombi tokens:", result.error);
+//                     // Optionally set an error state
+//                     // setError(result.error);
+//                 }
+//             } catch (error) {
+//                 console.error("Error fetching Djombi tokens:", error);
+//                 // Optionally set an error state
+//                 // setError("An unexpected error occurred while fetching Djombi tokens");
+//             }
+//         };
+
+//         fetchDjombiTokens();
+//     }, [token, djombiTokens]); // Added isAuthenticated to dependencies
+
 //     // Fetch emails
 //     useEffect(() => {
 //         const fetchEmails = async () => {
@@ -540,6 +624,7 @@ export default ProfessionalEmailInbox;
 //             try {
 //                 // Get token from cookies using the utility function
 //                 console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+//                 console.log("Active Djombi tokens:", activeDjombiTokens);
 
 //                 if (!token) {
 //                     throw new Error('No access token available');
@@ -561,54 +646,9 @@ export default ProfessionalEmailInbox;
 //                     method: 'GET',
 //                     headers: {
 //                         'Content-Type': 'application/json',
-//                         'Authorization': `Bearer ${token.access_token}`
+//                         'Authorization': `Bearer ${djombiTokens}`
 //                     }
 //                 });
-
-//                 // If the GET request fails, try with POST instead
-//                 // if (!response.ok) {
-//                 //     console.log("GET request failed with status:", response.status);
-
-//                 //     // Alternative: Use POST if the API requires sending data in the body
-//                 //     const postEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox';
-//                 //     console.log("Trying POST request to:", postEndpoint);
-
-//                 //     const postResponse = await fetch(postEndpoint, {
-//                 //         method: 'POST',
-//                 //         headers: {
-//                 //             'Content-Type': 'application/json',
-//                 //             'Authorization': `Bearer ${token}`
-//                 //         },
-//                 //         body: JSON.stringify({
-//                 //             email_id: linkedEmailId
-//                 //         })
-//                 //     });
-
-//                 //     // Process the POST response
-//                 //     const postResponseText = await postResponse.text();
-//                 //     console.log("POST raw response:", postResponseText);
-
-//                 //     let postData;
-//                 //     try {
-//                 //         postData = JSON.parse(postResponseText);
-//                 //         console.log("POST parsed response data:", postData);
-//                 //     } catch (e) {
-//                 //         console.error("Failed to parse POST response as JSON:", e);
-//                 //         throw new Error(`Invalid POST response format: ${postResponseText.substring(0, 100)}...`);
-//                 //     }
-
-//                 //     // Check for success/error in POST response
-//                 //     if (!postResponse.ok || postData.success === false) {
-//                 //         const errorMessage = postData.message || postResponse.statusText;
-//                 //         console.error("API POST error:", errorMessage);
-//                 //         throw new Error(`API POST error: ${errorMessage}`);
-//                 //     }
-
-//                 //     // Process the successful POST response
-//                 //     const formattedEmails = processEmailData(postData);
-//                 //     setEmails(formattedEmails);
-//                 //     return;
-//                 // }
 
 //                 // Process the successful GET response
 //                 const responseText = await response.text();
@@ -641,7 +681,7 @@ export default ProfessionalEmailInbox;
 //         };
 
 //         fetchEmails();
-//     }, []);
+//     }, [token, activeDjombiTokens]); // Add activeDjombiTokens as dependency
 
 //     // Process email data from API response
 //     const processEmailData = (data: any): Email[] => {
@@ -790,20 +830,6 @@ export default ProfessionalEmailInbox;
 //     }
 
 //     // Error state
-//     // if (error) {
-//     //     return (
-//     //         <div className="p-4 text-red-500">
-//     //             <p>Error loading emails: {error}</p>
-//     //             <button
-//     //                 className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-//     //                 onClick={() => window.location.reload()}
-//     //             >
-//     //                 Try Again
-//     //             </button>
-//     //         </div>
-//     //     );
-//     // }
-
 //     if (error) {
 //         if (error === 'No linked email ID found') {
 //             console.error('Error loading emails: No linked email ID found');
@@ -828,7 +854,6 @@ export default ProfessionalEmailInbox;
 //         );
 //     }
 
-
 //     return (
 //         <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
 //             <div className="relative w-full h-full overflow-x-auto pb-4">
@@ -840,8 +865,8 @@ export default ProfessionalEmailInbox;
 //                                     ref={provided.innerRef}
 //                                     {...provided.droppableProps}
 //                                     className={`min-w-[350px] w-[350px] max-w-[350px] p-4 rounded-lg border ${snapshot.isDraggingOver
-//                                             ? "border-blue-400 bg-blue-50"
-//                                             : "border-gray-200"
+//                                         ? "border-blue-400 bg-blue-50"
+//                                         : "border-gray-200"
 //                                         } transition-colors duration-200`}
 //                                 >
 //                                     <div className="flex justify-between items-center mb-4">
@@ -927,6 +952,52 @@ export default ProfessionalEmailInbox;
 // };
 
 // export default ProfessionalEmailInbox;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

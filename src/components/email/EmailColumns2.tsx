@@ -1,6 +1,6 @@
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
 import { useEmailStore } from "@/lib/store/email-store";
-import { EmailCard } from "./EmailCard";
+import { EmailCard } from "./EmailSections/EmailInboxComponents/EmailCard";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useState, useEffect, useContext } from "react";

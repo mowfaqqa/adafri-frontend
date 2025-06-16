@@ -1,7 +1,7 @@
 import { useEmailStore } from "@/lib/store/email-store";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Filter, RefreshCw, X } from "lucide-react";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import { Email, EmailCategory } from "@/lib/types/email";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getAuthToken, getCookie } from "@/lib/utils/cookies";
@@ -15,7 +15,7 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { AuthContext } from "@/lib/context/auth";
-import { useCombinedAuth } from "../providers/useCombinedAuth";
+import { useCombinedAuth } from "../../providers/useCombinedAuth";
 
 interface EmailSentProps {
   onBack?: () => void;
@@ -23,6 +23,11 @@ interface EmailSentProps {
 
 export const EmailSent = ({ onBack }: EmailSentProps) => {
   const { emails, addEmail } = useEmailStore();
+  
+  // Move all hooks to the top level
+  const { token, user } = useContext(AuthContext);
+  const { djombi } = useCombinedAuth();
+  
   const [apiSentEmails, setApiSentEmails] = useState<Email[]>([]);
   const [filterDate, setFilterDate] = useState<string | null>(null);
   const [sortNewest, setSortNewest] = useState(true);
@@ -38,69 +43,7 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
   useEffect(() => {
     setMounted(true);
   }, []);
-  
-  const fetchSentEmails = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Get token from cookies
-      // const token = getAuthToken();
-      const { token, user } = useContext(AuthContext);
-      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
 
-      const { djombi } = useCombinedAuth()
-      const djombiTokens = djombi.token || ""
-      
-      if (!token) {
-        throw new Error('No access token available');
-      }
-      
-      // Get linked email ID from cookies
-      const linkedEmailId = getCookie('linkedEmailId');
-      console.log("Linked Email ID:", linkedEmailId);
-      
-      if (!linkedEmailId) {
-        throw new Error('No linked email ID found');
-      }
-      
-      // Use axios instead of fetch
-      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}`;
-      console.log("Fetching from API endpoint:", apiEndpoint);
-      
-      const response = await axios.get(apiEndpoint, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${djombiTokens}`,
-        }
-      });
-      
-      console.log("GET response data:", response.data);
-      
-      // Check for success/error in response
-      if (response.data.success === false) {
-        const errorMessage = response.data.message || 'API request failed';
-        console.error("API error:", errorMessage);
-        throw new Error(`API error: ${errorMessage}`);
-      }
-      
-      processResponseData(response.data);
-    } catch (err) {
-      console.error('Failed to fetch sent emails:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch sent emails');
-      
-      // Fallback to local data if API fails
-      const localSentEmails = emails.filter(email => email.status === "sent");
-      if (localSentEmails.length > 0) {
-        console.log("Using local sent emails as fallback");
-        setApiSentEmails([]);
-      }
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-  
   // Helper function to process response data
   const processResponseData = (data: any) => {
     // Check if data contains emails (handle different response structures)
@@ -173,9 +116,69 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
     setApiSentEmails(formattedEmails);
   };
   
+  // Use useCallback to memoize the function and include dependencies
+  const fetchSentEmails = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+      const djombiTokens = djombi.token || "";
+      
+      if (!token) {
+        throw new Error('No access token available');
+      }
+      
+      // Get linked email ID - use the same approach as ProfessionalEmailInbox
+      const linkedEmailId = getCookie('linkedEmailId') ||
+        (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+      console.log("Linked Email ID:", linkedEmailId);
+      
+      if (!linkedEmailId) {
+        throw new Error('No linked email ID found');
+      }
+      
+      // Use axios instead of fetch
+      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+      console.log("Fetching from API endpoint:", apiEndpoint);
+      
+      const response = await axios.get(apiEndpoint, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${djombiTokens}`,
+        }
+      });
+      
+      console.log("GET response data:", response.data);
+      
+      // Check for success/error in response
+      if (response.data.success === false) {
+        const errorMessage = response.data.message || 'API request failed';
+        console.error("API error:", errorMessage);
+        throw new Error(`API error: ${errorMessage}`);
+      }
+      
+      processResponseData(response.data);
+    } catch (err) {
+      console.error('Failed to fetch sent emails:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch sent emails');
+      
+      // Fallback to local data if API fails
+      const localSentEmails = emails.filter(email => email.status === "sent");
+      if (localSentEmails.length > 0) {
+        console.log("Using local sent emails as fallback");
+        setApiSentEmails([]);
+      }
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [token, djombi.token, emails, addEmail]);
+  
   useEffect(() => {
     fetchSentEmails();
-  }, [emails, addEmail]);
+  }, [fetchSentEmails]);
   
   const handleRefresh = () => {
     setIsRefreshing(true);

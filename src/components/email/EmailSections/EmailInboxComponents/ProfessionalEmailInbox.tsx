@@ -17,7 +17,7 @@ import { LoadingState, ErrorState, NoEmailState } from "./InboxStates";
 
 const ProfessionalEmailInbox = () => {
     // Move all hooks to the top level
-    const { token } = useContext(AuthContext);
+    const { token, user } = useContext(AuthContext);
     const { djombi } = useCombinedAuth();
     const djombiTokens = djombi.token || "";
 

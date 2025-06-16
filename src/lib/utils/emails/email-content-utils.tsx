@@ -539,20 +539,26 @@ export function createEmailPreview(content: string | undefined, maxLength: numbe
   return plainTextVersion.substring(0, maxLength) + 
     (plainTextVersion.length > maxLength ? '...' : '');
 }
+
 /**
  * React component to render email content appropriately with auto height adjustment
+ * Fixed to follow React hooks rules by moving all hooks to top level
  */
 export const EmailContentRenderer: React.FC<{ content?: string }> = ({ content }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeHeight, setIframeHeight] = useState(400);
   
-  if (!content) return null;
+  // ✅ FIXED: Move all hooks to top level - don't call conditionally
+  const { processedContent, contentType, plainTextVersion } = content ? processEmailContent(content) : {
+    processedContent: '',
+    contentType: 'text' as const,
+    plainTextVersion: ''
+  };
   
-  const { processedContent, contentType } = processEmailContent(content);
-  
+  // ✅ FIXED: Always call useEffect, but conditionally execute logic inside
   useEffect(() => {
-    // Adjust iframe height based on content height
-    if (contentType === 'html' && iframeRef.current) {
+    // Only execute iframe height adjustment if we have HTML content
+    if (contentType === 'html' && iframeRef.current && processedContent) {
       const adjustHeight = () => {
         try {
           const iframe = iframeRef.current;
@@ -574,7 +580,13 @@ export const EmailContentRenderer: React.FC<{ content?: string }> = ({ content }
         if (iframe) iframe.onload = null;
       };
     }
-  }, [contentType, processedContent]);
+    
+    // Return empty cleanup function if no iframe setup needed
+    return () => {};
+  }, [contentType, processedContent]); // Include dependencies
+  
+  // Early return after all hooks have been called
+  if (!content) return null;
   
   if (contentType === 'html') {
     return (

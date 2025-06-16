@@ -93,61 +93,7 @@ const MessagingLayout: React.FC = () => {
           )}
         </div>
         
-        {/* Header Actions */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <button className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors">
-            <Search size={20} />
-          </button>
-          <button className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors">
-            <Bell size={20} />
-          </button>
-          
-          {/* User profile dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-lg transition-colors"
-            >
-              <Avatar
-                src={user?.avatar}
-                alt={user?.fullName || 'User'}
-                size="sm"
-                status="online"
-              />
-            </button>
-            
-            {showUserMenu && (
-              <>
-                <div 
-                  className="fixed inset-0 z-40" 
-                  onClick={() => setShowUserMenu(false)}
-                />
-                <div className="absolute top-12 right-0 w-56 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
-                  <div className="p-4 border-b border-gray-100">
-                    <p className="font-semibold text-gray-900">{user?.fullName}</p>
-                    <p className="text-sm text-gray-500">@{user?.username}</p>
-                  </div>
-                  <div className="py-1">
-                    <button
-                      onClick={handleOpenProfile}
-                      className="flex items-center w-full px-4 py-3 hover:bg-gray-50 text-left transition-colors"
-                    >
-                      <Settings size={16} className="mr-3 text-gray-500" />
-                      <span className="text-gray-700">Settings</span>
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-3 hover:bg-gray-50 text-left border-t border-gray-100 transition-colors"
-                    >
-                      <LogOut size={16} className="mr-3 text-gray-500" />
-                      <span className="text-gray-700">Logout</span>
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+       
       </header>
       
       {/* Main content layout with borders */}

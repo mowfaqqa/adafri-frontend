@@ -83,7 +83,7 @@ const WorkspaceSidebar: React.FC = () => {
                   className="w-full h-full object-cover rounded-md"
                 />
               ) : (
-                workspace.name.substring(0, 2).toUpperCase()
+                workspace?.name?.substring(0, 2)?.toUpperCase()
               )}
             </div>
             

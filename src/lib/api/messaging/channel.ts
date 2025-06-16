@@ -41,7 +41,9 @@ export const getChannelById = async (channelId: string): Promise<Channel> => {
 /**
  * Create a new channel
  */
-export const createChannel = async (channelData: ChannelCreateData): Promise<Channel> => {
+export const createChannel = async (
+  channelData: ChannelCreateData
+): Promise<Channel> => {
   try {
     const response = await axiosInstance.post<{ channel: Channel }>(
       "/channels",
@@ -162,14 +164,13 @@ export const addChannelAdmin = async (
 /**
  * Get all direct messages for the current user in a workspace
  */
-export const getDirectMessages = async (workspaceId: string): Promise<DirectMessageChannel[]> => {
+export const getDirectMessages = async (
+  workspaceId: string
+): Promise<DirectMessageChannel[]> => {
   try {
     const response = await axiosInstance.get<{
       directMessages: DirectMessageChannel[];
-    }>(
-      "/channels/direct",
-      { params: { workspaceId } }
-    );
+    }>("/channels/direct", { params: { workspaceId } });
     return response.data.directMessages;
   } catch (error) {
     console.error("Get direct messages error:", error);
@@ -187,10 +188,7 @@ export const createDirectMessage = async (
   try {
     const response = await axiosInstance.post<{
       directMessage: DirectMessageChannel;
-    }>(
-      "/channels/direct",
-      { workspaceId, userId }
-    );
+    }>("/channels/direct", { userId, workspaceId });
     return response.data;
   } catch (error) {
     console.error("Create direct message error:", error);

@@ -4,7 +4,7 @@ import config from "@/lib/config/messaging";
 import { refreshToken } from "./auth";
 
 // Create an axios instance with default configs
-const axiosInstance = axios.create({
+const messagingApi = axios.create({
   baseURL: config.apiBaseUrl,
   headers: {
     "Content-Type": "application/json",
@@ -12,14 +12,14 @@ const axiosInstance = axios.create({
 });
 
 // Add a request interceptor to attach the JWT token to all requests
-axiosInstance.interceptors.request.use(
+messagingApi.interceptors.request.use(
   (config: any) => {
     // Get token from cookie or localStorage (prefer cookie for security)
     const token =
-      JSON.parse(localStorage.getItem("access_token")!) 
+      localStorage.getItem("token")! 
       
     if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token.access_token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -29,7 +29,7 @@ axiosInstance.interceptors.request.use(
 );
 
 // Add a response interceptor to handle common responses and token refresh
-axiosInstance.interceptors.response.use(
+messagingApi.interceptors.response.use(
   (response) => {
     return response;
   },
@@ -57,7 +57,7 @@ axiosInstance.interceptors.response.use(
 
             // Update authorization header and retry the request
             originalRequest.headers.Authorization = `Bearer ${response.token}`;
-            return axiosInstance(originalRequest);
+            return messagingApi(originalRequest);
           }
         }
       } catch (refreshError) {
@@ -66,7 +66,7 @@ axiosInstance.interceptors.response.use(
         // Clear authentication if refresh fails
         Cookies.remove(config.tokenCookieName);
         Cookies.remove(config.refreshTokenCookieName);
-        localStorage.removeItem("messaging_token");
+        localStorage.removeItem("token");
 
         // If on client side, redirect to login
         if (typeof window !== "undefined") {
@@ -79,4 +79,4 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-export default axiosInstance;
+export default messagingApi;

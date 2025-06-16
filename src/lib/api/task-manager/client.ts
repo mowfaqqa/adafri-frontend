@@ -1,9 +1,11 @@
+"use client"
 import { getAuthToken, removeCookie } from "@/lib/utils/cookies";
 import axios from "axios";
 
 // Create axios instance with default config
 const taskApiClient = axios.create({
   baseURL: "https://task-manager-api-e7mf.onrender.com/api",
+  // baseURL: "http://localhost:9000/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -22,9 +24,7 @@ export const getStoredAuthToken = () => authToken;
 // Request interceptor for API calls
 taskApiClient.interceptors.request.use(
   (config) => {
-    // Priority:
-    // 1. Use token from AuthContext (set via setAuthToken)
-    const token = authToken || getAuthToken();
+    const token = authToken
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

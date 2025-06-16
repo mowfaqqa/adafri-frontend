@@ -190,7 +190,7 @@ const ChatLayout = () => {
 
           {/* User profile */}
           <div className="mb-6 flex items-center space-x-3 relative">
-            <button
+            {/* <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center space-x-3 hover:bg-gray-100 p-2 rounded-md w-full"
             >
@@ -206,10 +206,10 @@ const ChatLayout = () => {
                   @{user?.username}
                 </p>
               </div>
-            </button>
+            </button> */}
 
             {/* User menu dropdown */}
-            {showUserMenu && (
+            {/* {showUserMenu && (
               <div className="absolute top-12 left-0 w-full bg-white rounded-md shadow-lg border border-gray-200 z-50">
                 <button
                   onClick={handleOpenProfile}
@@ -226,7 +226,7 @@ const ChatLayout = () => {
                   <span>Logout</span>
                 </button>
               </div>
-            )}
+            )} */}
           </div>
 
           {selectedWorkspaceId ? (

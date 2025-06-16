@@ -112,15 +112,15 @@ const MessagingLayout: React.FC = () => {
           </div>
           
           <div className="flex items-center space-x-4">
-            <button className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100">
+            {/* <button className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100">
               <Search size={20} />
             </button>
             <button className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100">
               <Bell size={20} />
-            </button>
+            </button> */}
             
             {/* User profile dropdown */}
-            <div className="relative">
+            {/* <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-md"
@@ -155,7 +155,7 @@ const MessagingLayout: React.FC = () => {
                   </button>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         </header>
         

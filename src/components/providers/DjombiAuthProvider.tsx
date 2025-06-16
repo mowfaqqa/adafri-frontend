@@ -98,13 +98,11 @@ export const DjombiAuthProvider = ({ children }: DjombiAuthProviderProps) => {
 
       try {
         // Check if Adafri token exists (adjust key name based on your OAuth2 implementation)
-        const adafriToken = localStorage.getItem('access_token') || 
-                           localStorage.getItem('auth_token') ||
-                           localStorage.getItem('adafri_token');
+        const adafriToken = JSON.parse(localStorage.getItem('access_token')!)
 
-        if (adafriToken && !isDjombiAuthenticated) {
+        if (adafriToken.access_token && !isDjombiAuthenticated) {
           setIsLoading(true);
-          await initializeDjombi(adafriToken);
+          await initializeDjombi(adafriToken.access_token);
         }
       } catch (err) {
         console.error('Auto-initialization failed:', err);

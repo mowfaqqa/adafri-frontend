@@ -191,11 +191,11 @@ const MessagingLayout: React.FC = () => {
               </div>
               
               {/* Message Area - Centered */}
-              <div className="flex-1 flex flex-col justify-center overflow-hidden">
-                <div className="flex-1 flex items-center justify-center overflow-hidden">
+              <div className="flex flex-col justify-center overflow-hidden">
+                <div className="flex-1 items-center justify-center overflow-hidden">
                   <MessageList />
                 </div>
-                <div className="border-t border-gray-200">
+                <div className="bottom-0 border-t border-gray-200">
                   <MessageInput />
                 </div>
               </div>

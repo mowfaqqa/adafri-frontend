@@ -3,8 +3,8 @@
  */
 const config = {
   // API URLs
-  apiBaseUrl: "https://messaging-a1v0.onrender.com/api",
-  // apiBaseUrl: "http://localhost:5000/api",
+  // apiBaseUrl: "https://messaging-a1v0.onrender.com/api",
+  apiBaseUrl: "http://localhost:5000/api",
   socketUrl: "https://messaging-a1v0.onrender.com/api",
 
   // Authorization

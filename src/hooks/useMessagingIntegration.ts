@@ -1,3 +1,4 @@
+"use client";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "@/lib/context/auth";
 import useAuthStore from "@/lib/store/messaging/authStore";
@@ -43,7 +44,7 @@ export const useMessagingIntegration = () => {
           // Call the hook-based API for external token authentication
           const authResponse =
             await authApi.authenticateWithExternalToken(tokenValue);
-
+          console.log("Auth response:", authResponse);
           // Initialize messaging with the response
           if (authResponse && authResponse.token) {
             // Store the messaging token
@@ -93,13 +94,7 @@ export const useMessagingIntegration = () => {
     };
 
     initializeMessaging();
-  }, [
-    authContext.isAuthenticated,
-    authContext.token,
-    isMessagingAuthenticated,
-    initialize,
-    authApi,
-  ]);
+  }, []);
 
   return {
     isMessagingInitialized: isInitialized,

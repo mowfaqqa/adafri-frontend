@@ -81,7 +81,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-gray-400 text-sm">CHANNELS</h2>
+        <h2 className="text-gray-500 font-semibold text-sm">CHANNELS</h2>
         <button
           onClick={handleCreateChannel}
           className="text-gray-400 hover:text-gray-600 cursor-pointer p-1 rounded-md hover:bg-gray-100"

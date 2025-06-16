@@ -1,7 +1,7 @@
 import { useEmailStore } from "@/lib/store/email-store";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Filter, RefreshCw, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Email, EmailCategory } from "@/lib/types/email";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getAuthToken, getCookie } from "@/lib/utils/cookies";
@@ -14,6 +14,9 @@ import {
   DialogTitle,
   DialogClose
 } from "@/components/ui/dialog";
+import { AuthContext } from "@/lib/context/auth";
+import { useCombinedAuth } from "../providers/useCombinedAuth";
+
 
 interface EmailSpamProps {
   onBack?: () => void;
@@ -43,8 +46,12 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
     
     try {
       // Get token from cookies
-      const token = getAuthToken();
-      console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
+      // const token = getAuthToken();
+      const { token, user } = useContext(AuthContext);
+      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+      const { djombi } = useCombinedAuth()
+      const djombiTokens = djombi.token || ""
       
       if (!token) {
         throw new Error('No access token available');
@@ -65,7 +72,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
       const response = await axios.get(apiEndpoint, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${djombiTokens}`
         }
       });
       

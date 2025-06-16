@@ -181,7 +181,8 @@ const MessageList: React.FC = () => {
   // If no workspace, channel or DM is selected
   if (!selectedWorkspaceId || (!selectedChannelId && !selectedDirectMessageId)) {
     return (
-      <div className="flex-1 flex flex-col border border-gray-200 rounded-r-xl">
+      // <div className="flex-1 flex flex-col border border-gray-200 rounded-r-xl">
+      <div className="flex-1 flex flex-col">
         <div className="flex h-full items-center justify-center">
           <div className="text-center">
             {currentWorkspace ? (

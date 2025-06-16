@@ -8,12 +8,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useEmailStore } from "@/lib/store/email-store";
 import { sendEmail } from "@/app/dashboard/api/emailSend";
 import { saveDraft } from "@/app/dashboard/api/draftEmail";
 import { Email, EmailData, EmailSendData, EmailSegment } from '@/lib/types/email';
 import { getCookie, getUserInfo, getAuthToken } from "@/lib/utils/cookies";
+import { AuthContext } from "@/lib/context/auth";
+import { useCombinedAuth } from "../providers/useCombinedAuth";
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -59,6 +61,9 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
 
   const [accessToken, setAccessToken] = useState('');
   const [linkedEmailId, setLinkedEmailId] = useState<string | null>(null);
+
+  const { djombi } = useCombinedAuth()
+  const djombiTokens = djombi.token || ""
 
   // Combined useEffect for initialization
   useEffect(() => {
@@ -198,7 +203,8 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
 
   // Function for Send Email
   const handleSend = async () => {
-    const accessToken = getAuthToken();
+    // const accessToken = getAuthToken();
+    const { token, user } = useContext(AuthContext);
     console.log("handleSend function called");
 
     // Get the linked email ID from cookies
@@ -281,13 +287,14 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       if (editMode && email.id) {
         try {
           console.log("Edit mode: deleting existing draft before sending", email.id);
-          const token = getAuthToken();
+          // const token = getAuthToken();
+          const { token, user } = useContext(AuthContext);
           
           if (token && emailId) {
             await fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${email.id}?email_id=${encodeURIComponent(emailId)}`, {
               method: 'DELETE',
               headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${djombiTokens}`,
                 'Content-Type': 'application/json'
               }
             });

@@ -8,8 +8,6 @@ import { User } from '@awc/helpers/user';
 import { AuthContext } from '@/lib/context/auth';
 import { usePathname, useRouter } from 'next/navigation';
 
-
-
 const ACCESS_TOKEN_COOKIE = '__frsadfrusrtkn';
 const REFRESH_TOKEN_COOKIE = '__rfrsadfrusrtkn';
 

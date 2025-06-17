@@ -173,7 +173,7 @@ const Dashboard: React.FC = () => {
       "analytics": false,
       "facebook-ads": false,
       "linkedin-ads": false,
-      "crm": false,
+      "crm": true,
       "whatsapp-messaging": activeTab === "whatsapp",
       "chatgpt-assistant": activeTab === "chatgpt",
       "telegram-messaging": activeTab === "telegram"
@@ -276,7 +276,7 @@ const exampleData: Tab[] = [
         title: "Dashboard Overview",
         subtitle: "View all your stats",
         imageUrl: "/icons/dashboardnew.png",
-        link: "/dashboard/overview",
+        link: "/dashboard",
         isActive: true
       }
     ]
@@ -290,8 +290,8 @@ const exampleData: Tab[] = [
         title: "CRM",
         subtitle: "Boost Connections, Drive Sales!",
         imageUrl: "/icons/crm.png",
-        link: "/dashboard/intern-message",
-        isActive: false
+        link: "/dashboard/crm",
+        isActive: true
       },
       {
         id: "social-listening",

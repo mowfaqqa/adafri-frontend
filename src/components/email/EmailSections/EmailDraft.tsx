@@ -1,13 +1,15 @@
 import { useEmailStore } from "@/lib/store/email-store";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Filter, Trash2, Send, Archive, Edit, RefreshCw } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import { Email, EmailCategory } from "@/lib/types/email";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies"; // Import cookie functions
-import { ComposeModal } from "./ComposeModal"; // Import ComposeModal
 import axios from "axios";
+import { AuthContext } from "@/lib/context/auth";
+import { useCombinedAuth } from "../../providers/useCombinedAuth";
+import { ComposeModal } from "./ComposeModal";
 
 interface EmailDraftProps {
   onBack?: () => void;
@@ -25,6 +27,11 @@ const getLinkedEmailId = () => {
 
 export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   const { emails, updateDraft } = useEmailStore();
+  
+  // Move all hooks to the top level
+  const { token, user } = useContext(AuthContext);
+  const { djombi } = useCombinedAuth();
+  
   const [apiDraftEmails, setApiDraftEmails] = useState<Email[]>([]);
   const [filterDate, setFilterDate] = useState<string | null>(null);
   const [sortNewest, setSortNewest] = useState(true);
@@ -40,84 +47,6 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   // Add missing toggleSort function
   const toggleSort = () => {
     setSortNewest(!sortNewest);
-  };
-
-  const fetchDraftEmails = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Get token from cookies
-      const token = getAccessToken();
-      console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
-
-      if (!token) {
-        throw new Error('No access token available');
-      }
-
-      // Get linked email ID from cookies
-      const linkedEmailId = getLinkedEmailId();
-      console.log("Linked Email ID:", linkedEmailId);
-
-      if (!linkedEmailId) {
-        throw new Error('No linked email ID found');
-      }
-
-      // Use axios instead of fetch for GET request
-      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${encodeURIComponent(linkedEmailId)}`;
-      console.log("Fetching from API endpoint:", apiEndpoint);
-
-      try {
-        const response = await axios.get(apiEndpoint, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        console.log("GET response data:", response.data);
-        processResponseData(response.data);
-      } catch (getError) {
-        console.log("GET request failed:", getError);
-
-        // Alternative: Use POST if the API requires sending data in the body
-        const postEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts';
-        console.log("Trying POST request to:", postEndpoint);
-
-        try {
-          const postResponse = await axios.post(postEndpoint,
-            { email_id: linkedEmailId, content: "" }, // Adding empty content as POST requires it
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              }
-            }
-          );
-
-          console.log("POST response data:", postResponse.data);
-
-          // Check for success/error in POST response
-          if (postResponse.data.success === false) {
-            const errorMessage = postResponse.data.message || 'API request failed';
-            console.error("API POST error:", errorMessage);
-            throw new Error(`API POST error: ${errorMessage}`);
-          }
-
-          // Process the successful POST response
-          processResponseData(postResponse.data);
-        } catch (postError) {
-          console.error("POST request also failed:", postError);
-          throw postError;
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching draft emails:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch draft emails');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
   };
 
   // Helper function to process response data
@@ -159,9 +88,88 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
     setApiDraftEmails(formattedEmails);
   };
 
+  // Use useCallback to memoize the function and include dependencies
+  const fetchDraftEmails = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+      const djombiTokens = djombi.token || "";
+
+      if (!token) {
+        throw new Error('No access token available');
+      }
+
+      // Get linked email ID from cookies
+      const linkedEmailId = getLinkedEmailId();
+      console.log("Linked Email ID:", linkedEmailId);
+
+      if (!linkedEmailId) {
+        throw new Error('No linked email ID found');
+      }
+
+      // Use axios instead of fetch for GET request
+      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+      console.log("Fetching from API endpoint:", apiEndpoint);
+
+      try {
+        const response = await axios.get(apiEndpoint, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${djombiTokens}`
+          }
+        });
+
+        console.log("GET response data:", response.data);
+        processResponseData(response.data);
+      } catch (getError) {
+        console.log("GET request failed:", getError);
+
+        // Alternative: Use POST if the API requires sending data in the body
+        const postEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts';
+        console.log("Trying POST request to:", postEndpoint);
+
+        try {
+          const postResponse = await axios.post(postEndpoint,
+            { email_id: linkedEmailId, content: "" }, // Adding empty content as POST requires it
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token.access_token}`
+              }
+            }
+          );
+
+          console.log("POST response data:", postResponse.data);
+
+          // Check for success/error in POST response
+          if (postResponse.data.success === false) {
+            const errorMessage = postResponse.data.message || 'API request failed';
+            console.error("API POST error:", errorMessage);
+            throw new Error(`API POST error: ${errorMessage}`);
+          }
+
+          // Process the successful POST response
+          processResponseData(postResponse.data);
+        } catch (postError) {
+          console.error("POST request also failed:", postError);
+          throw postError;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching draft emails:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch draft emails');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [token, djombi.token]); // Add dependencies
+
   useEffect(() => {
     fetchDraftEmails();
-  }, []);
+  }, [fetchDraftEmails]); // Now fetchDraftEmails is included as dependency
 
   // Handle refresh button click
   const handleRefresh = () => {
@@ -198,12 +206,11 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
     }
   };
 
-  const deleteDrafts = async () => {
+  // Use useCallback for deleteDrafts to access hooks at component level
+  const deleteDrafts = useCallback(async () => {
     if (selectedEmails.length === 0) return;
 
     try {
-      const token = getAccessToken();
-
       if (!token) {
         throw new Error('No access token found');
       }
@@ -212,7 +219,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       const deletePromises = selectedEmails.map(id =>
         axios.delete(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${id}`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${token.access_token}`,
             'Content-Type': 'application/json'
           }
         }).catch(error => {
@@ -235,7 +242,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
             { draft_id: id },  // FIXED: Only send draft_id without email_id
             {
               headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${token.access_token}`,
                 'Content-Type': 'application/json'
               }
             }
@@ -265,7 +272,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       console.error('Error deleting drafts:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete drafts');
     }
-  };
+  }, [selectedEmails, token]);
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '';
@@ -285,10 +292,8 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   };
 
   // Update draft using axios instead of fetch
-  const updateDraftInApi = async (draftId: string, updatedData: any) => {
+  const updateDraftInApi = useCallback(async (draftId: string, updatedData: any) => {
     try {
-      const token = getAuthToken();
-
       if (!token) {
         throw new Error('No access token found');
       }
@@ -299,7 +304,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
         updatedData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${token.access_token}`,
             'Content-Type': 'application/json'
           }
         }
@@ -320,7 +325,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       console.error('Error updating draft:', err);
       throw err;
     }
-  };
+  }, [token]);
 
   // Handler to open ComposeModal with selected draft data
   const handleEditDraft = (email: Email) => {

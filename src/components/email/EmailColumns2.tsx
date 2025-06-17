@@ -1,17 +1,21 @@
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
 import { useEmailStore } from "@/lib/store/email-store";
-import { EmailCard } from "./EmailCard";
+import { EmailCard } from "./EmailSections/EmailInboxComponents/EmailCard";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Email, EmailSegment } from "@/lib/types/email";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies"; // Import the cookie utilities
 import { createEmailPreview, EmailContentRenderer } from "@/lib/utils/emails/email-content-utils";
-
+import { AuthContext } from "@/lib/context/auth";
 
 export const EmailColumns2 = () => {
   const { emails, moveEmail, customSegments, addSegment, addEmail } = useEmailStore();
+  
+  // Move all hooks to the top level
+  const { token, user } = useContext(AuthContext);
+  
   const [showNewSegmentInput, setShowNewSegmentInput] = useState(false);
   const [newSegmentName, setNewSegmentName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -53,176 +57,175 @@ export const EmailColumns2 = () => {
     };
   };
 
-  // Fetch inbox emails from the API
-  useEffect(() => {
-    const fetchInboxEmails = async () => {
-      setIsLoading(true);
-      setError(null);
+  // Helper function to process response data
+  const processResponseData = useCallback((data: any) => {
+    // Check if data contains emails (handle different response structures)
+    let emailsData: any[] = [];
 
-      try {
-        // Get token from cookies using the utility function
-        const token = getAuthToken();
-        console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
-
-        if (!token) {
-          throw new Error('No access token available');
+    if (Array.isArray(data)) {
+      emailsData = data;
+    } else if (data.data && Array.isArray(data.data)) {
+      emailsData = data.data;
+    } else if (data.emails && Array.isArray(data.emails)) {
+      emailsData = data.emails;
+    } else if (data.inbox && Array.isArray(data.inbox)) {
+      emailsData = data.inbox;
+    } else {
+      console.log("Response structure different than expected:", data);
+      // Look for any array in the response that might contain emails
+      for (const key in data) {
+        if (Array.isArray(data[key]) && data[key].length > 0) {
+          console.log(`Found array in response at key: ${key}`, data[key]);
+          emailsData = data[key];
+          break;
         }
+      }
+    }
 
-        // Get linked email ID from cookies or localStorage as fallback
-        const linkedEmailId = getCookie('linkedEmailId') || 
-                              (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
-        console.log("Linked Email ID:", linkedEmailId);
+    if (emailsData.length > 0) {
+      console.log("Sample email data structure:", emailsData[0]);
+    }
 
-        if (!linkedEmailId) {
-          throw new Error('No linked email ID found');
+    // Format emails and ensure they have proper structure
+    const formattedEmails: Email[] = emailsData.map((email: any) => {
+      // Parse and format the email content
+      const formattedContent = formatEmailContent(email.content || '');
+      
+      return {
+        id: email.id || email._id || `inbox-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        subject: email.subject || 'No Subject',
+        content: formattedContent.content,
+        contentType: formattedContent.contentType as 'text' | 'html',
+        from: email.from || email.sender || 'Unknown Sender',
+        to: email.to || email.recipient || '',
+        timestamp: email.date || email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+        status: email.type || "inbox" as EmailSegment,
+        isUrgent: email.isUrgent || email.is_urgent || false,
+        hasAttachment: email.hasAttachment || email.has_attachment || false,
+        category: email.category || email.type || "inbox",
+        isRead: email.isRead || email.is_read || false,
+        email_id: email.email_id || null
+      };
+    });
+
+    // Add emails to store
+    formattedEmails.forEach((email: Email) => {
+      addEmail(email);
+    });
+    
+    setApiInboxEmails(formattedEmails);
+  }, [addEmail]);
+
+  // Fetch inbox emails from the API - use useCallback to access hooks at component level
+  const fetchInboxEmails = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+      if (!token) {
+        throw new Error('No access token available');
+      }
+
+      // Get linked email ID from cookies or localStorage as fallback - same approach as ProfessionalEmailInbox
+      const linkedEmailId = getCookie('linkedEmailId') || 
+                            (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+      console.log("Linked Email ID:", linkedEmailId);
+
+      if (!linkedEmailId) {
+        throw new Error('No linked email ID found');
+      }
+
+      // Rest of your code remains the same...
+      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}`;
+      console.log("Fetching from API endpoint:", apiEndpoint);
+
+      const response = await fetch(apiEndpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token.access_token}`
         }
+      });
 
-        // Rest of your code remains the same...
-        const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}`;
-        console.log("Fetching from API endpoint:", apiEndpoint);
+      // If the GET request fails, try with POST instead
+      if (!response.ok) {
+        console.log("GET request failed with status:", response.status);
 
-        const response = await fetch(apiEndpoint, {
-          method: 'GET',
+        // Alternative: Use POST if the API requires sending data in the body
+        const postEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox';
+        console.log("Trying POST request to:", postEndpoint);
+
+        const postResponse = await fetch(postEndpoint, {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+            'Authorization': `Bearer ${token.access_token}`
+          },
+          body: JSON.stringify({ 
+            email_id: linkedEmailId
+          })
         });
 
-        // If the GET request fails, try with POST instead
-        if (!response.ok) {
-          console.log("GET request failed with status:", response.status);
+        // Process the POST response
+        const postResponseText = await postResponse.text();
+        console.log("POST raw response:", postResponseText);
 
-          // Alternative: Use POST if the API requires sending data in the body
-          const postEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox';
-          console.log("Trying POST request to:", postEndpoint);
-
-          const postResponse = await fetch(postEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ 
-              email_id: linkedEmailId
-            })
-          });
-
-          // Process the POST response
-          const postResponseText = await postResponse.text();
-          console.log("POST raw response:", postResponseText);
-
-          let postData;
-          try {
-            postData = JSON.parse(postResponseText);
-            console.log("POST parsed response data:", postData);
-          } catch (e) {
-            console.error("Failed to parse POST response as JSON:", e);
-            throw new Error(`Invalid POST response format: ${postResponseText.substring(0, 100)}...`);
-          }
-
-          // Check for success/error in POST response
-          if (!postResponse.ok || postData.success === false) {
-            const errorMessage = postData.message || postResponse.statusText;
-            console.error("API POST error:", errorMessage);
-            throw new Error(`API POST error: ${errorMessage}`);
-          }
-
-          // Process the successful POST response
-          processResponseData(postData);
-          return;
-        }
-
-        // Process the successful GET response
-        const responseText = await response.text();
-        console.log("Raw response:", responseText);
-
-        let data;
+        let postData;
         try {
-          data = JSON.parse(responseText);
-          console.log("Parsed response data:", data);
+          postData = JSON.parse(postResponseText);
+          console.log("POST parsed response data:", postData);
         } catch (e) {
-          console.error("Failed to parse response as JSON:", e);
-          throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
+          console.error("Failed to parse POST response as JSON:", e);
+          throw new Error(`Invalid POST response format: ${postResponseText.substring(0, 100)}...`);
         }
 
-        // Check for success/error in response
-        if (data.success === false) {
-          const errorMessage = data.message || response.statusText;
-          console.error("API error:", errorMessage);
-          throw new Error(`API error: ${errorMessage}`);
+        // Check for success/error in POST response
+        if (!postResponse.ok || postData.success === false) {
+          const errorMessage = postData.message || postResponse.statusText;
+          console.error("API POST error:", errorMessage);
+          throw new Error(`API POST error: ${errorMessage}`);
         }
 
-        processResponseData(data);
-      } catch (err) {
-        console.error('Error fetching inbox emails:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch inbox emails');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Helper function to process response data
-    const processResponseData = (data: any) => {
-      // Check if data contains emails (handle different response structures)
-      let emailsData: any[] = [];
-
-      if (Array.isArray(data)) {
-        emailsData = data;
-      } else if (data.data && Array.isArray(data.data)) {
-        emailsData = data.data;
-      } else if (data.emails && Array.isArray(data.emails)) {
-        emailsData = data.emails;
-      } else if (data.inbox && Array.isArray(data.inbox)) {
-        emailsData = data.inbox;
-      } else {
-        console.log("Response structure different than expected:", data);
-        // Look for any array in the response that might contain emails
-        for (const key in data) {
-          if (Array.isArray(data[key]) && data[key].length > 0) {
-            console.log(`Found array in response at key: ${key}`, data[key]);
-            emailsData = data[key];
-            break;
-          }
-        }
+        // Process the successful POST response
+        processResponseData(postData);
+        return;
       }
 
-      if (emailsData.length > 0) {
-        console.log("Sample email data structure:", emailsData[0]);
+      // Process the successful GET response
+      const responseText = await response.text();
+      console.log("Raw response:", responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log("Parsed response data:", data);
+      } catch (e) {
+        console.error("Failed to parse response as JSON:", e);
+        throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
       }
 
-      // Format emails and ensure they have proper structure
-      const formattedEmails: Email[] = emailsData.map((email: any) => {
-        // Parse and format the email content
-        const formattedContent = formatEmailContent(email.content || '');
-        
-        return {
-          id: email.id || email._id || `inbox-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          subject: email.subject || 'No Subject',
-          content: formattedContent.content,
-          contentType: formattedContent.contentType as 'text' | 'html',
-          from: email.from || email.sender || 'Unknown Sender',
-          to: email.to || email.recipient || '',
-          timestamp: email.date || email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
-          status: email.type || "inbox" as EmailSegment,
-          isUrgent: email.isUrgent || email.is_urgent || false,
-          hasAttachment: email.hasAttachment || email.has_attachment || false,
-          category: email.category || email.type || "inbox",
-          isRead: email.isRead || email.is_read || false,
-          email_id: email.email_id || null
-        };
-      });
+      // Check for success/error in response
+      if (data.success === false) {
+        const errorMessage = data.message || response.statusText;
+        console.error("API error:", errorMessage);
+        throw new Error(`API error: ${errorMessage}`);
+      }
 
-      // Add emails to store
-      formattedEmails.forEach((email: Email) => {
-        addEmail(email);
-      });
-      
-      setApiInboxEmails(formattedEmails);
-    };
+      processResponseData(data);
+    } catch (err) {
+      console.error('Error fetching inbox emails:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch inbox emails');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, processResponseData]);
 
+  // Fetch inbox emails on component mount
+  useEffect(() => {
     fetchInboxEmails();
-  }, [addEmail]);
+  }, [fetchInboxEmails]);
 
   // Rest of your component remains the same...
   const inboxEmails = emails.filter((email) => email.status === "inbox");

@@ -8,14 +8,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useCallback } from "react";
 import { useEmailStore } from "@/lib/store/email-store";
 import { sendEmail } from "@/app/dashboard/api/emailSend";
 import { saveDraft } from "@/app/dashboard/api/draftEmail";
 import { Email, EmailData, EmailSendData, EmailSegment } from '@/lib/types/email';
 import { getCookie, getUserInfo, getAuthToken } from "@/lib/utils/cookies";
 import { AuthContext } from "@/lib/context/auth";
-import { useCombinedAuth } from "../providers/useCombinedAuth";
+import { useCombinedAuth } from "../../providers/useCombinedAuth";
 
 interface ComposeModalProps {
   isOpen: boolean;
@@ -30,6 +30,11 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
   // Get addEmail and updateDraft from the store
   const addEmail = useEmailStore((state) => state.addEmail);
   const updateDraft = useEmailStore((state) => state.updateDraft);
+
+  // Move all hooks to the top level
+  const { token, user } = useContext(AuthContext);
+  const { djombi } = useCombinedAuth();
+  const djombiTokens = djombi.token || "";
 
   const [emails, setEmails] = useState<Email[]>([]);
   const [userEmail, setUserEmail] = useState('');
@@ -62,9 +67,6 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
   const [accessToken, setAccessToken] = useState('');
   const [linkedEmailId, setLinkedEmailId] = useState<string | null>(null);
 
-  const { djombi } = useCombinedAuth()
-  const djombiTokens = djombi.token || ""
-
   // Combined useEffect for initialization
   useEffect(() => {
     // Get access token from cookies
@@ -76,8 +78,9 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       console.error("No access token found in cookies");
     }
 
-    // Check if email ID is already stored in cookies
-    const emailId = getCookie('linkedEmailId');
+    // Check if email ID is already stored in cookies - use same approach as ProfessionalEmailInbox
+    const emailId = getCookie('linkedEmailId') ||
+      (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
     if (emailId) {
       setLinkedEmailId(emailId);
       console.log('Currently linked email ID:', emailId);
@@ -201,14 +204,13 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
     return emailRegex.test(email.trim());
   };
 
-  // Function for Send Email
-  const handleSend = async () => {
-    // const accessToken = getAuthToken();
-    const { token, user } = useContext(AuthContext);
+  // Function for Send Email - use useCallback to access hooks at component level
+  const handleSend = useCallback(async () => {
     console.log("handleSend function called");
 
-    // Get the linked email ID from cookies
-    const emailId = getCookie('linkedEmailId');
+    // Get the linked email ID from cookies - use same approach as ProfessionalEmailInbox
+    const emailId = getCookie('linkedEmailId') ||
+      (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
     console.log("Linked email ID from cookies:", emailId);
 
     // More comprehensive validation
@@ -287,8 +289,6 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       if (editMode && email.id) {
         try {
           console.log("Edit mode: deleting existing draft before sending", email.id);
-          // const token = getAuthToken();
-          const { token, user } = useContext(AuthContext);
           
           if (token && emailId) {
             await fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${email.id}?email_id=${encodeURIComponent(emailId)}`, {
@@ -395,9 +395,9 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       setLoading(false);
       console.log("handleSend process completed");
     }
-  };
+  }, [token, djombiTokens, email, editMode, showCc, showBcc, userEmail, addEmail, updateDraft, onClose]);
 
-  const handleSendLater = async () => {
+  const handleSendLater = useCallback(async () => {
     if (!email.to.trim() && !email.subject.trim() && !email.content.trim()) {
       return; // Don't save empty drafts
     }
@@ -405,8 +405,9 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
     setLoading(true);
     setError("");
   
-    // Get email_id from cookies
-    const emailId = getCookie('linkedEmailId') || "";
+    // Get email_id from cookies - use same approach as ProfessionalEmailInbox
+    const emailId = getCookie('linkedEmailId') ||
+      (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
     if (!emailId) {
       // If no linkedEmailId found, we can't save the draft to the server
       console.log("No linked email ID found in cookies");
@@ -423,7 +424,7 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       bcc: bccArray,
       subject: email.subject.trim() || "",
       content: email.content.trim() || "",
-      email_id: emailId,
+      email_id: emailId || "",
       signature: null // Keep signature as null as requested
     };
   
@@ -472,7 +473,7 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
       onClose();
       setLoading(false);
     }
-  };
+  }, [email, showCc, showBcc, userEmail, addEmail, updateDraft, onClose]);
   
   // Update dialog title based on mode
   const dialogTitle = editMode ? "Edit Draft" : "Compose Email";
@@ -565,7 +566,6 @@ export const ComposeModal = ({ isOpen, onClose, editMode = false, draftEmail = n
     </Dialog>
   );
 };
-
 
 
 

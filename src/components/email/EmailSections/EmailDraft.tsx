@@ -1,15 +1,15 @@
 import { useEmailStore } from "@/lib/store/email-store";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Filter, Trash2, Send, Archive, Edit, RefreshCw } from "lucide-react";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import { Email, EmailCategory } from "@/lib/types/email";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies"; // Import cookie functions
-import { ComposeModal } from "./ComposeModal"; // Import ComposeModal
 import axios from "axios";
 import { AuthContext } from "@/lib/context/auth";
-import { useCombinedAuth } from "../providers/useCombinedAuth";
+import { useCombinedAuth } from "../../providers/useCombinedAuth";
+import { ComposeModal } from "./ComposeModal";
 
 interface EmailDraftProps {
   onBack?: () => void;
@@ -27,6 +27,11 @@ const getLinkedEmailId = () => {
 
 export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   const { emails, updateDraft } = useEmailStore();
+  
+  // Move all hooks to the top level
+  const { token, user } = useContext(AuthContext);
+  const { djombi } = useCombinedAuth();
+  
   const [apiDraftEmails, setApiDraftEmails] = useState<Email[]>([]);
   const [filterDate, setFilterDate] = useState<string | null>(null);
   const [sortNewest, setSortNewest] = useState(true);
@@ -44,18 +49,54 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
     setSortNewest(!sortNewest);
   };
 
-  const fetchDraftEmails = async () => {
+  // Helper function to process response data
+  const processResponseData = (data: any) => {
+    // Check if data contains emails (handle different response structures)
+    let emailsData: any[] = [];
+
+    if (Array.isArray(data)) {
+      emailsData = data;
+    } else if (data.data && Array.isArray(data.data)) {
+      emailsData = data.data;
+    } else if (data.drafts && Array.isArray(data.drafts)) {
+      emailsData = data.drafts;
+    } else {
+      console.log("Response structure different than expected:", data);
+      // Look for any array in the response that might contain emails
+      for (const key in data) {
+        if (Array.isArray(data[key]) && data[key].length > 0) {
+          console.log(`Found array in response at key: ${key}`, data[key]);
+          emailsData = data[key];
+          break;
+        }
+      }
+    }
+
+    if (emailsData.length > 0) {
+      console.log("Sample email data structure:", emailsData[0]);
+    }
+
+    // Format emails and ensure they have proper structure
+    const formattedEmails = emailsData.map((email: any) => ({
+      ...email,
+      id: email.id || email._id || `draft-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      content: email.content || '',
+      createdAt: email.createdAt || email.created_at || Date.now(),
+      status: "draft"
+    }));
+
+    setApiDraftEmails(formattedEmails);
+  };
+
+  // Use useCallback to memoize the function and include dependencies
+  const fetchDraftEmails = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Get token from cookies
-      // const token = getAccessToken();
-      const { token, user } = useContext(AuthContext);
       console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
 
-      const { djombi } = useCombinedAuth()
-      const djombiTokens = djombi.token || ""
+      const djombiTokens = djombi.token || "";
 
       if (!token) {
         throw new Error('No access token available');
@@ -70,7 +111,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       }
 
       // Use axios instead of fetch for GET request
-      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${encodeURIComponent(linkedEmailId)}`;
+      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
       console.log("Fetching from API endpoint:", apiEndpoint);
 
       try {
@@ -124,50 +165,11 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
-
-  // Helper function to process response data
-  const processResponseData = (data: any) => {
-    // Check if data contains emails (handle different response structures)
-    let emailsData: any[] = [];
-
-    if (Array.isArray(data)) {
-      emailsData = data;
-    } else if (data.data && Array.isArray(data.data)) {
-      emailsData = data.data;
-    } else if (data.drafts && Array.isArray(data.drafts)) {
-      emailsData = data.drafts;
-    } else {
-      console.log("Response structure different than expected:", data);
-      // Look for any array in the response that might contain emails
-      for (const key in data) {
-        if (Array.isArray(data[key]) && data[key].length > 0) {
-          console.log(`Found array in response at key: ${key}`, data[key]);
-          emailsData = data[key];
-          break;
-        }
-      }
-    }
-
-    if (emailsData.length > 0) {
-      console.log("Sample email data structure:", emailsData[0]);
-    }
-
-    // Format emails and ensure they have proper structure
-    const formattedEmails = emailsData.map((email: any) => ({
-      ...email,
-      id: email.id || email._id || `draft-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      content: email.content || '',
-      createdAt: email.createdAt || email.created_at || Date.now(),
-      status: "draft"
-    }));
-
-    setApiDraftEmails(formattedEmails);
-  };
+  }, [token, djombi.token]); // Add dependencies
 
   useEffect(() => {
     fetchDraftEmails();
-  }, []);
+  }, [fetchDraftEmails]); // Now fetchDraftEmails is included as dependency
 
   // Handle refresh button click
   const handleRefresh = () => {
@@ -204,12 +206,11 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
     }
   };
 
-  const deleteDrafts = async () => {
+  // Use useCallback for deleteDrafts to access hooks at component level
+  const deleteDrafts = useCallback(async () => {
     if (selectedEmails.length === 0) return;
 
     try {
-      // const token = getAccessToken();
-      const { token, user } = useContext(AuthContext);
       if (!token) {
         throw new Error('No access token found');
       }
@@ -271,7 +272,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       console.error('Error deleting drafts:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete drafts');
     }
-  };
+  }, [selectedEmails, token]);
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '';
@@ -291,10 +292,8 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   };
 
   // Update draft using axios instead of fetch
-  const updateDraftInApi = async (draftId: string, updatedData: any) => {
+  const updateDraftInApi = useCallback(async (draftId: string, updatedData: any) => {
     try {
-      // const token = getAuthToken();
-      const { token, user } = useContext(AuthContext);
       if (!token) {
         throw new Error('No access token found');
       }
@@ -326,7 +325,7 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
       console.error('Error updating draft:', err);
       throw err;
     }
-  };
+  }, [token]);
 
   // Handler to open ComposeModal with selected draft data
   const handleEditDraft = (email: Email) => {

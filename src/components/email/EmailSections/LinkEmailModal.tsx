@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Mail } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuthContext } from "@/lib/context/auth";
-import { useCombinedAuth } from "../providers/useCombinedAuth";
+import { useCombinedAuth } from "../../providers/useCombinedAuth";
 
 // Explicitly define allowed providers
 const ALLOWED_PROVIDERS = [
@@ -69,7 +69,6 @@ export function LinkEmailModal() {
     const { token, user } = useContext(AuthContext);
     const {djombi} = useCombinedAuth()
     const djombiTokens = djombi.token || ""
-    console.log(djombiTokens);
     
     
     const [isOpen, setIsOpen] = useState(false);
@@ -131,10 +130,10 @@ export function LinkEmailModal() {
                 return;
             }
 
-            const response = await fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails', {
+            const response = await fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails?offset=1&limit=20', {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${accessToken}`,
+                    'Authorization': `Bearer ${djombiTokens}`,
                     'Content-Type': 'application/json'
                 }
             });

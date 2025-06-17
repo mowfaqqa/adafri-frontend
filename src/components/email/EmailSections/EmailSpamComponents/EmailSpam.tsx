@@ -1,12 +1,9 @@
-import { useEmailStore } from "@/lib/store/email-store";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Filter, RefreshCw, X } from "lucide-react";
-import { useState, useEffect, useContext } from "react";
-import { Email, EmailCategory } from "@/lib/types/email";
+import { useState, useEffect } from "react";
+import { Email } from "@/lib/types/email";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getAuthToken, getCookie } from "@/lib/utils/cookies";
 import { createEmailPreview, EmailContentRenderer } from "@/lib/utils/emails/email-content-utils";
-import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -14,187 +11,36 @@ import {
   DialogTitle,
   DialogClose
 } from "@/components/ui/dialog";
-import { AuthContext } from "@/lib/context/auth";
-import { useCombinedAuth } from "../providers/useCombinedAuth";
-
+import { useEmailSpam } from "./useEmailSpam";
 
 interface EmailSpamProps {
   onBack?: () => void;
 }
 
 export const EmailSpam = ({ onBack }: EmailSpamProps) => {
-  const { emails, addEmail } = useEmailStore();
-  const [apiSpamEmails, setApiSpamEmails] = useState<Email[]>([]);
+  // Use the custom hook for all spam email logic
+  const {
+    uniqueSpamEmails,
+    isLoading,
+    error,
+    isRefreshing,
+    handleRefresh,
+    handleMoveToInbox
+  } = useEmailSpam();
+
+  // Local UI state
   const [filterDate, setFilterDate] = useState<string | null>(null);
   const [sortNewest, setSortNewest] = useState(true);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [showDialog, setShowDialog] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Handle client-side mounting
   useEffect(() => {
     setMounted(true);
   }, []);
-  
-  const fetchSpamEmails = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Get token from cookies
-      // const token = getAuthToken();
-      const { token, user } = useContext(AuthContext);
-      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
 
-      const { djombi } = useCombinedAuth()
-      const djombiTokens = djombi.token || ""
-      
-      if (!token) {
-        throw new Error('No access token available');
-      }
-      
-      // Get linked email ID from cookies
-      const linkedEmailId = getCookie('linkedEmailId');
-      console.log("Linked Email ID:", linkedEmailId);
-      
-      if (!linkedEmailId) {
-        throw new Error('No linked email ID found');
-      }
-      
-      // Use axios instead of fetch
-      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/spam?email_id=${encodeURIComponent(linkedEmailId)}`;
-      console.log("Fetching from API endpoint:", apiEndpoint);
-      
-      const response = await axios.get(apiEndpoint, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${djombiTokens}`
-        }
-      });
-      
-      console.log("GET response data:", response.data);
-      
-      // Check for success/error in response
-      if (response.data.success === false) {
-        const errorMessage = response.data.message || 'API request failed';
-        console.error("API error:", errorMessage);
-        throw new Error(`API error: ${errorMessage}`);
-      }
-      
-      processResponseData(response.data);
-    } catch (err) {
-      console.error('Failed to fetch spam emails:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch spam emails');
-      
-      // Fallback to local data if API fails
-      const localSpamEmails = emails.filter(email => email.category === "spam");
-      if (localSpamEmails.length > 0) {
-        console.log("Using local spam emails as fallback");
-        setApiSpamEmails([]);
-      }
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-  
-  // Helper function to process response data
-  const processResponseData = (data: any) => {
-    // Check if data contains emails (handle different response structures)
-    let emailsData: any[] = [];
-    
-    if (Array.isArray(data)) {
-      emailsData = data;
-    } else if (data.data && Array.isArray(data.data)) {
-      emailsData = data.data;
-    } else if (data.spam && Array.isArray(data.spam)) {
-      emailsData = data.spam;
-    } else if (data.emails && Array.isArray(data.emails)) {
-      emailsData = data.emails;
-    } else {
-      console.log("Response structure different than expected:", data);
-      // Look for any array in the response that might contain emails
-      for (const key in data) {
-        if (Array.isArray(data[key]) && data[key].length > 0) {
-          console.log(`Found array in response at key: ${key}`, data[key]);
-          emailsData = data[key];
-          break;
-        }
-      }
-    }
-    
-    if (emailsData.length === 0) {
-      console.log("No spam emails found in the response");
-      setApiSpamEmails([]);
-      return;
-    }
-    
-    console.log("Sample email data structure:", emailsData[0]);
-    
-    // First, filter out invalid emails, then map them to the correct structure
-    const validEmailsData = emailsData.filter(email => email && typeof email === 'object');
-    
-    // Now map the valid emails to the correct structure
-    const formattedEmails: Email[] = validEmailsData.map((email: any): Email => {
-      return {
-        id: email.id || email._id || `spam-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        subject: email.subject || 'No Subject',
-        content: email.content || '',
-        contentType: email.contentType || 'text',
-        from: email.from || email.sender || 'Unknown Sender',
-        to: email.to || email.recipient || '',
-        timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
-        status: "read",
-        isUrgent: Boolean(email.isUrgent || email.is_urgent || false),
-        hasAttachment: Boolean(email.hasAttachment || email.has_attachment || false),
-        category: "spam",
-        isRead: true,
-        email_id: email.email_id || null
-      };
-    });
-    
-    console.log(`Processed ${formattedEmails.length} spam emails`);
-    
-    // Add to email store first
-    formattedEmails.forEach(email => {
-      // Check if email already exists in store to prevent duplicates
-      const exists = emails.some(e => e.id === email.id);
-      if (!exists) {
-        addEmail({
-          ...email,
-        //   category: "spam",
-        });
-      }
-    });
-    
-    setApiSpamEmails(formattedEmails);
-  };
-  
-  useEffect(() => {
-    fetchSpamEmails();
-  }, [emails, addEmail]);
-  
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchSpamEmails();
-  };
-  
-  // Combine spam emails from store and API
-  const allSpamEmails = [
-    ...emails.filter(email => email.category === "spam"),
-    ...apiSpamEmails
-  ];
-  
-  // Remove duplicates by id
-  const uniqueSpamEmails = allSpamEmails.filter(
-    (email, index, self) => 
-      index === self.findIndex(e => e.id === email.id)
-  );
-  
   // Sort by date
   const sortedEmails = [...uniqueSpamEmails].sort((a, b) => {
     const dateA = new Date(a.timestamp || "").getTime();
@@ -231,11 +77,15 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
     setShowDialog(true);
   };
 
-  // Handle moving email from spam to inbox
-  const handleMoveToInbox = (emailId: string) => {
-    // Implementation would depend on your email store and API structure
-    console.log(`Move email ${emailId} to inbox`);
-    // You would typically make an API call here and update your local store
+  // Handle moving email from spam to inbox with error handling
+  const handleMoveToInboxWithFeedback = async (emailId: string) => {
+    try {
+      await handleMoveToInbox(emailId);
+      // Success feedback could be added here (toast notification, etc.)
+    } catch (error) {
+      console.error('Failed to move email to inbox:', error);
+      // Error feedback could be added here (toast notification, etc.)
+    }
   };
 
   return (
@@ -375,7 +225,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
                   variant="outline"
                   onClick={() => {
                     if (selectedEmail?.id) {
-                      handleMoveToInbox(selectedEmail.id);
+                      handleMoveToInboxWithFeedback(selectedEmail.id);
                       setShowDialog(false);
                     }
                   }}

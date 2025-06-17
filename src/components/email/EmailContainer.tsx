@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { EmailSent } from "./EmailSent";
-import { EmailDraft } from "./EmailDraft";
-import { EmailSpam } from "./EmailSpam";
+import { EmailSent } from "./EmailSections/EmailSent";
+import { EmailDraft } from "./EmailSections/EmailDraft";
+import { EmailSpam } from "./EmailSections/EmailSpamComponents/EmailSpam";
 // import { EmailAgenda } from "./EmailAgenda";
 import { EmailCategory } from "@/lib/types/email";
 import { EmailColumns2 } from "./EmailColumns2";

@@ -183,7 +183,7 @@ const MessageList: React.FC = () => {
     return (
       // <div className="flex-1 flex flex-col border border-gray-200 rounded-r-xl">
       <div className="flex-1 flex flex-col">
-        <div className="flex h-full items-center justify-center">
+        <div className="flex min-h-[70vh] items-center justify-center">
           <div className="text-center">
             {currentWorkspace ? (
               <>

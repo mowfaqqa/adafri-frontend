@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner";
 import { EmailCard } from "./EmailCard";
 import { Email, EmailColumn as EmailColumnType, EmailCompose } from "@/lib/types/email2";
-import { ComposeModal } from "../ComposeModal";
+import { ComposeModal } from "../AddEmailComponents/ComposeModal";
 
 interface EmailColumnProps {
     column: EmailColumnType;

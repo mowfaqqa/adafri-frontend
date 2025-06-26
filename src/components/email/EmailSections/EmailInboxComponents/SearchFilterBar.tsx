@@ -37,13 +37,13 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
 
   return (
     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-2">
-      <div className="flex-grow">
+      <div className="flex-shrink-0">
         <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-800 to-gray-600 mb-2">
           Email Inbox
         </h1>
       </div>
       
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 w-full sm:w-auto sm:justify-start">
         {/* Email Account Type Toggle */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

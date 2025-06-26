@@ -115,7 +115,7 @@ export const NoEmailState: React.FC<NoEmailStateProps> = ({
       
       {/* Optional action button */}
       <button className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105">
-        Connect Email
+        Connect Email First
       </button>
     </div>
   );

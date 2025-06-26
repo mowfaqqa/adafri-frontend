@@ -23,7 +23,6 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   // Move all hooks to the top level
   const { token } = useContext(AuthContext);
   const { djombi } = useCombinedAuth();
-  
   const [apiDraftEmails, setApiDraftEmails] = useState<Email[]>([]);
   const [filterDate, setFilterDate] = useState<string | null>(null);
   const [sortNewest, setSortNewest] = useState(true);

@@ -127,7 +127,7 @@ export function DealsView({ onReconfigure, contactsFromContactView = [] }: Deals
   }
 
   return (
-    <div className="p-4 sm:p-6 bg-white min-h-screen">
+    <div className="bg-white min-h-screen">
       {/* Mobile View - Stack cards vertically */}
       <div className="block md:hidden space-y-6">
         {stages.map((stage) => (

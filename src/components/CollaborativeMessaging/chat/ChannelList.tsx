@@ -97,16 +97,16 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
             key={channel.id}
             onClick={() => handleSelectChannel(channel.id)}
             className={`
-              flex justify-between items-center p-2 cursor-pointer rounded
+              flex justify-between items-center p-2 cursor-pointer rounded text-gray-600 group
               ${
                 selectedChannelId === channel.id
-                  ? "bg-emerald-200"
-                  : "hover:bg-gray-100"
+                  ? "bg-blue-500 text-white"
+                  : "hover:bg-blue-600 hover:text-white"
               }
             `}
           >
             <div className="flex items-center space-x-2 truncate">
-              <Hash size={18} className="text-gray-500 shrink-0" />
+              <Hash size={18} className="text-white group-hover:text-white shrink-0" />
               <span className="truncate">{channel.name}</span>
             </div>
 
@@ -133,7 +133,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
                   flex justify-between items-center p-2 cursor-pointer rounded
                   ${
                     selectedChannelId === channel.id
-                      ? "bg-emerald-200"
+                      ? "bg-blue-500 text-white"
                       : "hover:bg-gray-100"
                   }
                 `}

@@ -163,7 +163,7 @@ export const EmailSection: React.FC<EmailSectionProps> = ({ className }) => {
   };
 
   return (
-    <div className={cn("bg-white rounded-lg border border-gray-200 p-4 flex flex-col", className)}>
+    <div className={cn("bg-white rounded-lg border border-gray-200 p-4 flex flex-col h-[43vh]", className)}>
       <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4 text-center">EMAILS</h3>
 
       {/* Tab buttons */}

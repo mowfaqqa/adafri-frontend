@@ -266,7 +266,7 @@ export function B2BContactView({ activityType, onContactsUpdate }: ContactViewPr
               {contact.phone && (
                 <div className="flex items-center space-x-2 text-xs text-gray-600">
                   <Phone className="w-3 h-3" />
-                  <span>{contact.phone}</span>
+                  {/* <span>{contact.phone}</span> */}
                 </div>
               )}
               {contact.website && (

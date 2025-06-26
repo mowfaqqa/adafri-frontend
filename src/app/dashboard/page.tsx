@@ -174,6 +174,7 @@ const Dashboard: React.FC = () => {
       "facebook-ads": false,
       "linkedin-ads": false,
       "crm": true,
+      "invoice": true,
       "whatsapp-messaging": activeTab === "whatsapp",
       "chatgpt-assistant": activeTab === "chatgpt",
       "telegram-messaging": activeTab === "telegram"
@@ -378,6 +379,14 @@ const exampleData: Tab[] = [
         imageUrl: "/icons/image-editor.png",
         link: "/dashboard/image-editor",
         isActive: false
+      },
+      {
+        id: "invoice",
+        title: "Invoice",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/invoice.png",
+        link: "/dashboard/invoices",
+        isActive: true
       },
     ],
   },

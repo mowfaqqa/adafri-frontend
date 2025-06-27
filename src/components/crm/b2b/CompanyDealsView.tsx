@@ -171,7 +171,7 @@ export function CompanyDealsView({
       .filter((segment, index, array) => array.indexOf(segment) === index);
     
     setCustomSegments(segments);
-  }, [contactsFromContactView, companiesFromCompanyView, viewType]);
+  }, [contactsFromContactView, companiesFromCompanyView, viewType, onCompaniesUpdate, onDealsUpdate]);
 
   // Define stages based on view type
   const getStages = (): Stage[] => {

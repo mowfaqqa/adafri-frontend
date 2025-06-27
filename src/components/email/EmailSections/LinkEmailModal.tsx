@@ -1,6 +1,5 @@
-
 "use client";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import {
     Dialog,
     DialogContent,
@@ -26,7 +25,6 @@ const ALLOWED_PROVIDERS = [
     "custom", 
     "googleWorkspace"
 ];
-
 
 interface DjombiTokens {
   accessTokenAdafri: string;
@@ -70,7 +68,6 @@ export function LinkEmailModal() {
     const {djombi} = useCombinedAuth()
     const djombiTokens = djombi.token || ""
     
-    
     const [isOpen, setIsOpen] = useState(false);
     const [emailCredentials, setEmailCredentials] = useState({
         email: "",
@@ -88,11 +85,6 @@ export function LinkEmailModal() {
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
     const [linkedEmail, setLinkedEmail] = useState<LinkedEmail | null>(null);
     const [fetchingLinkedEmail, setFetchingLinkedEmail] = useState(false);
-    
-    // Fetch linked email on component mount
-    useEffect(() => {
-        fetchLinkedEmail();
-    }, [token]); // Add token as dependency
 
     // Function to get access token from localStorage
     const getAccessToken = (): string | null => {
@@ -117,8 +109,8 @@ export function LinkEmailModal() {
         }
     };
 
-    // Function to fetch linked email
-    const fetchLinkedEmail = async () => {
+    // Function to fetch linked email - wrapped in useCallback
+    const fetchLinkedEmail = useCallback(async () => {
         try {
             setFetchingLinkedEmail(true);
             
@@ -160,7 +152,12 @@ export function LinkEmailModal() {
         } finally {
             setFetchingLinkedEmail(false);
         }
-    };
+    }, [token?.access_token, djombiTokens]); // Dependencies for useCallback
+    
+    // Fetch linked email on component mount
+    useEffect(() => {
+        fetchLinkedEmail();
+    }, [fetchLinkedEmail]); // Now properly includes fetchLinkedEmail
 
     // Detect provider from email address
     const detectProviderFromEmail = (email: string): string | null => {

@@ -36,7 +36,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ workspaceId }) => {
         fetchChannels(selectedWorkspaceId!);
       }
     }
-  }, [effectiveWorkspaceId, fetchChannels]);
+  }, [effectiveWorkspaceId, fetchChannels, selectedWorkspaceId]);
 
   // Handle channel creation
   const handleCreateChannel = () => {

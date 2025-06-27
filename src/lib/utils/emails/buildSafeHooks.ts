@@ -3,7 +3,7 @@
  * These functions handle SSR/SSG compatibility issues
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 /**
  * Safe localStorage access that works during SSR/build
@@ -153,6 +153,7 @@ export const safeFetch = async (
 
 /**
  * Hook that safely handles async operations during build
+ * Usage: const { data, loading, error } = useSafeAsync(useCallback(() => fetchData(), [dependency1, dependency2]));
  */
 export const useSafeAsync = <T>(
   asyncFn: () => Promise<T>,
@@ -167,6 +168,9 @@ export const useSafeAsync = <T>(
   const [error, setError] = useState<Error | null>(null);
   const isClient = useIsClient();
 
+  // Memoize the async function to prevent unnecessary re-renders
+  const memoizedAsyncFn = useCallback(asyncFn, deps);
+
   useEffect(() => {
     if (!isClient) return;
 
@@ -174,7 +178,7 @@ export const useSafeAsync = <T>(
     setLoading(true);
     setError(null);
 
-    asyncFn()
+    memoizedAsyncFn()
       .then((result) => {
         if (!cancelled) {
           setData(result);
@@ -194,7 +198,7 @@ export const useSafeAsync = <T>(
     return () => {
       cancelled = true;
     };
-  }, [isClient, ...deps]);
+  }, [isClient, memoizedAsyncFn]);
 
   return { data, loading, error };
 };

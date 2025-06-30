@@ -202,9 +202,9 @@ const ProjectMembersPanel: React.FC = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
-                    <span className="font-medium">{member?.userId}</span>
+                    <span className="font-medium">{member?.email || member?.userId}</span>
                     <span className="text-xs text-gray-500">
-                      {member?.userId}@example.com
+                      {member?.email}
                     </span>
                   </div>
                 </TableCell>

@@ -325,7 +325,7 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
                           {member?.name?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium">{member?.name || "Unknown"}</span>
+                      <span className="font-medium">{member?.email || "Unknown"}</span>
                       <Button
                         type="button"
                         variant="ghost"
@@ -352,7 +352,7 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({
                         value={member.userId}
                         disabled={selectedAssignees.includes(member.userId)}
                       >
-                        {member.name || member.userId}
+                        {member.email || member.userId}
                       </SelectItem>
                     ))}
                   </SelectContent>

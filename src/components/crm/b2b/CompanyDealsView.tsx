@@ -171,7 +171,7 @@ export function CompanyDealsView({
       .filter((segment, index, array) => array.indexOf(segment) === index);
     
     setCustomSegments(segments);
-  }, [contactsFromContactView, companiesFromCompanyView, viewType]);
+  }, [contactsFromContactView, companiesFromCompanyView, viewType, onCompaniesUpdate, onDealsUpdate]);
 
   // Define stages based on view type
   const getStages = (): Stage[] => {
@@ -354,7 +354,7 @@ export function CompanyDealsView({
   );
 
   return (
-    <div className="p-4 sm:p-6 bg-white min-h-screen">
+    <div className=" min-h-screen">
       {/* Mobile View - Stack cards vertically */}
       <div className="block md:hidden space-y-6">
         {stages.map((stage) => (

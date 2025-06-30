@@ -354,7 +354,7 @@ const ContactTable: React.FC<ContactTableProps> = ({
         {contacts.map((contact) => (
           <div
             key={contact.id}
-            className="group grid grid-cols-12 gap-4 items-center py-4 border-b border-gray-50 hover:bg-gradient-to-r hover:from-blue-25 hover:to-indigo-25 transition-all duration-200 rounded-lg"
+            className="group grid grid-cols-12 gap-4 items-center py-2 border-b border-gray-50 hover:bg-gradient-to-r hover:from-blue-25 hover:to-indigo-25 transition-all duration-200 rounded-lg"
             onMouseEnter={() => setHoveredContact(contact.id)}
             onMouseLeave={() => setHoveredContact(null)}
           >
@@ -377,8 +377,8 @@ const ContactTable: React.FC<ContactTableProps> = ({
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-gray-900 text-sm mb-1 truncate">{contact.name}</div>
                   <div className="text-xs text-gray-500 flex items-center space-x-1">
-                    <Calendar className="w-3 h-3" />
-                    <span>{contact.lastActivity}</span>
+                    {/* <Calendar className="w-3 h-3" /> */}
+                    {/* <span>{contact.lastActivity}</span> */}
                   </div>
                 </div>
               </div>
@@ -387,14 +387,14 @@ const ContactTable: React.FC<ContactTableProps> = ({
             <div className="col-span-3">
               <div className="space-y-1">
                 {renderEditableCell(contact, 'email', contact.email)}
-                {renderEditableCell(contact, 'phone', contact.phone)}
+                {/* {renderEditableCell(contact, 'phone', contact.phone)} */}
               </div>
             </div>
 
             <div className="col-span-2">
               <div className="space-y-1">
                 {renderEditableCell(contact, 'company', contact.company)}
-                {renderEditableCell(contact, 'website', contact.website)}
+                {/* {renderEditableCell(contact, 'website', contact.website)} */}
               </div>
             </div>
 

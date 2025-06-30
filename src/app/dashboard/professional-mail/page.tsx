@@ -110,7 +110,8 @@ export default function EmailDashboard() {
   // Show loading state during authentication
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      // <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center p-8 bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20">
           <div className="relative mb-6">
             <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-purple-600 animate-spin">
@@ -152,7 +153,8 @@ export default function EmailDashboard() {
   // Show login prompt if not fully authenticated
   if (!isFullyAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+      // <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+      <div className="flex items-center justify-center min-h-screen bg-white p-4">
         <div className="text-center max-w-md w-full p-8 bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
             <User className="w-10 h-10 text-white" />
@@ -242,7 +244,7 @@ export default function EmailDashboard() {
 
   // At this point, user is fully authenticated, render the email dashboard
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+    <div className="min-h-screen bg-white/90 backdrop-blur-sm p-4 lg:p-6">
       {/* Mobile Header */}
       <div className="lg:hidden bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50">
         <div className="flex items-center justify-between p-4">

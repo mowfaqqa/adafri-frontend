@@ -16,10 +16,49 @@ import {
 } from "@/components/ui/dialog";
 import { AuthContext } from "@/lib/context/auth";
 import { useCombinedAuth } from "../../providers/useCombinedAuth";
+import { DjombiProfileService } from "@/lib/services/DjombiProfileService";
 
 interface EmailSentProps {
   onBack?: () => void;
 }
+
+// Helper function to get Djombi access token
+const getDjombiAccessToken = (): string | null => {
+  // First try from DjombiProfileService
+  const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
+  if (accessToken) {
+    return accessToken;
+  }
+  
+  // Fallback to localStorage directly
+  if (typeof window !== 'undefined') {
+    const storedToken = localStorage.getItem('djombi_access_token');
+    if (storedToken) {
+      return storedToken;
+    }
+  }
+  
+  return null;
+};
+
+// Helper function to get linked email ID
+const getLinkedEmailId = (): string | null => {
+  // First try cookies
+  const emailIdFromCookie = getCookie('linkedEmailId');
+  if (emailIdFromCookie) {
+    return emailIdFromCookie;
+  }
+  
+  // Then try localStorage
+  if (typeof window !== 'undefined') {
+    const emailIdFromStorage = localStorage.getItem('linkedEmailId');
+    if (emailIdFromStorage) {
+      return emailIdFromStorage;
+    }
+  }
+  
+  return null;
+};
 
 export const EmailSent = ({ onBack }: EmailSentProps) => {
   const { emails, addEmail } = useEmailStore();
@@ -44,11 +83,15 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
     setMounted(true);
   }, []);
 
-  // Helper function to process response data
-  const processResponseData = (data: any) => {
+  // Helper function to process response data - memoized to prevent unnecessary re-renders
+  const processResponseData = useCallback((data: any) => {
+    console.log("Processing sent response data:", data);
+    console.log("Full response structure:", JSON.stringify(data, null, 2));
+    
     // Check if data contains emails (handle different response structures)
     let emailsData: any[] = [];
     
+    // More comprehensive response structure handling
     if (Array.isArray(data)) {
       emailsData = data;
     } else if (data.data && Array.isArray(data.data)) {
@@ -57,6 +100,14 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
       emailsData = data.sent;
     } else if (data.emails && Array.isArray(data.emails)) {
       emailsData = data.emails;
+    } else if (data.sentEmails && Array.isArray(data.sentEmails)) {
+      emailsData = data.sentEmails;
+    } else if (data.result && Array.isArray(data.result)) {
+      emailsData = data.result;
+    } else if (data.items && Array.isArray(data.items)) {
+      emailsData = data.items;
+    } else if (data.messages && Array.isArray(data.messages)) {
+      emailsData = data.messages;
     } else {
       console.log("Response structure different than expected:", data);
       // Look for any array in the response that might contain emails
@@ -69,8 +120,10 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
       }
     }
     
+    console.log(`Found ${emailsData.length} emails in response`);
+    
     if (emailsData.length === 0) {
-      console.log("No emails found in the response");
+      console.log("No sent emails found in the response - setting empty array");
       setApiSentEmails([]);
       return;
     }
@@ -79,33 +132,40 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
     
     // First, filter out invalid emails, then map them to the correct structure
     const validEmailsData = emailsData.filter(email => email && typeof email === 'object');
+    console.log(`Filtering: ${emailsData.length} -> ${validEmailsData.length} valid emails`);
     
     // Now map the valid emails to the correct structure
-    const formattedEmails: Email[] = validEmailsData.map((email: any): Email => {
-      return {
-        id: email.id || email._id || `sent-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        subject: email.subject || 'No Subject',
-        content: email.content || '',
-        contentType: email.contentType || 'text',  // Add this if it's required in your Email interface
-        from: email.from || email.sender || 'Unknown Sender',
-        to: email.to || email.recipient || '',
-        timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+    const formattedEmails: Email[] = validEmailsData.map((email: any, index: number): Email => {
+      const formatted = {
+        id: email.id || email._id || email.messageId || email.message_id || `sent-${Date.now()}-${index}`,
+        subject: email.subject || email.Subject || 'No Subject',
+        content: email.content || email.body || email.Body || email.textContent || email.htmlContent || '',
+        contentType: email.contentType || email.content_type || 'text',
+        from: email.from || email.sender || email.From || 'Unknown Sender',
+        to: email.to || email.recipient || email.To || email.recipients || '',
+        timestamp: email.timestamp || email.createdAt || email.created_at || email.date || email.Date || new Date().toISOString(),
         status: "sent",
-        isUrgent: Boolean(email.isUrgent || email.is_urgent || false),
-        hasAttachment: Boolean(email.hasAttachment || email.has_attachment || false),
+        isUrgent: Boolean(email.isUrgent || email.is_urgent || email.priority === 'high' || false),
+        hasAttachment: Boolean(email.hasAttachment || email.has_attachment || email.attachments || false),
         category: "sent",
         isRead: true, // Sent emails are always read
-        email_id: email.email_id || null  // Add this if it's required in your Email interface
+        email_id: email.email_id || email.emailId || null
       };
+      
+      console.log(`Formatted email ${index + 1}:`, formatted);
+      return formatted;
     });
     
-    console.log(`Processed ${formattedEmails.length} sent emails`);
+    console.log(`Successfully processed ${formattedEmails.length} sent emails`);
     
-    // Add to email store first
+    // Update the API state with all sent emails from server
+    setApiSentEmails(formattedEmails);
+    
+    // Also add to email store for consistency, but avoid duplicates
     formattedEmails.forEach(email => {
-      // Check if email already exists in store to prevent duplicates
       const exists = emails.some(e => e.id === email.id);
       if (!exists) {
+        console.log(`Adding new email to store: ${email.subject}`);
         addEmail({
           ...email,
           status: "sent",
@@ -113,68 +173,134 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
       }
     });
     
-    setApiSentEmails(formattedEmails);
-  };
+  }, [emails, addEmail]); // Include 'emails' in dependency array since it's used in the forEach loop
   
-  // Use useCallback to memoize the function and include dependencies
-  const fetchSentEmails = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+ // Use useCallback to memoize the function and include dependencies
+const fetchSentEmails = useCallback(async () => {
+  setIsLoading(true);
+  setError(null);
+  
+  try {
+    console.log("Starting fetchSentEmails...");
 
-      const djombiTokens = djombi.token || "";
+    // Get Djombi access token using utility function
+    const djombiToken = getDjombiAccessToken();
+    console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
+    
+    if (!djombiToken) {
+      throw new Error('No Djombi access token available. Please log in again.');
+    }
+    
+    // Get linked email ID using utility function
+    const linkedEmailId = getLinkedEmailId();
+    console.log("Linked Email ID:", linkedEmailId);
+    
+    if (!linkedEmailId) {
+      console.log("Checking localStorage for linkedEmailId...");
+      if (typeof window !== 'undefined') {
+        const storageKeys = Object.keys(localStorage);
+        console.log("Available localStorage keys:", storageKeys);
+        console.log("linkedEmailId value:", localStorage.getItem('linkedEmailId'));
+      }
+      throw new Error('No linked email ID found. Please link your email first.');
+    }
+    
+    // Try GET request with proper URL encoding and parameters
+    const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
+    console.log("Fetching from API endpoint:", apiEndpoint);
+    
+    const response = await axios.get(apiEndpoint, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${djombiToken}`
+      },
+      timeout: 30000 // 30 second timeout
+    });
+    
+    console.log("GET response status:", response.status);
+    console.log("GET response headers:", response.headers);
+    console.log("GET response data:", response.data);
+    
+    // Check for success/error in response
+    if (response.data.success === false) {
+      const errorMessage = response.data.message || 'API request failed';
+      console.error("API error:", errorMessage);
       
-      if (!token) {
-        throw new Error('No access token available');
+      // If API explicitly says no sent emails, that's fine
+      if (errorMessage.toLowerCase().includes('no sent emails') || 
+          errorMessage.toLowerCase().includes('not found')) {
+        console.log("API confirmed no sent emails exist");
+        setApiSentEmails([]);
+        return;
       }
       
-      // Get linked email ID - use the same approach as ProfessionalEmailInbox
-      const linkedEmailId = getCookie('linkedEmailId') ||
-        (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
-      console.log("Linked Email ID:", linkedEmailId);
-      
-      if (!linkedEmailId) {
-        throw new Error('No linked email ID found');
-      }
-      
-      // Use axios instead of fetch
-      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
-      console.log("Fetching from API endpoint:", apiEndpoint);
-      
-      const response = await axios.get(apiEndpoint, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${djombiTokens}`,
+      throw new Error(`API error: ${errorMessage}`);
+    }
+    
+    // Process successful response
+    if (response.status === 200) {
+      console.log("Successfully received sent emails response");
+      processResponseData(response.data);
+    } else {
+      console.warn(`Unexpected response status: ${response.status}`);
+      processResponseData(response.data);
+    }
+    
+  } catch (err) {
+    console.error('Failed to fetch sent emails:', err);
+    
+    // Enhanced error logging
+    if (err instanceof Error) {
+      console.error('Error details:', {
+        message: err.message,
+        name: err.name,
+        stack: err.stack
+      });
+    }
+    
+    if (axios.isAxiosError(err)) {
+      console.error('Axios error details:', {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        headers: err.response?.headers,
+        config: {
+          url: err.config?.url,
+          method: err.config?.method,
+          headers: err.config?.headers
         }
       });
       
-      console.log("GET response data:", response.data);
-      
-      // Check for success/error in response
-      if (response.data.success === false) {
-        const errorMessage = response.data.message || 'API request failed';
-        console.error("API error:", errorMessage);
-        throw new Error(`API error: ${errorMessage}`);
-      }
-      
-      processResponseData(response.data);
-    } catch (err) {
-      console.error('Failed to fetch sent emails:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch sent emails');
-      
-      // Fallback to local data if API fails
-      const localSentEmails = emails.filter(email => email.status === "sent");
-      if (localSentEmails.length > 0) {
-        console.log("Using local sent emails as fallback");
+      // Handle specific error cases
+      if (err.response?.status === 404) {
+        console.log("Sent emails endpoint returned 404 - no sent emails exist");
         setApiSentEmails([]);
+        return;
+      } else if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        return;
+      } else if (err.response?.status === 403) {
+        setError('Access denied. Please check your permissions.');
+        return;
       }
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
     }
-  }, [token, djombi.token, emails, addEmail]);
+    
+    setError(err instanceof Error ? err.message : 'Failed to fetch sent emails');
+    
+    // Fallback to local data if API fails
+    const localSentEmails = emails.filter(email => email.status === "sent" || email.category === "sent");
+    if (localSentEmails.length > 0) {
+      console.log("Using local sent emails as fallback:", localSentEmails.length);
+      setApiSentEmails(localSentEmails);
+    } else {
+      console.log("No local sent emails found either");
+      setApiSentEmails([]);
+    }
+  } finally {
+    setIsLoading(false);
+    setIsRefreshing(false);
+  }
+}, [emails, processResponseData]); // Include 'emails' here since it's used in the fallback section
   
   useEffect(() => {
     fetchSentEmails();
@@ -373,6 +499,2045 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
 };
 
 export default EmailSent;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import { useEmailStore } from "@/lib/store/email-store";
+// import { Button } from "@/components/ui/button";
+// import { ArrowLeft, Filter, RefreshCw, X } from "lucide-react";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { Email, EmailCategory } from "@/lib/types/email";
+// import { Checkbox } from "@/components/ui/checkbox";
+// import { getAuthToken, getCookie } from "@/lib/utils/cookies";
+// import { createEmailPreview, EmailContentRenderer } from "@/lib/utils/emails/email-content-utils";
+// import axios from "axios";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogClose
+// } from "@/components/ui/dialog";
+// import { AuthContext } from "@/lib/context/auth";
+// import { useCombinedAuth } from "../../providers/useCombinedAuth";
+// import { DjombiProfileService } from "@/lib/services/DjombiProfileService";
+
+// interface EmailSentProps {
+//   onBack?: () => void;
+// }
+
+// // Helper function to get Djombi access token
+// const getDjombiAccessToken = (): string | null => {
+//   // First try from DjombiProfileService
+//   const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
+//   if (accessToken) {
+//     return accessToken;
+//   }
+  
+//   // Fallback to localStorage directly
+//   if (typeof window !== 'undefined') {
+//     const storedToken = localStorage.getItem('djombi_access_token');
+//     if (storedToken) {
+//       return storedToken;
+//     }
+//   }
+  
+//   return null;
+// };
+
+// // Helper function to get linked email ID
+// const getLinkedEmailId = (): string | null => {
+//   // First try cookies
+//   const emailIdFromCookie = getCookie('linkedEmailId');
+//   if (emailIdFromCookie) {
+//     return emailIdFromCookie;
+//   }
+  
+//   // Then try localStorage
+//   if (typeof window !== 'undefined') {
+//     const emailIdFromStorage = localStorage.getItem('linkedEmailId');
+//     if (emailIdFromStorage) {
+//       return emailIdFromStorage;
+//     }
+//   }
+  
+//   return null;
+// };
+
+// export const EmailSent = ({ onBack }: EmailSentProps) => {
+//   const { emails, addEmail } = useEmailStore();
+  
+//   // Move all hooks to the top level
+//   const { token, user } = useContext(AuthContext);
+//   const { djombi } = useCombinedAuth();
+  
+//   const [apiSentEmails, setApiSentEmails] = useState<Email[]>([]);
+//   const [filterDate, setFilterDate] = useState<string | null>(null);
+//   const [sortNewest, setSortNewest] = useState(true);
+//   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+//   const [mounted, setMounted] = useState(false);
+//   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+//   const [showDialog, setShowDialog] = useState(false);
+//   const [isRefreshing, setIsRefreshing] = useState(false);
+
+//   // Handle client-side mounting
+//   useEffect(() => {
+//     setMounted(true);
+//   }, []);
+
+//   // Helper function to process response data - memoized to prevent unnecessary re-renders
+//   const processResponseData = useCallback((data: any) => {
+//     console.log("Processing sent response data:", data);
+//     console.log("Full response structure:", JSON.stringify(data, null, 2));
+    
+//     // Check if data contains emails (handle different response structures)
+//     let emailsData: any[] = [];
+    
+//     // More comprehensive response structure handling
+//     if (Array.isArray(data)) {
+//       emailsData = data;
+//     } else if (data.data && Array.isArray(data.data)) {
+//       emailsData = data.data;
+//     } else if (data.sent && Array.isArray(data.sent)) {
+//       emailsData = data.sent;
+//     } else if (data.emails && Array.isArray(data.emails)) {
+//       emailsData = data.emails;
+//     } else if (data.sentEmails && Array.isArray(data.sentEmails)) {
+//       emailsData = data.sentEmails;
+//     } else if (data.result && Array.isArray(data.result)) {
+//       emailsData = data.result;
+//     } else if (data.items && Array.isArray(data.items)) {
+//       emailsData = data.items;
+//     } else if (data.messages && Array.isArray(data.messages)) {
+//       emailsData = data.messages;
+//     } else {
+//       console.log("Response structure different than expected:", data);
+//       // Look for any array in the response that might contain emails
+//       for (const key in data) {
+//         if (Array.isArray(data[key]) && data[key].length > 0) {
+//           console.log(`Found array in response at key: ${key}`, data[key]);
+//           emailsData = data[key];
+//           break;
+//         }
+//       }
+//     }
+    
+//     console.log(`Found ${emailsData.length} emails in response`);
+    
+//     if (emailsData.length === 0) {
+//       console.log("No sent emails found in the response - setting empty array");
+//       setApiSentEmails([]);
+//       return;
+//     }
+    
+//     console.log("Sample email data structure:", emailsData[0]);
+    
+//     // First, filter out invalid emails, then map them to the correct structure
+//     const validEmailsData = emailsData.filter(email => email && typeof email === 'object');
+//     console.log(`Filtering: ${emailsData.length} -> ${validEmailsData.length} valid emails`);
+    
+//     // Now map the valid emails to the correct structure
+//     const formattedEmails: Email[] = validEmailsData.map((email: any, index: number): Email => {
+//       const formatted = {
+//         id: email.id || email._id || email.messageId || email.message_id || `sent-${Date.now()}-${index}`,
+//         subject: email.subject || email.Subject || 'No Subject',
+//         content: email.content || email.body || email.Body || email.textContent || email.htmlContent || '',
+//         contentType: email.contentType || email.content_type || 'text',
+//         from: email.from || email.sender || email.From || 'Unknown Sender',
+//         to: email.to || email.recipient || email.To || email.recipients || '',
+//         timestamp: email.timestamp || email.createdAt || email.created_at || email.date || email.Date || new Date().toISOString(),
+//         status: "sent",
+//         isUrgent: Boolean(email.isUrgent || email.is_urgent || email.priority === 'high' || false),
+//         hasAttachment: Boolean(email.hasAttachment || email.has_attachment || email.attachments || false),
+//         category: "sent",
+//         isRead: true, // Sent emails are always read
+//         email_id: email.email_id || email.emailId || null
+//       };
+      
+//       console.log(`Formatted email ${index + 1}:`, formatted);
+//       return formatted;
+//     });
+    
+//     console.log(`Successfully processed ${formattedEmails.length} sent emails`);
+    
+//     // Update the API state with all sent emails from server
+//     setApiSentEmails(formattedEmails);
+    
+//     // Also add to email store for consistency, but avoid duplicates
+//     formattedEmails.forEach(email => {
+//       const exists = emails.some(e => e.id === email.id);
+//       if (!exists) {
+//         console.log(`Adding new email to store: ${email.subject}`);
+//         addEmail({
+//           ...email,
+//           status: "sent",
+//         });
+//       }
+//     });
+    
+//   }, [emails, addEmail]);
+  
+//  // Use useCallback to memoize the function and include dependencies
+// const fetchSentEmails = useCallback(async () => {
+//   setIsLoading(true);
+//   setError(null);
+  
+//   try {
+//     console.log("Starting fetchSentEmails...");
+
+//     // Get Djombi access token using utility function
+//     const djombiToken = getDjombiAccessToken();
+//     console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
+    
+//     if (!djombiToken) {
+//       throw new Error('No Djombi access token available. Please log in again.');
+//     }
+    
+//     // Get linked email ID using utility function
+//     const linkedEmailId = getLinkedEmailId();
+//     console.log("Linked Email ID:", linkedEmailId);
+    
+//     if (!linkedEmailId) {
+//       console.log("Checking localStorage for linkedEmailId...");
+//       if (typeof window !== 'undefined') {
+//         const storageKeys = Object.keys(localStorage);
+//         console.log("Available localStorage keys:", storageKeys);
+//         console.log("linkedEmailId value:", localStorage.getItem('linkedEmailId'));
+//       }
+//       throw new Error('No linked email ID found. Please link your email first.');
+//     }
+    
+//     // Try GET request with proper URL encoding and parameters
+//     const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
+//     console.log("Fetching from API endpoint:", apiEndpoint);
+    
+//     const response = await axios.get(apiEndpoint, {
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'Authorization': `Bearer ${djombiToken}`
+//       },
+//       timeout: 30000 // 30 second timeout
+//     });
+    
+//     console.log("GET response status:", response.status);
+//     console.log("GET response headers:", response.headers);
+//     console.log("GET response data:", response.data);
+    
+//     // Check for success/error in response
+//     if (response.data.success === false) {
+//       const errorMessage = response.data.message || 'API request failed';
+//       console.error("API error:", errorMessage);
+      
+//       // If API explicitly says no sent emails, that's fine
+//       if (errorMessage.toLowerCase().includes('no sent emails') || 
+//           errorMessage.toLowerCase().includes('not found')) {
+//         console.log("API confirmed no sent emails exist");
+//         setApiSentEmails([]);
+//         return;
+//       }
+      
+//       throw new Error(`API error: ${errorMessage}`);
+//     }
+    
+//     // Process successful response
+//     if (response.status === 200) {
+//       console.log("Successfully received sent emails response");
+//       processResponseData(response.data);
+//     } else {
+//       console.warn(`Unexpected response status: ${response.status}`);
+//       processResponseData(response.data);
+//     }
+    
+//   } catch (err) {
+//     console.error('Failed to fetch sent emails:', err);
+    
+//     // Enhanced error logging
+//     if (err instanceof Error) {
+//       console.error('Error details:', {
+//         message: err.message,
+//         name: err.name,
+//         stack: err.stack
+//       });
+//     }
+    
+//     if (axios.isAxiosError(err)) {
+//       console.error('Axios error details:', {
+//         status: err.response?.status,
+//         statusText: err.response?.statusText,
+//         data: err.response?.data,
+//         headers: err.response?.headers,
+//         config: {
+//           url: err.config?.url,
+//           method: err.config?.method,
+//           headers: err.config?.headers
+//         }
+//       });
+      
+//       // Handle specific error cases
+//       if (err.response?.status === 404) {
+//         console.log("Sent emails endpoint returned 404 - no sent emails exist");
+//         setApiSentEmails([]);
+//         return;
+//       } else if (err.response?.status === 401) {
+//         setError('Authentication failed. Please log in again.');
+//         return;
+//       } else if (err.response?.status === 403) {
+//         setError('Access denied. Please check your permissions.');
+//         return;
+//       }
+//     }
+    
+//     setError(err instanceof Error ? err.message : 'Failed to fetch sent emails');
+    
+//     // Fallback to local data if API fails
+//     const localSentEmails = emails.filter(email => email.status === "sent" || email.category === "sent");
+//     if (localSentEmails.length > 0) {
+//       console.log("Using local sent emails as fallback:", localSentEmails.length);
+//       setApiSentEmails(localSentEmails);
+//     } else {
+//       console.log("No local sent emails found either");
+//       setApiSentEmails([]);
+//     }
+//   } finally {
+//     setIsLoading(false);
+//     setIsRefreshing(false);
+//   }
+// }, [processResponseData]); // Include processResponseData as dependency and remove unnecessary token dependencies
+  
+//   useEffect(() => {
+//     fetchSentEmails();
+//   }, [fetchSentEmails]);
+  
+//   const handleRefresh = () => {
+//     setIsRefreshing(true);
+//     fetchSentEmails();
+//   };
+  
+//   // Combine sent emails from store and API
+//   const allSentEmails = [
+//     ...emails.filter(email => email.status === "sent"),
+//     ...apiSentEmails
+//   ];
+  
+//   // Remove duplicates by id
+//   const uniqueSentEmails = allSentEmails.filter(
+//     (email, index, self) => 
+//       index === self.findIndex(e => e.id === email.id)
+//   );
+  
+//   // Sort by date
+//   const sortedEmails = [...uniqueSentEmails].sort((a, b) => {
+//     const dateA = new Date(a.timestamp || "").getTime();
+//     const dateB = new Date(b.timestamp || "").getTime();
+//     return sortNewest ? dateB - dateA : dateA - dateB;
+//   });
+  
+//   // Filter by date if filterDate is set
+//   const displayedEmails = filterDate 
+//     ? sortedEmails.filter(email => {
+//         const emailDate = new Date(email.timestamp || "").toLocaleDateString();
+//         return emailDate === filterDate;
+//       })
+//     : sortedEmails;
+
+//   const toggleSort = () => {
+//     setSortNewest(!sortNewest);
+//   };
+
+//   const toggleSelect = (emailId: string, event: React.MouseEvent) => {
+//     // Prevent triggering the row click when selecting checkbox
+//     event.stopPropagation();
+    
+//     setSelectedEmails(prev => 
+//       prev.includes(emailId) 
+//         ? prev.filter(id => id !== emailId)
+//         : [...prev, emailId]
+//     );
+//   };
+  
+//   // Handle row click to open dialog
+//   const handleRowClick = (email: Email) => {
+//     setSelectedEmail(email);
+//     setShowDialog(true);
+//   };
+
+//   return (
+//     <div className="w-full h-full overflow-y-auto pb-4">
+//       {onBack && (
+//         <Button variant="ghost" size="icon" onClick={onBack} className="mb-4">
+//           <ArrowLeft className="w-4 h-4" />
+//         </Button>
+//       )}
+      
+//       <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]">
+//         <div className="sticky top-0 bg-background z-10 p-4 border-b">
+//           <div className="flex justify-between items-center">
+//             <h2 className="text-xl font-semibold">Sent</h2>
+//             <div className="flex items-center gap-2">
+//               <Button 
+//                 variant="outline" 
+//                 size="sm" 
+//                 onClick={toggleSort}
+//               >
+//                 Sort: {sortNewest ? "Newest" : "Oldest"}
+//               </Button>
+//               <Button 
+//                 variant="outline" 
+//                 size="icon" 
+//                 onClick={handleRefresh}
+//                 disabled={isRefreshing}
+//               >
+//                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+//               </Button>
+//               <Button variant="outline" size="icon">
+//                 <Filter className="w-4 h-4" />
+//               </Button>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="overflow-y-auto h-[calc(100%-60px)]">
+//           {isLoading ? (
+//             <div className="flex justify-center items-center h-full">
+//               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+//             </div>
+//           ) : error ? (
+//             <div className="text-center py-8">
+//               <p className="text-red-500">{error}</p>
+//               <Button 
+//                 className="mt-4" 
+//                 variant="outline" 
+//                 onClick={handleRefresh}
+//               >
+//                 Try Again
+//               </Button>
+//             </div>
+//           ) : displayedEmails.length === 0 ? (
+//             <div className="text-center py-8 text-muted-foreground">
+//               No sent emails found.
+//             </div>
+//           ) : (
+//             <div className="space-y-0">
+//               {displayedEmails.map((email) => (
+//                 <div 
+//                   key={email.id} 
+//                   className="flex items-center px-4 py-3 border-b last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
+//                   onClick={() => handleRowClick(email)}
+//                 >
+//                   <div className="mr-3" onClick={(e) => e.stopPropagation()}>
+//                     <Checkbox
+//                       checked={selectedEmails.includes(email.id || "")}
+//                       onCheckedChange={() => {}}
+//                       onClick={(e) => toggleSelect(email.id || "", e as React.MouseEvent)}
+//                     />
+//                   </div>
+//                   <div className="flex-1 grid grid-cols-12 gap-2">
+//                     <div className="col-span-2 text-sm text-gray-600 truncate pr-2">
+//                       To: {email.to}
+//                     </div>
+//                     <div className="col-span-7 flex items-center">
+//                       <div className="text-sm truncate">
+//                         <span className="font-medium">{email.subject}</span>
+//                         {email.content && (
+//                           <span className="text-gray-500"> - {mounted ? createEmailPreview(email.content, 50) : ''}</span>
+//                         )}
+//                       </div>
+//                     </div>
+//                     <div className="col-span-3 text-right text-sm text-gray-500">
+//                       {email.timestamp ? 
+//                         new Date(email.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+//                         ""}
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </div>
+//       </div>
+      
+//       {/* Email Details Dialog */}
+//       <Dialog open={showDialog} onOpenChange={setShowDialog}>
+//         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+//           <DialogHeader>
+//             <div className="flex justify-between items-center">
+//               <DialogTitle>{selectedEmail?.subject || "Email Details"}</DialogTitle>
+//               <DialogClose asChild>
+//                 <Button variant="ghost" size="icon">
+//                   <X className="w-4 h-4" />
+//                 </Button>
+//               </DialogClose>
+//             </div>
+//           </DialogHeader>
+          
+//           {selectedEmail && (
+//             <div className="space-y-4">
+//               <div className="grid grid-cols-12 gap-2 text-sm">
+//                 <div className="col-span-2 font-medium">From:</div>
+//                 <div className="col-span-10">{selectedEmail.from}</div>
+                
+//                 <div className="col-span-2 font-medium">To:</div>
+//                 <div className="col-span-10">{selectedEmail.to}</div>
+                
+//                 <div className="col-span-2 font-medium">Date:</div>
+//                 <div className="col-span-10">
+//                   {selectedEmail.timestamp ? 
+//                     new Date(selectedEmail.timestamp).toLocaleString() : 
+//                     ""}
+//                 </div>
+//               </div>
+              
+//               <div className="mt-4 border-t pt-4">
+//                 <div className="prose prose-sm max-w-none">
+//                   {mounted && <EmailContentRenderer content={selectedEmail.content} />}
+//                 </div>
+//               </div>
+//             </div>
+//           )}
+//         </DialogContent>
+//       </Dialog>
+//     </div>
+//   );
+// };
+
+// export default EmailSent;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 29/6/2025 10:46
+// import { useEmailStore } from "@/lib/store/email-store";
+// import { Button } from "@/components/ui/button";
+// import { ArrowLeft, Filter, RefreshCw, X } from "lucide-react";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { Email, EmailCategory } from "@/lib/types/email";
+// import { Checkbox } from "@/components/ui/checkbox";
+// import { getAuthToken, getCookie } from "@/lib/utils/cookies";
+// import { createEmailPreview, EmailContentRenderer } from "@/lib/utils/emails/email-content-utils";
+// import axios from "axios";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogClose
+// } from "@/components/ui/dialog";
+// import { AuthContext } from "@/lib/context/auth";
+// import { useCombinedAuth } from "../../providers/useCombinedAuth";
+// import { DjombiProfileService } from "@/lib/services/DjombiProfileService";
+
+// interface EmailSentProps {
+//   onBack?: () => void;
+// }
+
+// // Helper function to get Djombi access token
+// const getDjombiAccessToken = (): string | null => {
+//   // First try from DjombiProfileService
+//   const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
+//   if (accessToken) {
+//     return accessToken;
+//   }
+  
+//   // Fallback to localStorage directly
+//   if (typeof window !== 'undefined') {
+//     const storedToken = localStorage.getItem('djombi_access_token');
+//     if (storedToken) {
+//       return storedToken;
+//     }
+//   }
+  
+//   return null;
+// };
+
+// // Helper function to get linked email ID
+// const getLinkedEmailId = (): string | null => {
+//   // First try cookies
+//   const emailIdFromCookie = getCookie('linkedEmailId');
+//   if (emailIdFromCookie) {
+//     return emailIdFromCookie;
+//   }
+  
+//   // Then try localStorage
+//   if (typeof window !== 'undefined') {
+//     const emailIdFromStorage = localStorage.getItem('linkedEmailId');
+//     if (emailIdFromStorage) {
+//       return emailIdFromStorage;
+//     }
+//   }
+  
+//   return null;
+// };
+
+// export const EmailSent = ({ onBack }: EmailSentProps) => {
+//   const { emails, addEmail } = useEmailStore();
+  
+//   // Move all hooks to the top level
+//   const { token, user } = useContext(AuthContext);
+//   const { djombi } = useCombinedAuth();
+  
+//   const [apiSentEmails, setApiSentEmails] = useState<Email[]>([]);
+//   const [filterDate, setFilterDate] = useState<string | null>(null);
+//   const [sortNewest, setSortNewest] = useState(true);
+//   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+//   const [mounted, setMounted] = useState(false);
+//   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+//   const [showDialog, setShowDialog] = useState(false);
+//   const [isRefreshing, setIsRefreshing] = useState(false);
+
+//   // Handle client-side mounting
+//   useEffect(() => {
+//     setMounted(true);
+//   }, []);
+
+//   // Helper function to process response data - memoized to prevent unnecessary re-renders
+//   const processResponseData = useCallback((data: any) => {
+//     console.log("Processing sent response data:", data);
+    
+//     // Check if data contains emails (handle different response structures)
+//     let emailsData: any[] = [];
+    
+//     if (Array.isArray(data)) {
+//       emailsData = data;
+//     } else if (data.data && Array.isArray(data.data)) {
+//       emailsData = data.data;
+//     } else if (data.sent && Array.isArray(data.sent)) {
+//       emailsData = data.sent;
+//     } else if (data.emails && Array.isArray(data.emails)) {
+//       emailsData = data.emails;
+//     } else {
+//       console.log("Response structure different than expected:", data);
+//       // Look for any array in the response that might contain emails
+//       for (const key in data) {
+//         if (Array.isArray(data[key]) && data[key].length > 0) {
+//           console.log(`Found array in response at key: ${key}`, data[key]);
+//           emailsData = data[key];
+//           break;
+//         }
+//       }
+//     }
+    
+//     if (emailsData.length === 0) {
+//       console.log("No sent emails found in the response");
+//       setApiSentEmails([]);
+//       return;
+//     }
+    
+//     console.log("Sample email data structure:", emailsData[0]);
+//     console.log(`Found ${emailsData.length} sent emails in response`);
+    
+//     // First, filter out invalid emails, then map them to the correct structure
+//     const validEmailsData = emailsData.filter(email => email && typeof email === 'object');
+    
+//     // Now map the valid emails to the correct structure
+//     const formattedEmails: Email[] = validEmailsData.map((email: any): Email => {
+//       return {
+//         id: email.id || email._id || `sent-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+//         subject: email.subject || 'No Subject',
+//         content: email.content || '',
+//         contentType: email.contentType || 'text',
+//         from: email.from || email.sender || 'Unknown Sender',
+//         to: email.to || email.recipient || '',
+//         timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+//         status: "sent",
+//         isUrgent: Boolean(email.isUrgent || email.is_urgent || false),
+//         hasAttachment: Boolean(email.hasAttachment || email.has_attachment || false),
+//         category: "sent",
+//         isRead: true, // Sent emails are always read
+//         email_id: email.email_id || null
+//       };
+//     });
+    
+//     console.log(`Processed ${formattedEmails.length} sent emails`);
+    
+//     // Add to email store first
+//     formattedEmails.forEach(email => {
+//       // Check if email already exists in store to prevent duplicates
+//       const exists = emails.some(e => e.id === email.id);
+//       if (!exists) {
+//         addEmail({
+//           ...email,
+//           status: "sent",
+//         });
+//       }
+//     });
+    
+//     setApiSentEmails(formattedEmails);
+//   }, [emails, addEmail]);
+  
+//  // Use useCallback to memoize the function and include dependencies
+// const fetchSentEmails = useCallback(async () => {
+//   setIsLoading(true);
+//   setError(null);
+  
+//   try {
+//     console.log("Starting fetchSentEmails...");
+
+//     // Get Djombi access token using utility function
+//     const djombiToken = getDjombiAccessToken();
+//     console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
+    
+//     if (!djombiToken) {
+//       throw new Error('No Djombi access token available. Please log in again.');
+//     }
+    
+//     // Get linked email ID using utility function
+//     const linkedEmailId = getLinkedEmailId();
+//     console.log("Linked Email ID:", linkedEmailId);
+    
+//     if (!linkedEmailId) {
+//       console.log("Checking localStorage for linkedEmailId...");
+//       if (typeof window !== 'undefined') {
+//         const storageKeys = Object.keys(localStorage);
+//         console.log("Available localStorage keys:", storageKeys);
+//         console.log("linkedEmailId value:", localStorage.getItem('linkedEmailId'));
+//       }
+//       throw new Error('No linked email ID found. Please link your email first.');
+//     }
+    
+//     // First try GET request with proper URL encoding and parameters
+//     const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//     console.log("Fetching from API endpoint:", apiEndpoint);
+    
+//     try {
+//       const response = await axios.get(apiEndpoint, {
+//         headers: {
+//           'Content-Type': 'application/json',
+//           'Authorization': `Bearer ${djombiToken}` // Use Djombi token
+//         }
+//       });
+      
+//       console.log("GET response status:", response.status);
+//       console.log("GET response data:", response.data);
+      
+//       // Check for success/error in response
+//       if (response.data.success === false) {
+//         const errorMessage = response.data.message || 'API request failed';
+//         console.error("API error:", errorMessage);
+//         throw new Error(`API error: ${errorMessage}`);
+//       }
+      
+//       processResponseData(response.data);
+//     } catch (getError) {
+//       console.log("GET request failed, trying POST fallback:", getError);
+      
+//       // Try POST request as fallback with query parameters (same pattern as drafts)
+//       const postEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//       console.log("Trying POST request to:", postEndpoint);
+      
+//       try {
+//         const postResponse = await axios.post(postEndpoint, {
+//           email_id: linkedEmailId,
+//           content: "" // Add empty content similar to drafts fallback
+//         }, {
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': `Bearer ${djombiToken}` // Use Djombi token
+//           }
+//         });
+        
+//         console.log("POST response status:", postResponse.status);
+//         console.log("POST response data:", postResponse.data);
+        
+//         // Check for success/error in POST response
+//         if (postResponse.data.success === false) {
+//           const errorMessage = postResponse.data.message || 'API POST request failed';
+//           console.error("API POST error:", errorMessage);
+//           throw new Error(`API POST error: ${errorMessage}`);
+//         }
+        
+//         // Process the successful POST response
+//         processResponseData(postResponse.data);
+//       } catch (postError) {
+//         console.error("POST request also failed:", postError);
+//         throw postError;
+//       }
+//     }
+//   } catch (err) {
+//     console.error('Failed to fetch sent emails:', err);
+    
+//     // Enhanced error logging
+//     if (err instanceof Error) {
+//       console.error('Error details:', {
+//         message: err.message,
+//         name: err.name,
+//         stack: err.stack
+//       });
+//     }
+    
+//     if (axios.isAxiosError(err)) {
+//       console.error('Axios error details:', {
+//         status: err.response?.status,
+//         statusText: err.response?.statusText,
+//         data: err.response?.data,
+//         headers: err.response?.headers
+//       });
+//     }
+    
+//     setError(err instanceof Error ? err.message : 'Failed to fetch sent emails');
+    
+//     // Fallback to local data if API fails
+//     const localSentEmails = emails.filter(email => email.status === "sent");
+//     if (localSentEmails.length > 0) {
+//       console.log("Using local sent emails as fallback");
+//       setApiSentEmails(localSentEmails);
+//     } else {
+//       setApiSentEmails([]);
+//     }
+//   } finally {
+//     setIsLoading(false);
+//     setIsRefreshing(false);
+//   }
+// }, [processResponseData]); // Include processResponseData as dependency and remove unnecessary token dependencies
+  
+//   useEffect(() => {
+//     fetchSentEmails();
+//   }, [fetchSentEmails]);
+  
+//   const handleRefresh = () => {
+//     setIsRefreshing(true);
+//     fetchSentEmails();
+//   };
+  
+//   // Combine sent emails from store and API
+//   const allSentEmails = [
+//     ...emails.filter(email => email.status === "sent"),
+//     ...apiSentEmails
+//   ];
+  
+//   // Remove duplicates by id
+//   const uniqueSentEmails = allSentEmails.filter(
+//     (email, index, self) => 
+//       index === self.findIndex(e => e.id === email.id)
+//   );
+  
+//   // Sort by date
+//   const sortedEmails = [...uniqueSentEmails].sort((a, b) => {
+//     const dateA = new Date(a.timestamp || "").getTime();
+//     const dateB = new Date(b.timestamp || "").getTime();
+//     return sortNewest ? dateB - dateA : dateA - dateB;
+//   });
+  
+//   // Filter by date if filterDate is set
+//   const displayedEmails = filterDate 
+//     ? sortedEmails.filter(email => {
+//         const emailDate = new Date(email.timestamp || "").toLocaleDateString();
+//         return emailDate === filterDate;
+//       })
+//     : sortedEmails;
+
+//   const toggleSort = () => {
+//     setSortNewest(!sortNewest);
+//   };
+
+//   const toggleSelect = (emailId: string, event: React.MouseEvent) => {
+//     // Prevent triggering the row click when selecting checkbox
+//     event.stopPropagation();
+    
+//     setSelectedEmails(prev => 
+//       prev.includes(emailId) 
+//         ? prev.filter(id => id !== emailId)
+//         : [...prev, emailId]
+//     );
+//   };
+  
+//   // Handle row click to open dialog
+//   const handleRowClick = (email: Email) => {
+//     setSelectedEmail(email);
+//     setShowDialog(true);
+//   };
+
+//   return (
+//     <div className="w-full h-full overflow-y-auto pb-4">
+//       {onBack && (
+//         <Button variant="ghost" size="icon" onClick={onBack} className="mb-4">
+//           <ArrowLeft className="w-4 h-4" />
+//         </Button>
+//       )}
+      
+//       <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]">
+//         <div className="sticky top-0 bg-background z-10 p-4 border-b">
+//           <div className="flex justify-between items-center">
+//             <h2 className="text-xl font-semibold">Sent</h2>
+//             <div className="flex items-center gap-2">
+//               <Button 
+//                 variant="outline" 
+//                 size="sm" 
+//                 onClick={toggleSort}
+//               >
+//                 Sort: {sortNewest ? "Newest" : "Oldest"}
+//               </Button>
+//               <Button 
+//                 variant="outline" 
+//                 size="icon" 
+//                 onClick={handleRefresh}
+//                 disabled={isRefreshing}
+//               >
+//                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+//               </Button>
+//               <Button variant="outline" size="icon">
+//                 <Filter className="w-4 h-4" />
+//               </Button>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="overflow-y-auto h-[calc(100%-60px)]">
+//           {isLoading ? (
+//             <div className="flex justify-center items-center h-full">
+//               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+//             </div>
+//           ) : error ? (
+//             <div className="text-center py-8">
+//               <p className="text-red-500">{error}</p>
+//               <Button 
+//                 className="mt-4" 
+//                 variant="outline" 
+//                 onClick={handleRefresh}
+//               >
+//                 Try Again
+//               </Button>
+//             </div>
+//           ) : displayedEmails.length === 0 ? (
+//             <div className="text-center py-8 text-muted-foreground">
+//               No sent emails found.
+//             </div>
+//           ) : (
+//             <div className="space-y-0">
+//               {displayedEmails.map((email) => (
+//                 <div 
+//                   key={email.id} 
+//                   className="flex items-center px-4 py-3 border-b last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
+//                   onClick={() => handleRowClick(email)}
+//                 >
+//                   <div className="mr-3" onClick={(e) => e.stopPropagation()}>
+//                     <Checkbox
+//                       checked={selectedEmails.includes(email.id || "")}
+//                       onCheckedChange={() => {}}
+//                       onClick={(e) => toggleSelect(email.id || "", e as React.MouseEvent)}
+//                     />
+//                   </div>
+//                   <div className="flex-1 grid grid-cols-12 gap-2">
+//                     <div className="col-span-2 text-sm text-gray-600 truncate pr-2">
+//                       To: {email.to}
+//                     </div>
+//                     <div className="col-span-7 flex items-center">
+//                       <div className="text-sm truncate">
+//                         <span className="font-medium">{email.subject}</span>
+//                         {email.content && (
+//                           <span className="text-gray-500"> - {mounted ? createEmailPreview(email.content, 50) : ''}</span>
+//                         )}
+//                       </div>
+//                     </div>
+//                     <div className="col-span-3 text-right text-sm text-gray-500">
+//                       {email.timestamp ? 
+//                         new Date(email.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+//                         ""}
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </div>
+//       </div>
+      
+//       {/* Email Details Dialog */}
+//       <Dialog open={showDialog} onOpenChange={setShowDialog}>
+//         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+//           <DialogHeader>
+//             <div className="flex justify-between items-center">
+//               <DialogTitle>{selectedEmail?.subject || "Email Details"}</DialogTitle>
+//               <DialogClose asChild>
+//                 <Button variant="ghost" size="icon">
+//                   <X className="w-4 h-4" />
+//                 </Button>
+//               </DialogClose>
+//             </div>
+//           </DialogHeader>
+          
+//           {selectedEmail && (
+//             <div className="space-y-4">
+//               <div className="grid grid-cols-12 gap-2 text-sm">
+//                 <div className="col-span-2 font-medium">From:</div>
+//                 <div className="col-span-10">{selectedEmail.from}</div>
+                
+//                 <div className="col-span-2 font-medium">To:</div>
+//                 <div className="col-span-10">{selectedEmail.to}</div>
+                
+//                 <div className="col-span-2 font-medium">Date:</div>
+//                 <div className="col-span-10">
+//                   {selectedEmail.timestamp ? 
+//                     new Date(selectedEmail.timestamp).toLocaleString() : 
+//                     ""}
+//                 </div>
+//               </div>
+              
+//               <div className="mt-4 border-t pt-4">
+//                 <div className="prose prose-sm max-w-none">
+//                   {mounted && <EmailContentRenderer content={selectedEmail.content} />}
+//                 </div>
+//               </div>
+//             </div>
+//           )}
+//         </DialogContent>
+//       </Dialog>
+//     </div>
+//   );
+// };
+
+// export default EmailSent;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import { useEmailStore } from "@/lib/store/email-store";
+// import { Button } from "@/components/ui/button";
+// import { ArrowLeft, Filter, RefreshCw, X } from "lucide-react";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { Email, EmailCategory } from "@/lib/types/email";
+// import { Checkbox } from "@/components/ui/checkbox";
+// import { getAuthToken, getCookie } from "@/lib/utils/cookies";
+// import { createEmailPreview, EmailContentRenderer } from "@/lib/utils/emails/email-content-utils";
+// import axios from "axios";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogClose
+// } from "@/components/ui/dialog";
+// import { AuthContext } from "@/lib/context/auth";
+// import { useCombinedAuth } from "../../providers/useCombinedAuth";
+// import { DjombiProfileService } from "@/lib/services/DjombiProfileService";
+
+// interface EmailSentProps {
+//   onBack?: () => void;
+// }
+
+// // Helper function to get Djombi access token
+// const getDjombiAccessToken = (): string | null => {
+//   // First try from DjombiProfileService
+//   const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
+//   if (accessToken) {
+//     return accessToken;
+//   }
+  
+//   // Fallback to localStorage directly
+//   if (typeof window !== 'undefined') {
+//     const storedToken = localStorage.getItem('djombi_access_token');
+//     if (storedToken) {
+//       return storedToken;
+//     }
+//   }
+  
+//   return null;
+// };
+
+// // Helper function to get linked email ID
+// const getLinkedEmailId = (): string | null => {
+//   // First try cookies
+//   const emailIdFromCookie = getCookie('linkedEmailId');
+//   if (emailIdFromCookie) {
+//     return emailIdFromCookie;
+//   }
+  
+//   // Then try localStorage
+//   if (typeof window !== 'undefined') {
+//     const emailIdFromStorage = localStorage.getItem('linkedEmailId');
+//     if (emailIdFromStorage) {
+//       return emailIdFromStorage;
+//     }
+//   }
+  
+//   return null;
+// };
+
+// export const EmailSent = ({ onBack }: EmailSentProps) => {
+//   const { emails, addEmail } = useEmailStore();
+  
+//   // Move all hooks to the top level
+//   const { token, user } = useContext(AuthContext);
+//   const { djombi } = useCombinedAuth();
+  
+//   const [apiSentEmails, setApiSentEmails] = useState<Email[]>([]);
+//   const [filterDate, setFilterDate] = useState<string | null>(null);
+//   const [sortNewest, setSortNewest] = useState(true);
+//   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+//   const [mounted, setMounted] = useState(false);
+//   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+//   const [showDialog, setShowDialog] = useState(false);
+//   const [isRefreshing, setIsRefreshing] = useState(false);
+
+//   // Handle client-side mounting
+//   useEffect(() => {
+//     setMounted(true);
+//   }, []);
+
+//   // Helper function to process response data
+//   const processResponseData = (data: any) => {
+//     console.log("Processing sent response data:", data);
+    
+//     // Check if data contains emails (handle different response structures)
+//     let emailsData: any[] = [];
+    
+//     if (Array.isArray(data)) {
+//       emailsData = data;
+//     } else if (data.data && Array.isArray(data.data)) {
+//       emailsData = data.data;
+//     } else if (data.sent && Array.isArray(data.sent)) {
+//       emailsData = data.sent;
+//     } else if (data.emails && Array.isArray(data.emails)) {
+//       emailsData = data.emails;
+//     } else {
+//       console.log("Response structure different than expected:", data);
+//       // Look for any array in the response that might contain emails
+//       for (const key in data) {
+//         if (Array.isArray(data[key]) && data[key].length > 0) {
+//           console.log(`Found array in response at key: ${key}`, data[key]);
+//           emailsData = data[key];
+//           break;
+//         }
+//       }
+//     }
+    
+//     if (emailsData.length === 0) {
+//       console.log("No sent emails found in the response");
+//       setApiSentEmails([]);
+//       return;
+//     }
+    
+//     console.log("Sample email data structure:", emailsData[0]);
+//     console.log(`Found ${emailsData.length} sent emails in response`);
+    
+//     // First, filter out invalid emails, then map them to the correct structure
+//     const validEmailsData = emailsData.filter(email => email && typeof email === 'object');
+    
+//     // Now map the valid emails to the correct structure
+//     const formattedEmails: Email[] = validEmailsData.map((email: any): Email => {
+//       return {
+//         id: email.id || email._id || `sent-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+//         subject: email.subject || 'No Subject',
+//         content: email.content || '',
+//         contentType: email.contentType || 'text',
+//         from: email.from || email.sender || 'Unknown Sender',
+//         to: email.to || email.recipient || '',
+//         timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+//         status: "sent",
+//         isUrgent: Boolean(email.isUrgent || email.is_urgent || false),
+//         hasAttachment: Boolean(email.hasAttachment || email.has_attachment || false),
+//         category: "sent",
+//         isRead: true, // Sent emails are always read
+//         email_id: email.email_id || null
+//       };
+//     });
+    
+//     console.log(`Processed ${formattedEmails.length} sent emails`);
+    
+//     // Add to email store first
+//     formattedEmails.forEach(email => {
+//       // Check if email already exists in store to prevent duplicates
+//       const exists = emails.some(e => e.id === email.id);
+//       if (!exists) {
+//         addEmail({
+//           ...email,
+//           status: "sent",
+//         });
+//       }
+//     });
+    
+//     setApiSentEmails(formattedEmails);
+//   };
+  
+//  // Use useCallback to memoize the function and include dependencies
+// const fetchSentEmails = useCallback(async () => {
+//   setIsLoading(true);
+//   setError(null);
+  
+//   try {
+//     console.log("Starting fetchSentEmails...");
+
+//     // Get Djombi access token using utility function
+//     const djombiToken = getDjombiAccessToken();
+//     console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
+    
+//     if (!djombiToken) {
+//       throw new Error('No Djombi access token available. Please log in again.');
+//     }
+    
+//     // Get linked email ID using utility function
+//     const linkedEmailId = getLinkedEmailId();
+//     console.log("Linked Email ID:", linkedEmailId);
+    
+//     if (!linkedEmailId) {
+//       console.log("Checking localStorage for linkedEmailId...");
+//       if (typeof window !== 'undefined') {
+//         const storageKeys = Object.keys(localStorage);
+//         console.log("Available localStorage keys:", storageKeys);
+//         console.log("linkedEmailId value:", localStorage.getItem('linkedEmailId'));
+//       }
+//       throw new Error('No linked email ID found. Please link your email first.');
+//     }
+    
+//     // First try GET request with proper URL encoding and parameters
+//     const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//     console.log("Fetching from API endpoint:", apiEndpoint);
+    
+//     try {
+//       const response = await axios.get(apiEndpoint, {
+//         headers: {
+//           'Content-Type': 'application/json',
+//           'Authorization': `Bearer ${djombiToken}` // Use Djombi token
+//         }
+//       });
+      
+//       console.log("GET response status:", response.status);
+//       console.log("GET response data:", response.data);
+      
+//       // Check for success/error in response
+//       if (response.data.success === false) {
+//         const errorMessage = response.data.message || 'API request failed';
+//         console.error("API error:", errorMessage);
+//         throw new Error(`API error: ${errorMessage}`);
+//       }
+      
+//       processResponseData(response.data);
+//     } catch (getError) {
+//       console.log("GET request failed, trying POST fallback:", getError);
+      
+//       // Try POST request as fallback with query parameters (same pattern as drafts)
+//       const postEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//       console.log("Trying POST request to:", postEndpoint);
+      
+//       try {
+//         const postResponse = await axios.post(postEndpoint, {
+//           email_id: linkedEmailId,
+//           content: "" // Add empty content similar to drafts fallback
+//         }, {
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': `Bearer ${djombiToken}` // Use Djombi token
+//           }
+//         });
+        
+//         console.log("POST response status:", postResponse.status);
+//         console.log("POST response data:", postResponse.data);
+        
+//         // Check for success/error in POST response
+//         if (postResponse.data.success === false) {
+//           const errorMessage = postResponse.data.message || 'API POST request failed';
+//           console.error("API POST error:", errorMessage);
+//           throw new Error(`API POST error: ${errorMessage}`);
+//         }
+        
+//         // Process the successful POST response
+//         processResponseData(postResponse.data);
+//       } catch (postError) {
+//         console.error("POST request also failed:", postError);
+//         throw postError;
+//       }
+//     }
+//   } catch (err) {
+//     console.error('Failed to fetch sent emails:', err);
+    
+//     // Enhanced error logging
+//     if (err instanceof Error) {
+//       console.error('Error details:', {
+//         message: err.message,
+//         name: err.name,
+//         stack: err.stack
+//       });
+//     }
+    
+//     if (axios.isAxiosError(err)) {
+//       console.error('Axios error details:', {
+//         status: err.response?.status,
+//         statusText: err.response?.statusText,
+//         data: err.response?.data,
+//         headers: err.response?.headers
+//       });
+//     }
+    
+//     setError(err instanceof Error ? err.message : 'Failed to fetch sent emails');
+    
+//     // Fallback to local data if API fails
+//     const localSentEmails = emails.filter(email => email.status === "sent");
+//     if (localSentEmails.length > 0) {
+//       console.log("Using local sent emails as fallback");
+//       setApiSentEmails(localSentEmails);
+//     } else {
+//       setApiSentEmails([]);
+//     }
+//   } finally {
+//     setIsLoading(false);
+//     setIsRefreshing(false);
+//   }
+// }, [token, djombi.token, emails, addEmail]);
+  
+//   useEffect(() => {
+//     fetchSentEmails();
+//   }, [fetchSentEmails]);
+  
+//   const handleRefresh = () => {
+//     setIsRefreshing(true);
+//     fetchSentEmails();
+//   };
+  
+//   // Combine sent emails from store and API
+//   const allSentEmails = [
+//     ...emails.filter(email => email.status === "sent"),
+//     ...apiSentEmails
+//   ];
+  
+//   // Remove duplicates by id
+//   const uniqueSentEmails = allSentEmails.filter(
+//     (email, index, self) => 
+//       index === self.findIndex(e => e.id === email.id)
+//   );
+  
+//   // Sort by date
+//   const sortedEmails = [...uniqueSentEmails].sort((a, b) => {
+//     const dateA = new Date(a.timestamp || "").getTime();
+//     const dateB = new Date(b.timestamp || "").getTime();
+//     return sortNewest ? dateB - dateA : dateA - dateB;
+//   });
+  
+//   // Filter by date if filterDate is set
+//   const displayedEmails = filterDate 
+//     ? sortedEmails.filter(email => {
+//         const emailDate = new Date(email.timestamp || "").toLocaleDateString();
+//         return emailDate === filterDate;
+//       })
+//     : sortedEmails;
+
+//   const toggleSort = () => {
+//     setSortNewest(!sortNewest);
+//   };
+
+//   const toggleSelect = (emailId: string, event: React.MouseEvent) => {
+//     // Prevent triggering the row click when selecting checkbox
+//     event.stopPropagation();
+    
+//     setSelectedEmails(prev => 
+//       prev.includes(emailId) 
+//         ? prev.filter(id => id !== emailId)
+//         : [...prev, emailId]
+//     );
+//   };
+  
+//   // Handle row click to open dialog
+//   const handleRowClick = (email: Email) => {
+//     setSelectedEmail(email);
+//     setShowDialog(true);
+//   };
+
+//   return (
+//     <div className="w-full h-full overflow-y-auto pb-4">
+//       {onBack && (
+//         <Button variant="ghost" size="icon" onClick={onBack} className="mb-4">
+//           <ArrowLeft className="w-4 h-4" />
+//         </Button>
+//       )}
+      
+//       <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]">
+//         <div className="sticky top-0 bg-background z-10 p-4 border-b">
+//           <div className="flex justify-between items-center">
+//             <h2 className="text-xl font-semibold">Sent</h2>
+//             <div className="flex items-center gap-2">
+//               <Button 
+//                 variant="outline" 
+//                 size="sm" 
+//                 onClick={toggleSort}
+//               >
+//                 Sort: {sortNewest ? "Newest" : "Oldest"}
+//               </Button>
+//               <Button 
+//                 variant="outline" 
+//                 size="icon" 
+//                 onClick={handleRefresh}
+//                 disabled={isRefreshing}
+//               >
+//                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+//               </Button>
+//               <Button variant="outline" size="icon">
+//                 <Filter className="w-4 h-4" />
+//               </Button>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="overflow-y-auto h-[calc(100%-60px)]">
+//           {isLoading ? (
+//             <div className="flex justify-center items-center h-full">
+//               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+//             </div>
+//           ) : error ? (
+//             <div className="text-center py-8">
+//               <p className="text-red-500">{error}</p>
+//               <Button 
+//                 className="mt-4" 
+//                 variant="outline" 
+//                 onClick={handleRefresh}
+//               >
+//                 Try Again
+//               </Button>
+//             </div>
+//           ) : displayedEmails.length === 0 ? (
+//             <div className="text-center py-8 text-muted-foreground">
+//               No sent emails found.
+//             </div>
+//           ) : (
+//             <div className="space-y-0">
+//               {displayedEmails.map((email) => (
+//                 <div 
+//                   key={email.id} 
+//                   className="flex items-center px-4 py-3 border-b last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
+//                   onClick={() => handleRowClick(email)}
+//                 >
+//                   <div className="mr-3" onClick={(e) => e.stopPropagation()}>
+//                     <Checkbox
+//                       checked={selectedEmails.includes(email.id || "")}
+//                       onCheckedChange={() => {}}
+//                       onClick={(e) => toggleSelect(email.id || "", e as React.MouseEvent)}
+//                     />
+//                   </div>
+//                   <div className="flex-1 grid grid-cols-12 gap-2">
+//                     <div className="col-span-2 text-sm text-gray-600 truncate pr-2">
+//                       To: {email.to}
+//                     </div>
+//                     <div className="col-span-7 flex items-center">
+//                       <div className="text-sm truncate">
+//                         <span className="font-medium">{email.subject}</span>
+//                         {email.content && (
+//                           <span className="text-gray-500"> - {mounted ? createEmailPreview(email.content, 50) : ''}</span>
+//                         )}
+//                       </div>
+//                     </div>
+//                     <div className="col-span-3 text-right text-sm text-gray-500">
+//                       {email.timestamp ? 
+//                         new Date(email.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+//                         ""}
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </div>
+//       </div>
+      
+//       {/* Email Details Dialog */}
+//       <Dialog open={showDialog} onOpenChange={setShowDialog}>
+//         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+//           <DialogHeader>
+//             <div className="flex justify-between items-center">
+//               <DialogTitle>{selectedEmail?.subject || "Email Details"}</DialogTitle>
+//               <DialogClose asChild>
+//                 <Button variant="ghost" size="icon">
+//                   <X className="w-4 h-4" />
+//                 </Button>
+//               </DialogClose>
+//             </div>
+//           </DialogHeader>
+          
+//           {selectedEmail && (
+//             <div className="space-y-4">
+//               <div className="grid grid-cols-12 gap-2 text-sm">
+//                 <div className="col-span-2 font-medium">From:</div>
+//                 <div className="col-span-10">{selectedEmail.from}</div>
+                
+//                 <div className="col-span-2 font-medium">To:</div>
+//                 <div className="col-span-10">{selectedEmail.to}</div>
+                
+//                 <div className="col-span-2 font-medium">Date:</div>
+//                 <div className="col-span-10">
+//                   {selectedEmail.timestamp ? 
+//                     new Date(selectedEmail.timestamp).toLocaleString() : 
+//                     ""}
+//                 </div>
+//               </div>
+              
+//               <div className="mt-4 border-t pt-4">
+//                 <div className="prose prose-sm max-w-none">
+//                   {mounted && <EmailContentRenderer content={selectedEmail.content} />}
+//                 </div>
+//               </div>
+//             </div>
+//           )}
+//         </DialogContent>
+//       </Dialog>
+//     </div>
+//   );
+// };
+
+// export default EmailSent;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import { useEmailStore } from "@/lib/store/email-store";
+// import { Button } from "@/components/ui/button";
+// import { ArrowLeft, Filter, RefreshCw, X } from "lucide-react";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { Email, EmailCategory } from "@/lib/types/email";
+// import { Checkbox } from "@/components/ui/checkbox";
+// import { getAuthToken, getCookie } from "@/lib/utils/cookies";
+// import { createEmailPreview, EmailContentRenderer } from "@/lib/utils/emails/email-content-utils";
+// import axios from "axios";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogClose
+// } from "@/components/ui/dialog";
+// import { AuthContext } from "@/lib/context/auth";
+// import { useCombinedAuth } from "../../providers/useCombinedAuth";
+
+// interface EmailSentProps {
+//   onBack?: () => void;
+// }
+
+// export const EmailSent = ({ onBack }: EmailSentProps) => {
+//   const { emails, addEmail } = useEmailStore();
+  
+//   // Move all hooks to the top level
+//   const { token, user } = useContext(AuthContext);
+//   const { djombi } = useCombinedAuth();
+  
+//   const [apiSentEmails, setApiSentEmails] = useState<Email[]>([]);
+//   const [filterDate, setFilterDate] = useState<string | null>(null);
+//   const [sortNewest, setSortNewest] = useState(true);
+//   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+//   const [mounted, setMounted] = useState(false);
+//   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+//   const [showDialog, setShowDialog] = useState(false);
+//   const [isRefreshing, setIsRefreshing] = useState(false);
+
+//   // Handle client-side mounting
+//   useEffect(() => {
+//     setMounted(true);
+//   }, []);
+
+//   // Helper function to process response data
+//   const processResponseData = (data: any) => {
+//     // Check if data contains emails (handle different response structures)
+//     let emailsData: any[] = [];
+    
+//     if (Array.isArray(data)) {
+//       emailsData = data;
+//     } else if (data.data && Array.isArray(data.data)) {
+//       emailsData = data.data;
+//     } else if (data.sent && Array.isArray(data.sent)) {
+//       emailsData = data.sent;
+//     } else if (data.emails && Array.isArray(data.emails)) {
+//       emailsData = data.emails;
+//     } else {
+//       console.log("Response structure different than expected:", data);
+//       // Look for any array in the response that might contain emails
+//       for (const key in data) {
+//         if (Array.isArray(data[key]) && data[key].length > 0) {
+//           console.log(`Found array in response at key: ${key}`, data[key]);
+//           emailsData = data[key];
+//           break;
+//         }
+//       }
+//     }
+    
+//     if (emailsData.length === 0) {
+//       console.log("No emails found in the response");
+//       setApiSentEmails([]);
+//       return;
+//     }
+    
+//     console.log("Sample email data structure:", emailsData[0]);
+    
+//     // First, filter out invalid emails, then map them to the correct structure
+//     const validEmailsData = emailsData.filter(email => email && typeof email === 'object');
+    
+//     // Now map the valid emails to the correct structure
+//     const formattedEmails: Email[] = validEmailsData.map((email: any): Email => {
+//       return {
+//         id: email.id || email._id || `sent-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+//         subject: email.subject || 'No Subject',
+//         content: email.content || '',
+//         contentType: email.contentType || 'text',  // Add this if it's required in your Email interface
+//         from: email.from || email.sender || 'Unknown Sender',
+//         to: email.to || email.recipient || '',
+//         timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+//         status: "sent",
+//         isUrgent: Boolean(email.isUrgent || email.is_urgent || false),
+//         hasAttachment: Boolean(email.hasAttachment || email.has_attachment || false),
+//         category: "sent",
+//         isRead: true, // Sent emails are always read
+//         email_id: email.email_id || null  // Add this if it's required in your Email interface
+//       };
+//     });
+    
+//     console.log(`Processed ${formattedEmails.length} sent emails`);
+    
+//     // Add to email store first
+//     formattedEmails.forEach(email => {
+//       // Check if email already exists in store to prevent duplicates
+//       const exists = emails.some(e => e.id === email.id);
+//       if (!exists) {
+//         addEmail({
+//           ...email,
+//           status: "sent",
+//         });
+//       }
+//     });
+    
+//     setApiSentEmails(formattedEmails);
+//   };
+  
+//   // Use useCallback to memoize the function and include dependencies
+//   const fetchSentEmails = useCallback(async () => {
+//     setIsLoading(true);
+//     setError(null);
+    
+//     try {
+//       console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+//       const djombiTokens = djombi.token || "";
+      
+//       if (!token) {
+//         throw new Error('No access token available');
+//       }
+      
+//       // Get linked email ID - use the same approach as ProfessionalEmailInbox
+//       const linkedEmailId = getCookie('linkedEmailId') ||
+//         (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+//       console.log("Linked Email ID:", linkedEmailId);
+      
+//       if (!linkedEmailId) {
+//         throw new Error('No linked email ID found');
+//       }
+      
+//       // Use axios instead of fetch
+//       const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//       console.log("Fetching from API endpoint:", apiEndpoint);
+      
+//       const response = await axios.get(apiEndpoint, {
+//         headers: {
+//           'Content-Type': 'application/json',
+//           'Authorization': `Bearer ${djombiTokens}`,
+//         }
+//       });
+      
+//       console.log("GET response data:", response.data);
+      
+//       // Check for success/error in response
+//       if (response.data.success === false) {
+//         const errorMessage = response.data.message || 'API request failed';
+//         console.error("API error:", errorMessage);
+//         throw new Error(`API error: ${errorMessage}`);
+//       }
+      
+//       processResponseData(response.data);
+//     } catch (err) {
+//       console.error('Failed to fetch sent emails:', err);
+//       setError(err instanceof Error ? err.message : 'Failed to fetch sent emails');
+      
+//       // Fallback to local data if API fails
+//       const localSentEmails = emails.filter(email => email.status === "sent");
+//       if (localSentEmails.length > 0) {
+//         console.log("Using local sent emails as fallback");
+//         setApiSentEmails([]);
+//       }
+//     } finally {
+//       setIsLoading(false);
+//       setIsRefreshing(false);
+//     }
+//   }, [token, djombi.token, emails, addEmail]);
+  
+//   useEffect(() => {
+//     fetchSentEmails();
+//   }, [fetchSentEmails]);
+  
+//   const handleRefresh = () => {
+//     setIsRefreshing(true);
+//     fetchSentEmails();
+//   };
+  
+//   // Combine sent emails from store and API
+//   const allSentEmails = [
+//     ...emails.filter(email => email.status === "sent"),
+//     ...apiSentEmails
+//   ];
+  
+//   // Remove duplicates by id
+//   const uniqueSentEmails = allSentEmails.filter(
+//     (email, index, self) => 
+//       index === self.findIndex(e => e.id === email.id)
+//   );
+  
+//   // Sort by date
+//   const sortedEmails = [...uniqueSentEmails].sort((a, b) => {
+//     const dateA = new Date(a.timestamp || "").getTime();
+//     const dateB = new Date(b.timestamp || "").getTime();
+//     return sortNewest ? dateB - dateA : dateA - dateB;
+//   });
+  
+//   // Filter by date if filterDate is set
+//   const displayedEmails = filterDate 
+//     ? sortedEmails.filter(email => {
+//         const emailDate = new Date(email.timestamp || "").toLocaleDateString();
+//         return emailDate === filterDate;
+//       })
+//     : sortedEmails;
+
+//   const toggleSort = () => {
+//     setSortNewest(!sortNewest);
+//   };
+
+//   const toggleSelect = (emailId: string, event: React.MouseEvent) => {
+//     // Prevent triggering the row click when selecting checkbox
+//     event.stopPropagation();
+    
+//     setSelectedEmails(prev => 
+//       prev.includes(emailId) 
+//         ? prev.filter(id => id !== emailId)
+//         : [...prev, emailId]
+//     );
+//   };
+  
+//   // Handle row click to open dialog
+//   const handleRowClick = (email: Email) => {
+//     setSelectedEmail(email);
+//     setShowDialog(true);
+//   };
+
+//   return (
+//     <div className="w-full h-full overflow-y-auto pb-4">
+//       {onBack && (
+//         <Button variant="ghost" size="icon" onClick={onBack} className="mb-4">
+//           <ArrowLeft className="w-4 h-4" />
+//         </Button>
+//       )}
+      
+//       <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]">
+//         <div className="sticky top-0 bg-background z-10 p-4 border-b">
+//           <div className="flex justify-between items-center">
+//             <h2 className="text-xl font-semibold">Sent</h2>
+//             <div className="flex items-center gap-2">
+//               <Button 
+//                 variant="outline" 
+//                 size="sm" 
+//                 onClick={toggleSort}
+//               >
+//                 Sort: {sortNewest ? "Newest" : "Oldest"}
+//               </Button>
+//               <Button 
+//                 variant="outline" 
+//                 size="icon" 
+//                 onClick={handleRefresh}
+//                 disabled={isRefreshing}
+//               >
+//                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+//               </Button>
+//               <Button variant="outline" size="icon">
+//                 <Filter className="w-4 h-4" />
+//               </Button>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="overflow-y-auto h-[calc(100%-60px)]">
+//           {isLoading ? (
+//             <div className="flex justify-center items-center h-full">
+//               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+//             </div>
+//           ) : error ? (
+//             <div className="text-center py-8">
+//               <p className="text-red-500">{error}</p>
+//               <Button 
+//                 className="mt-4" 
+//                 variant="outline" 
+//                 onClick={handleRefresh}
+//               >
+//                 Try Again
+//               </Button>
+//             </div>
+//           ) : displayedEmails.length === 0 ? (
+//             <div className="text-center py-8 text-muted-foreground">
+//               No sent emails found.
+//             </div>
+//           ) : (
+//             <div className="space-y-0">
+//               {displayedEmails.map((email) => (
+//                 <div 
+//                   key={email.id} 
+//                   className="flex items-center px-4 py-3 border-b last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
+//                   onClick={() => handleRowClick(email)}
+//                 >
+//                   <div className="mr-3" onClick={(e) => e.stopPropagation()}>
+//                     <Checkbox
+//                       checked={selectedEmails.includes(email.id || "")}
+//                       onCheckedChange={() => {}}
+//                       onClick={(e) => toggleSelect(email.id || "", e as React.MouseEvent)}
+//                     />
+//                   </div>
+//                   <div className="flex-1 grid grid-cols-12 gap-2">
+//                     <div className="col-span-2 text-sm text-gray-600 truncate pr-2">
+//                       To: {email.to}
+//                     </div>
+//                     <div className="col-span-7 flex items-center">
+//                       <div className="text-sm truncate">
+//                         <span className="font-medium">{email.subject}</span>
+//                         {email.content && (
+//                           <span className="text-gray-500"> - {mounted ? createEmailPreview(email.content, 50) : ''}</span>
+//                         )}
+//                       </div>
+//                     </div>
+//                     <div className="col-span-3 text-right text-sm text-gray-500">
+//                       {email.timestamp ? 
+//                         new Date(email.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+//                         ""}
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </div>
+//       </div>
+      
+//       {/* Email Details Dialog */}
+//       <Dialog open={showDialog} onOpenChange={setShowDialog}>
+//         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+//           <DialogHeader>
+//             <div className="flex justify-between items-center">
+//               <DialogTitle>{selectedEmail?.subject || "Email Details"}</DialogTitle>
+//               <DialogClose asChild>
+//                 <Button variant="ghost" size="icon">
+//                   <X className="w-4 h-4" />
+//                 </Button>
+//               </DialogClose>
+//             </div>
+//           </DialogHeader>
+          
+//           {selectedEmail && (
+//             <div className="space-y-4">
+//               <div className="grid grid-cols-12 gap-2 text-sm">
+//                 <div className="col-span-2 font-medium">From:</div>
+//                 <div className="col-span-10">{selectedEmail.from}</div>
+                
+//                 <div className="col-span-2 font-medium">To:</div>
+//                 <div className="col-span-10">{selectedEmail.to}</div>
+                
+//                 <div className="col-span-2 font-medium">Date:</div>
+//                 <div className="col-span-10">
+//                   {selectedEmail.timestamp ? 
+//                     new Date(selectedEmail.timestamp).toLocaleString() : 
+//                     ""}
+//                 </div>
+//               </div>
+              
+//               <div className="mt-4 border-t pt-4">
+//                 <div className="prose prose-sm max-w-none">
+//                   {mounted && <EmailContentRenderer content={selectedEmail.content} />}
+//                 </div>
+//               </div>
+//             </div>
+//           )}
+//         </DialogContent>
+//       </Dialog>
+//     </div>
+//   );
+// };
+
+// export default EmailSent;
 
 
 

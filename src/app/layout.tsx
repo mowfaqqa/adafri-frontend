@@ -14,12 +14,7 @@ import {
   DjombiAuthProvider,
   DjombiAuthLoader,
 } from "@/components/providers/DjombiAuthProvider";
-
-// Dynamic imports for non-critical components
-const BackgroundTokenRefresh = dynamic(
-  () => import("@/components/auth/BackgroundTokenRefresh"),
-  { ssr: false }
-);
+import BackgroundTokenRefresh from "@/components/auth/BackgroundTokenRefresh";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

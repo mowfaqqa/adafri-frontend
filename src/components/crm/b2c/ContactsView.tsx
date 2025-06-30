@@ -318,7 +318,7 @@ export function ContactsView({ onReconfigure, onContactAdded, onContactsUpdate, 
       )}
 
       {/* Header with Search and Stats */}
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Contacts</h1>

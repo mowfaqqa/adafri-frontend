@@ -72,6 +72,12 @@ export interface ProjectStatus {
   updatedAt: string;
 }
 
+// Cover functionality interface
+export interface TaskCover {
+  type: 'gradient' | 'image';
+  value: string; // For gradient: CSS gradient string, For image: URL string
+}
+
 interface BaseTask {
   id: string;
   title: string;
@@ -90,6 +96,7 @@ interface BaseTask {
   projectId: string;
   epicId?: string;
   milestoneId?: string;
+  cover?: TaskCover | null;
 }
 
 // Sprint specific task interface

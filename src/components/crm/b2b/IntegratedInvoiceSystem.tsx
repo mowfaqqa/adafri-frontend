@@ -1,14 +1,18 @@
+// components/IntegratedInvoiceSystem.tsx
 "use client";
 import React, { useState } from 'react';
-import { Plus, FileText, Calendar, DollarSign, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, FileText, Calendar, DollarSign, Eye, Edit, Trash2, Settings, Sparkles } from 'lucide-react';
 import { InvoiceModal } from './modals/InvoiceModal';
+import { TemplateCurrencySelector } from './TemplateCurrencySelector';
+import { useInvoiceSettings } from '@/lib/context/invoices/InvoiceSettingsProvider';
 import type { DocumentData, CompanyInfo, Contact } from '@/lib/types/invoice/types';
 
-
 export default function IntegratedInvoiceSystem() {
+  const { settings, formatCurrency } = useInvoiceSettings();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [editingDocument, setEditingDocument] = useState<DocumentData | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleSave = (document: DocumentData) => {
     setDocuments(prev => {
@@ -33,6 +37,10 @@ export default function IntegratedInvoiceSystem() {
   };
 
   const handleCreateNew = () => {
+    if (!settings.isConfigured) {
+      setShowSettings(true);
+      return;
+    }
     setEditingDocument(null);
     setIsModalOpen(true);
   };
@@ -93,6 +101,49 @@ export default function IntegratedInvoiceSystem() {
   const paidDocuments = documents.filter(doc => doc.status === 'Paid');
   const pendingDocuments = documents.filter(doc => ['Sent', 'Draft'].includes(doc.status));
 
+  // Show settings/configuration screen if not configured
+  if (!settings.isConfigured || showSettings) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+              Welcome to Invoice & Quote System
+            </h1>
+            <p className="text-gray-600 text-lg mb-8">
+              Let's get started by setting up your preferences
+            </p>
+          </div>
+
+          {/* Settings Panel */}
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl border border-gray-200 shadow-2xl p-8">
+            <TemplateCurrencySelector 
+              onComplete={() => {
+                setShowSettings(false);
+              }}
+            />
+          </div>
+
+          {/* Back Button (only show if already configured) */}
+          {settings.isConfigured && (
+            <div className="text-center mt-8">
+              <button
+                onClick={() => setShowSettings(false)}
+                className="text-gray-600 hover:text-gray-800 underline"
+              >
+                ← Back to dashboard
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -113,6 +164,29 @@ export default function IntegratedInvoiceSystem() {
               <Plus className="w-6 h-6" />
               <span>Create New Document</span>
             </button>
+            
+            <button
+              onClick={() => setShowSettings(true)}
+              className="px-6 py-4 bg-white/80 backdrop-blur-lg text-gray-700 rounded-2xl font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2 border border-gray-200"
+            >
+              <Settings className="w-5 h-5" />
+              <span>Settings</span>
+            </button>
+          </div>
+
+          {/* Current Settings Display */}
+          <div className="mt-6 flex items-center justify-center space-x-6 text-sm text-gray-600">
+            <div className="flex items-center space-x-2">
+              <span>Template:</span>
+              <span className="font-medium text-gray-900 capitalize">{settings.selectedTemplate}</span>
+            </div>
+            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+            <div className="flex items-center space-x-2">
+              <span>Currency:</span>
+              <span className="font-medium text-gray-900">
+                {settings.selectedCurrency.code} ({settings.selectedCurrency.symbol})
+              </span>
+            </div>
           </div>
         </div>
 
@@ -135,7 +209,7 @@ export default function IntegratedInvoiceSystem() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-600 text-sm font-medium">Total Value</p>
-                  <p className="text-2xl font-bold text-gray-900">${totalValue.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalValue)}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-green-600" />
@@ -233,7 +307,7 @@ export default function IntegratedInvoiceSystem() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          ${doc.total.toFixed(2)}
+                          {formatCurrency(doc.total)}
                         </div>
                         {doc.discountAmount > 0 && (
                           <div className="text-sm text-green-600">
@@ -302,6 +376,386 @@ export default function IntegratedInvoiceSystem() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Former Design
+// "use client";
+// import React, { useState } from 'react';
+// import { Plus, FileText, Calendar, DollarSign, Eye, Edit, Trash2 } from 'lucide-react';
+// import { InvoiceModal } from './modals/InvoiceModal';
+// import type { DocumentData, CompanyInfo, Contact } from '@/lib/types/invoice/types';
+
+
+// export default function IntegratedInvoiceSystem() {
+//   const [isModalOpen, setIsModalOpen] = useState(false);
+//   const [documents, setDocuments] = useState<DocumentData[]>([]);
+//   const [editingDocument, setEditingDocument] = useState<DocumentData | null>(null);
+
+//   const handleSave = (document: DocumentData) => {
+//     setDocuments(prev => {
+//       const existing = prev.find(d => d.id === document.id);
+//       if (existing) {
+//         return prev.map(d => d.id === document.id ? document : d);
+//       }
+//       return [...prev, document];
+//     });
+//     setEditingDocument(null);
+//   };
+
+//   const handleEdit = (document: DocumentData) => {
+//     setEditingDocument(document);
+//     setIsModalOpen(true);
+//   };
+
+//   const handleDelete = (documentId: string) => {
+//     if (confirm('Are you sure you want to delete this document?')) {
+//       setDocuments(prev => prev.filter(d => d.id !== documentId));
+//     }
+//   };
+
+//   const handleCreateNew = () => {
+//     setEditingDocument(null);
+//     setIsModalOpen(true);
+//   };
+
+//   const sampleCompanyInfo: CompanyInfo = {
+//     name: 'Acme Corporation',
+//     address: '123 Business Ave\nNew York, NY 10001',
+//     email: 'contact@acme.com',
+//     phone: '+1 (555) 123-4567',
+//     taxId: 'TAX123456789',
+//     companyId: 'REG987654321'
+//   };
+
+//   const sampleContacts: Contact[] = [
+//     {
+//       id: '1',
+//       name: 'John Smith',
+//       email: 'john@techcorp.com',
+//       phone: '+1 (555) 987-6543',
+//       company: 'Tech Corp Solutions'
+//     },
+//     {
+//       id: '2',
+//       name: 'Sarah Johnson',
+//       email: 'sarah@designstudio.com',
+//       phone: '+1 (555) 456-7890',
+//       company: 'Creative Design Studio'
+//     },
+//     {
+//       id: '3',
+//       name: 'Mike Wilson',
+//       email: 'mike@retailplus.com',
+//       phone: '+1 (555) 321-0987',
+//       company: 'Retail Plus Inc'
+//     }
+//   ];
+
+//   const getStatusColor = (status: string) => {
+//     switch (status.toLowerCase()) {
+//       case 'paid':
+//         return 'bg-green-100 text-green-800';
+//       case 'sent':
+//         return 'bg-blue-100 text-blue-800';
+//       case 'overdue':
+//         return 'bg-red-100 text-red-800';
+//       case 'accepted':
+//         return 'bg-green-100 text-green-800';
+//       case 'declined':
+//         return 'bg-red-100 text-red-800';
+//       case 'cancelled':
+//         return 'bg-gray-100 text-gray-800';
+//       default:
+//         return 'bg-gray-100 text-gray-800';
+//     }
+//   };
+
+//   const totalValue = documents.reduce((sum, doc) => sum + doc.total, 0);
+//   const paidDocuments = documents.filter(doc => doc.status === 'Paid');
+//   const pendingDocuments = documents.filter(doc => ['Sent', 'Draft'].includes(doc.status));
+
+//   return (
+//     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-8">
+//       <div className="max-w-7xl mx-auto">
+//         {/* Header */}
+//         <div className="text-center mb-8">
+//           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+//             Invoice & Quote System
+//           </h1>
+//           <p className="text-gray-600 text-lg mb-8">
+//             Create beautiful invoices and quotes with multiple professional templates
+//           </p>
+          
+//           <div className="flex items-center justify-center space-x-4">
+//             <button
+//               onClick={handleCreateNew}
+//               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold hover:shadow-xl transition-all duration-300 flex items-center space-x-3"
+//             >
+//               <Plus className="w-6 h-6" />
+//               <span>Create New Document</span>
+//             </button>
+//           </div>
+//         </div>
+
+//         {/* Stats Cards */}
+//         {documents.length > 0 && (
+//           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+//             <div className="bg-white/80 backdrop-blur-lg rounded-2xl border border-gray-200 p-6 shadow-lg">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="text-gray-600 text-sm font-medium">Total Documents</p>
+//                   <p className="text-2xl font-bold text-gray-900">{documents.length}</p>
+//                 </div>
+//                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+//                   <FileText className="w-6 h-6 text-blue-600" />
+//                 </div>
+//               </div>
+//             </div>
+
+//             <div className="bg-white/80 backdrop-blur-lg rounded-2xl border border-gray-200 p-6 shadow-lg">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="text-gray-600 text-sm font-medium">Total Value</p>
+//                   <p className="text-2xl font-bold text-gray-900">${totalValue.toFixed(2)}</p>
+//                 </div>
+//                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+//                   <DollarSign className="w-6 h-6 text-green-600" />
+//                 </div>
+//               </div>
+//             </div>
+
+//             <div className="bg-white/80 backdrop-blur-lg rounded-2xl border border-gray-200 p-6 shadow-lg">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="text-gray-600 text-sm font-medium">Paid</p>
+//                   <p className="text-2xl font-bold text-gray-900">{paidDocuments.length}</p>
+//                 </div>
+//                 <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+//                   <Calendar className="w-6 h-6 text-emerald-600" />
+//                 </div>
+//               </div>
+//             </div>
+
+//             <div className="bg-white/80 backdrop-blur-lg rounded-2xl border border-gray-200 p-6 shadow-lg">
+//               <div className="flex items-center justify-between">
+//                 <div>
+//                   <p className="text-gray-600 text-sm font-medium">Pending</p>
+//                   <p className="text-2xl font-bold text-gray-900">{pendingDocuments.length}</p>
+//                 </div>
+//                 <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+//                   <Eye className="w-6 h-6 text-yellow-600" />
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Documents List */}
+//         {documents.length > 0 ? (
+//           <div className="bg-white/80 backdrop-blur-lg rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
+//             <div className="p-6 border-b border-gray-200">
+//               <h2 className="text-2xl font-bold text-gray-900">Recent Documents</h2>
+//             </div>
+            
+//             <div className="overflow-x-auto">
+//               <table className="w-full">
+//                 <thead className="bg-gray-50">
+//                   <tr>
+//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       Document
+//                     </th>
+//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       Client
+//                     </th>
+//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       Date
+//                     </th>
+//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       Amount
+//                     </th>
+//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       Status
+//                     </th>
+//                     <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                       Actions
+//                     </th>
+//                   </tr>
+//                 </thead>
+//                 <tbody className="bg-white divide-y divide-gray-200">
+//                   {documents.map((doc) => (
+//                     <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <div className="flex items-center">
+//                           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+//                             <FileText className="w-5 h-5 text-white" />
+//                           </div>
+//                           <div className="ml-4">
+//                             <div className="text-sm font-medium text-gray-900">
+//                               {doc.type.toUpperCase()} #{doc.invoiceNumber}
+//                             </div>
+//                             <div className="text-sm text-gray-500">
+//                               {doc.items.length} item{doc.items.length !== 1 ? 's' : ''}
+//                             </div>
+//                           </div>
+//                         </div>
+//                       </td>
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <div className="text-sm font-medium text-gray-900">{doc.toCompany}</div>
+//                         <div className="text-sm text-gray-500">{doc.toContact}</div>
+//                       </td>
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <div className="text-sm text-gray-900">
+//                           {new Date(doc.date).toLocaleDateString()}
+//                         </div>
+//                         <div className="text-sm text-gray-500">
+//                           {doc.type === 'invoice' ? 'Due: ' : 'Valid: '}
+//                           {new Date(doc.type === 'invoice' ? doc.dueDate : doc.validUntil || '').toLocaleDateString()}
+//                         </div>
+//                       </td>
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <div className="text-sm font-medium text-gray-900">
+//                           ${doc.total.toFixed(2)}
+//                         </div>
+//                         {doc.discountAmount > 0 && (
+//                           <div className="text-sm text-green-600">
+//                             -{doc.discountRate}% discount
+//                           </div>
+//                         )}
+//                       </td>
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(doc.status)}`}>
+//                           {doc.status}
+//                         </span>
+//                       </td>
+//                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+//                         <div className="flex items-center justify-end space-x-2">
+//                           <button
+//                             onClick={() => handleEdit(doc)}
+//                             className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+//                             title="Edit"
+//                           >
+//                             <Edit className="w-4 h-4" />
+//                           </button>
+//                           <button
+//                             onClick={() => handleDelete(doc.id)}
+//                             className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors"
+//                             title="Delete"
+//                           >
+//                             <Trash2 className="w-4 h-4" />
+//                           </button>
+//                         </div>
+//                       </td>
+//                     </tr>
+//                   ))}
+//                 </tbody>
+//               </table>
+//             </div>
+//           </div>
+//         ) : (
+//           <div className="bg-white/80 backdrop-blur-lg rounded-2xl border border-gray-200 p-12 shadow-xl text-center">
+//             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+//             <h3 className="text-xl font-semibold text-gray-900 mb-2">No documents yet</h3>
+//             <p className="text-gray-600 mb-6">
+//               Create your first invoice or quote to get started with professional billing.
+//             </p>
+//             <button
+//               onClick={handleCreateNew}
+//               className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2 mx-auto"
+//             >
+//               <Plus className="w-5 h-5" />
+//               <span>Create Your First Document</span>
+//             </button>
+//           </div>
+//         )}
+//       </div>
+
+//       <InvoiceModal
+//         isOpen={isModalOpen}
+//         onClose={() => {
+//           setIsModalOpen(false);
+//           setEditingDocument(null);
+//         }}
+//         onSave={handleSave}
+//         editingDocument={editingDocument}
+//         contacts={sampleContacts}
+//         companyInfo={sampleCompanyInfo}
+//       />
+//     </div>
+//   );
+// }
 
 
 

@@ -2,18 +2,26 @@
 "use client";
 import { useState, useEffect, useContext, useCallback } from "react";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
-import { Mail, Archive, AlertCircle, Inbox, Star, CheckCircle } from "lucide-react";
+import { Mail, Archive, AlertCircle, Inbox, Star, CheckCircle, Plus, MoreHorizontal, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getCookie } from "@/lib/utils/cookies";
 import { AuthContext } from "@/lib/context/auth";
-import { Email, EmailColumn as EmailColumnType, TabType, TabConfig, EmailCompose, EmailFilter, EmailAccountType, PaginationState } from "@/lib/types/email2";
+import { Email, EmailColumn as EmailColumnType, EmailCompose, EmailFilter, EmailAccountType, PaginationState } from "@/lib/types/email2";
 import { useCombinedAuth } from "@/components/providers/useCombinedAuth";
 
 // Import our new components
 import SearchFilterBar from "./SearchFilterBar";
-import TabNavigation from "./TabNavigation";
-import EmailBoard from "./EmailBoard";
 import { LoadingState, ErrorState, NoEmailState } from "./InboxStates";
+import EmailBoard from "./EmailBoard";
+import { ComposeModal } from "../AddEmailComponents/ComposeModal";
 
 const ProfessionalEmailInbox = () => {
     // Move all hooks to the top level
@@ -24,11 +32,10 @@ const ProfessionalEmailInbox = () => {
     // State
     const [emails, setEmails] = useState<Email[]>([]);
     const [columns, setColumns] = useState<EmailColumnType[]>([
-        { id: "inbox", title: "Inbox", icon: Inbox, gradient: "from-blue-500 to-cyan-500" },
-        { id: "urgent", title: "Urgent", icon: AlertCircle, gradient: "from-red-500 to-orange-500" },
-        { id: "archive", title: "Archive", icon: Archive, gradient: "from-gray-500 to-slate-500" }
+        { id: "inbox", title: "Inbox", icon: "📧", gradient: "from-blue-500 to-cyan-500" },
+        { id: "urgent", title: "Urgent", icon: "🚨", gradient: "from-red-500 to-orange-500" },
+        { id: "archive", title: "Archive", icon: "📁", gradient: "from-gray-500 to-slate-500" }
     ]);
-    const [activeTab, setActiveTab] = useState<TabType>("viewAll");
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
@@ -47,15 +54,10 @@ const ProfessionalEmailInbox = () => {
         content: ""
     });
     const [pagination, setPagination] = useState<PaginationState>({});
+    const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+    const [editingColumnName, setEditingColumnName] = useState("");
 
     const itemsPerPage = 12;
-
-    // Tab configuration - Updated with proper icons
-    const tabs: TabConfig[] = [
-        { id: "viewAll", label: "View All", icon: Star, gradient: "from-blue-500 to-cyan-500" },
-        { id: "urgent", label: "Urgent", icon: AlertCircle, gradient: "from-red-500 to-orange-500" },
-        { id: "archive", label: "Archive", icon: Archive, gradient: "from-gray-500 to-slate-500" }
-    ];
 
     // Initialize pagination state for each column
     const initializePagination = (columns: EmailColumnType[]) => {
@@ -69,23 +71,46 @@ const ProfessionalEmailInbox = () => {
         setPagination(initialPagination);
     };
 
-    // Filter emails based on active tab and filters
+    // Load saved data from localStorage
+    const loadSavedData = () => {
+        try {
+            const savedEmails = localStorage.getItem('emailInboxData');
+            const savedColumns = localStorage.getItem('emailColumnsData');
+            
+            if (savedEmails) {
+                const parsedEmails = JSON.parse(savedEmails);
+                setEmails(parsedEmails);
+            }
+            
+            if (savedColumns) {
+                const parsedColumns = JSON.parse(savedColumns);
+                setColumns(parsedColumns);
+            }
+        } catch (error) {
+            console.error('Error loading saved data:', error);
+        }
+    };
+
+    // Save data to localStorage - memoized to prevent unnecessary re-renders
+    const saveDataToStorage = useCallback(() => {
+        try {
+            localStorage.setItem('emailInboxData', JSON.stringify(emails));
+            localStorage.setItem('emailColumnsData', JSON.stringify(columns));
+        } catch (error) {
+            console.error('Error saving data:', error);
+        }
+    }, [emails, columns]);
+
+    // Save data whenever emails or columns change
+    useEffect(() => {
+        if (emails.length > 0) {
+            saveDataToStorage();
+        }
+    }, [emails, columns, saveDataToStorage]);
+
+    // Filter emails based on filters
     const getFilteredEmails = (emails: Email[]): Email[] => {
         let filtered = [...emails];
-
-        // Filter by tab
-        if (activeTab !== "viewAll") {
-            filtered = filtered.filter(email => {
-                switch (activeTab) {
-                    case "urgent":
-                        return email.isUrgent;
-                    case "archive":
-                        return email.status === "archive";
-                    default:
-                        return true;
-                }
-            });
-        }
 
         // Apply search filter
         if (emailFilter.searchTerm) {
@@ -187,6 +212,9 @@ const ProfessionalEmailInbox = () => {
 
     // Fetch emails using useCallback
     const fetchEmails = useCallback(async () => {
+        // First load saved data
+        loadSavedData();
+        
         setIsLoading(true);
         setError(null);
 
@@ -235,7 +263,15 @@ const ProfessionalEmailInbox = () => {
             }
 
             const formattedEmails = processEmailData(data);
-            setEmails(formattedEmails);
+            
+            // Merge with existing saved emails, preserving status changes
+            const savedEmails = JSON.parse(localStorage.getItem('emailInboxData') || '[]');
+            const mergedEmails = formattedEmails.map(newEmail => {
+                const existingEmail = savedEmails.find((saved: Email) => saved.id === newEmail.id);
+                return existingEmail ? { ...newEmail, status: existingEmail.status } : newEmail;
+            });
+            
+            setEmails(mergedEmails);
         } catch (err) {
             console.error('Error fetching emails:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch emails');
@@ -244,7 +280,7 @@ const ProfessionalEmailInbox = () => {
         }
     }, [token, djombiTokens]);
 
-    // Fetch emails
+    // Fetch emails on component mount
     useEffect(() => {
         fetchEmails();
     }, [fetchEmails]);
@@ -261,7 +297,37 @@ const ProfessionalEmailInbox = () => {
             id: newColumn.id || newColumn.title.toLowerCase().replace(/\s+/g, '-')
         };
         
-        setColumns([...columns, columnWithId]);
+        const updatedColumns = [...columns, columnWithId];
+        setColumns(updatedColumns);
+        
+        // Save to localStorage immediately
+        try {
+            localStorage.setItem('emailColumnsData', JSON.stringify(updatedColumns));
+        } catch (error) {
+            console.error('Error saving columns after addition:', error);
+        }
+        
+        toast.success(`Created new "${columnWithId.title}" column`);
+    };
+
+    // Handle column icon update
+    const handleUpdateColumnIcon = (columnId: string, icon: string) => {
+        const updatedColumns = columns.map(col =>
+            col.id === columnId
+                ? { ...col, icon: icon }
+                : col
+        );
+        
+        setColumns(updatedColumns);
+        
+        // Save to localStorage immediately
+        try {
+            localStorage.setItem('emailColumnsData', JSON.stringify(updatedColumns));
+        } catch (error) {
+            console.error('Error saving columns after icon update:', error);
+        }
+        
+        toast.success("Column icon updated");
     };
 
     // Handle drag start
@@ -301,9 +367,41 @@ const ProfessionalEmailInbox = () => {
         toast.success(`Email moved to ${destinationColumn?.title || destinationColumnId}`);
     };
 
-    // Handle column actions
+    // Handle column editing - Trello style
     const handleEditColumn = (column: EmailColumnType) => {
-        console.log("Edit column:", column);
+        setEditingColumnId(column.id);
+        setEditingColumnName(column.title);
+    };
+
+    const handleSaveColumnEdit = () => {
+        if (!editingColumnId || !editingColumnName.trim()) {
+            toast.error("Please enter a valid column name");
+            return;
+        }
+
+        const updatedColumns = columns.map(col =>
+            col.id === editingColumnId
+                ? { ...col, title: editingColumnName.trim() }
+                : col
+        );
+        
+        setColumns(updatedColumns);
+        
+        // Save to localStorage immediately
+        try {
+            localStorage.setItem('emailColumnsData', JSON.stringify(updatedColumns));
+        } catch (error) {
+            console.error('Error saving columns after edit:', error);
+        }
+
+        setEditingColumnId(null);
+        setEditingColumnName("");
+        toast.success("Column updated successfully");
+    };
+
+    const handleCancelColumnEdit = () => {
+        setEditingColumnId(null);
+        setEditingColumnName("");
     };
 
     const handleDeleteColumn = (column: EmailColumnType) => {
@@ -312,13 +410,49 @@ const ProfessionalEmailInbox = () => {
             return;
         }
         
-        setColumns(columns.filter(col => col.id !== column.id));
+        const updatedColumns = columns.filter(col => col.id !== column.id);
+        setColumns(updatedColumns);
+        
+        // Save to localStorage immediately
+        try {
+            localStorage.setItem('emailColumnsData', JSON.stringify(updatedColumns));
+        } catch (error) {
+            console.error('Error saving columns after deletion:', error);
+        }
+        
         toast.success(`Deleted "${column.title}" column`);
     };
 
-    // Loading state
+    // Handle email move via drag and drop selector
+    const handleEmailMove = (emailId: string, targetColumnId: string) => {
+        setEmails(prevEmails => {
+            const updatedEmails = prevEmails.map(email => {
+                if (email.id === emailId) {
+                    return { ...email, status: targetColumnId };
+                }
+                return email;
+            });
+            return updatedEmails;
+        });
+
+        const targetColumn = columns.find(col => col.id === targetColumnId);
+        toast.success(`Email moved to ${targetColumn?.title || targetColumnId}`);
+    };
+
+    // Loading state - Trello style
     if (isLoading) {
-        return <LoadingState message="Loading email inbox..." />;
+        return (
+            <div className="w-full min-h-screen flex items-center justify-center" style={{ backgroundColor: 'hsl(0, 0.00%, 100.00%)' }}>
+                <div className="text-center space-y-4">
+                    <div className="relative">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-blue-500 animate-spin">
+                            <div className="absolute inset-1 bg-white rounded-full"></div>
+                        </div>
+                    </div>
+                    <p className="text-base font-normal text-gray-700">Loading email board...</p>
+                </div>
+            </div>
+        );
     }
 
     // Error state
@@ -338,51 +472,97 @@ const ProfessionalEmailInbox = () => {
 
     return (
         <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
-            <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+            <div 
+                className="min-h-screen"
+                style={{ 
+                    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+                }}
+            >
                 <div className="max-w-full mx-auto">
                     {/* Header Section */}
-                    <div className="mb-8">
-                        <SearchFilterBar
-                            emailFilter={emailFilter}
-                            onFilterChange={setEmailFilter}
-                            emailAccountType={emailAccountType}
-                            onAccountTypeChange={setEmailAccountType}
-                        />
-
-                        {/* Enhanced Tab Navigation */}
-                        <TabNavigation
-                            tabs={tabs}
-                            activeTab={activeTab}
-                            onTabChange={setActiveTab}
-                        />
+                    <div className="mb-6">
+                        <div className="mb-4">
+                            <div>
+                                <SearchFilterBar
+                                    emailFilter={emailFilter}
+                                    onFilterChange={setEmailFilter}
+                                    emailAccountType={emailAccountType}
+                                    onAccountTypeChange={setEmailAccountType}
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Email Board */}
-                    <EmailBoard
-                        columns={columns}
-                        emails={filteredEmails}
-                        pagination={pagination}
-                        itemsPerPage={itemsPerPage}
-                        onEditColumn={handleEditColumn}
-                        onDeleteColumn={handleDeleteColumn}
-                        onPageChange={handlePageChange}
-                        onAddColumn={handleAddColumn}
-                        showNewColumnDialog={showNewColumnDialog}
-                        onNewColumnDialogChange={setShowNewColumnDialog}
-                    />
+                    {/* Email Board Container with horizontal scroll */}
+                    <div className="board-container mt-5">
+                        <EmailBoard
+                            columns={columns}
+                            emails={filteredEmails}
+                            pagination={pagination}
+                            itemsPerPage={itemsPerPage}
+                            onEditColumn={handleEditColumn}
+                            onDeleteColumn={handleDeleteColumn}
+                            onUpdateColumnIcon={handleUpdateColumnIcon}
+                            onPageChange={handlePageChange}
+                            onAddColumn={handleAddColumn}
+                            showNewColumnDialog={showNewColumnDialog}
+                            onNewColumnDialogChange={setShowNewColumnDialog}
+                            editingColumnId={editingColumnId}
+                            editingColumnName={editingColumnName}
+                            onStartEdit={handleEditColumn}
+                            onSaveEdit={handleSaveColumnEdit}
+                            onCancelEdit={handleCancelColumnEdit}
+                            onEditNameChange={setEditingColumnName}
+                            onEmailMove={handleEmailMove}
+                        />
+                    </div>
                 </div>
 
-                {/* Global Custom Animations and Styles */}
+                {/* Compose Modal */}
+                <ComposeModal
+                    isOpen={showComposeDialog}
+                    onClose={() => setShowComposeDialog(false)}
+                />
+
+                {/* Trello-style custom scrollbar */}
                 <style jsx>{`
-                    @keyframes fadeInUp {
-                        from {
-                            opacity: 0;
-                            transform: translateY(20px);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translateY(0);
-                        }
+                    .board-container {
+                        position: relative;
+                    }
+
+                    .board-scroll::-webkit-scrollbar {
+                        height: 12px;
+                    }
+                    
+                    .board-scroll::-webkit-scrollbar-track {
+                        background: rgba(255, 255, 255, 0.3);
+                        border-radius: 6px;
+                    }
+                    
+                    .board-scroll::-webkit-scrollbar-thumb {
+                        background-color: rgba(0,0,0,0.3);
+                        border-radius: 6px;
+                        border: 2px solid hsl(214,91.3%,95.5%);
+                    }
+                    
+                    .board-scroll::-webkit-scrollbar-thumb:hover {
+                        background-color: rgba(0,0,0,0.5);
+                    }
+
+                    .board-scroll {
+                        scrollbar-width: thin;
+                        scrollbar-color: rgba(0,0,0,0.3) rgba(255, 255, 255, 0.3);
+                    }
+
+                    .line-clamp-2 {
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                    }
+
+                    .group:hover {
+                        transform: translateY(-1px);
                     }
                 `}</style>
             </div>
@@ -391,6 +571,2770 @@ const ProfessionalEmailInbox = () => {
 };
 
 export default ProfessionalEmailInbox;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 6/29/2025 03:00am
+// /* eslint-disable @typescript-eslint/no-explicit-any */
+// "use client";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { DragDropContext, DropResult } from "react-beautiful-dnd";
+// import { Mail, Archive, AlertCircle, Inbox, Star, CheckCircle, Plus, MoreHorizontal, Check, X } from "lucide-react";
+// import { toast } from "sonner";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu";
+// import { getCookie } from "@/lib/utils/cookies";
+// import { AuthContext } from "@/lib/context/auth";
+// import { Email, EmailColumn as EmailColumnType, EmailCompose, EmailFilter, EmailAccountType, PaginationState } from "@/lib/types/email2";
+// import { useCombinedAuth } from "@/components/providers/useCombinedAuth";
+
+// // Import our new components
+// import SearchFilterBar from "./SearchFilterBar";
+// import { LoadingState, ErrorState, NoEmailState } from "./InboxStates";
+// import EmailBoard from "./EmailBoard";
+// import { ComposeModal } from "../AddEmailComponents/ComposeModal";
+
+// const ProfessionalEmailInbox = () => {
+//     // Move all hooks to the top level
+//     const { token, user } = useContext(AuthContext);
+//     const { djombi } = useCombinedAuth();
+//     const djombiTokens = djombi.token || "";
+
+//     // State
+//     const [emails, setEmails] = useState<Email[]>([]);
+//     const [columns, setColumns] = useState<EmailColumnType[]>([
+//         { id: "inbox", title: "Inbox", icon: "📧", gradient: "from-blue-500 to-cyan-500" },
+//         { id: "urgent", title: "Urgent", icon: "🚨", gradient: "from-red-500 to-orange-500" },
+//         { id: "archive", title: "Archive", icon: "📁", gradient: "from-gray-500 to-slate-500" }
+//     ]);
+//     const [isLoading, setIsLoading] = useState(true);
+//     const [error, setError] = useState<string | null>(null);
+//     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
+//     const [showComposeDialog, setShowComposeDialog] = useState(false);
+//     const [isDragging, setIsDragging] = useState(false);
+//     const [emailAccountType, setEmailAccountType] = useState<EmailAccountType>("personal");
+//     const [emailFilter, setEmailFilter] = useState<EmailFilter>({
+//         searchTerm: "",
+//         dateRange: "all",
+//         hasAttachment: null,
+//         isRead: null
+//     });
+//     const [composeEmail, setComposeEmail] = useState<EmailCompose>({
+//         to: "",
+//         subject: "",
+//         content: ""
+//     });
+//     const [pagination, setPagination] = useState<PaginationState>({});
+//     const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+//     const [editingColumnName, setEditingColumnName] = useState("");
+
+//     const itemsPerPage = 12;
+
+//     // Initialize pagination state for each column
+//     const initializePagination = (columns: EmailColumnType[]) => {
+//         const initialPagination: PaginationState = {};
+//         columns.forEach(column => {
+//             initialPagination[column.id] = {
+//                 currentPage: 1,
+//                 itemsPerPage: itemsPerPage
+//             };
+//         });
+//         setPagination(initialPagination);
+//     };
+
+//     // Load saved data from localStorage
+//     const loadSavedData = () => {
+//         try {
+//             const savedEmails = localStorage.getItem('emailInboxData');
+//             const savedColumns = localStorage.getItem('emailColumnsData');
+            
+//             if (savedEmails) {
+//                 const parsedEmails = JSON.parse(savedEmails);
+//                 setEmails(parsedEmails);
+//             }
+            
+//             if (savedColumns) {
+//                 const parsedColumns = JSON.parse(savedColumns);
+//                 setColumns(parsedColumns);
+//             }
+//         } catch (error) {
+//             console.error('Error loading saved data:', error);
+//         }
+//     };
+
+//     // Save data to localStorage
+//     const saveDataToStorage = () => {
+//         try {
+//             localStorage.setItem('emailInboxData', JSON.stringify(emails));
+//             localStorage.setItem('emailColumnsData', JSON.stringify(columns));
+//         } catch (error) {
+//             console.error('Error saving data:', error);
+//         }
+//     };
+
+//     // Save data whenever emails or columns change
+//     useEffect(() => {
+//         if (emails.length > 0) {
+//             saveDataToStorage();
+//         }
+//     }, [emails, columns]);
+
+//     // Filter emails based on filters
+//     const getFilteredEmails = (emails: Email[]): Email[] => {
+//         let filtered = [...emails];
+
+//         // Apply search filter
+//         if (emailFilter.searchTerm) {
+//             const searchTerm = emailFilter.searchTerm.toLowerCase();
+//             filtered = filtered.filter(email =>
+//                 email.subject.toLowerCase().includes(searchTerm) ||
+//                 email.from.toLowerCase().includes(searchTerm) ||
+//                 email.content.toLowerCase().includes(searchTerm)
+//             );
+//         }
+
+//         // Apply attachment filter
+//         if (emailFilter.hasAttachment !== null) {
+//             filtered = filtered.filter(email => email.hasAttachment === emailFilter.hasAttachment);
+//         }
+
+//         // Apply read status filter
+//         if (emailFilter.isRead !== null) {
+//             filtered = filtered.filter(email => email.isRead === emailFilter.isRead);
+//         }
+
+//         return filtered;
+//     };
+
+//     const filteredEmails = getFilteredEmails(emails);
+
+//     // Handle pagination
+//     const handlePageChange = (columnId: string, page: number) => {
+//         setPagination(prev => ({
+//             ...prev,
+//             [columnId]: {
+//                 ...prev[columnId],
+//                 currentPage: page
+//             }
+//         }));
+//     };
+
+//     // Handle compose email
+//     const handleComposeEmail = (compose: EmailCompose) => {
+//         setComposeEmail(compose);
+//         setShowComposeDialog(true);
+//     };
+
+//     const handleSendEmail = async () => {
+//         try {
+//             // Implement your email sending logic here
+//             console.log("Sending email:", composeEmail);
+            
+//             // For now, just show success message
+//             toast.success("Email sent successfully!");
+//             setShowComposeDialog(false);
+//             setComposeEmail({ to: "", subject: "", content: "" });
+//         } catch (error) {
+//             toast.error("Failed to send email");
+//         }
+//     };
+
+//     // Process email data from API response
+//     const processEmailData = (data: any): Email[] => {
+//         let emailsData: any[] = [];
+
+//         if (Array.isArray(data)) {
+//             emailsData = data;
+//         } else if (data.data && Array.isArray(data.data)) {
+//             emailsData = data.data;
+//         } else if (data.emails && Array.isArray(data.emails)) {
+//             emailsData = data.emails;
+//         } else if (data.inbox && Array.isArray(data.inbox)) {
+//             emailsData = data.inbox;
+//         } else {
+//             console.log("Response structure different than expected:", data);
+//             for (const key in data) {
+//                 if (Array.isArray(data[key]) && data[key].length > 0) {
+//                     console.log(`Found array in response at key: ${key}`, data[key]);
+//                     emailsData = data[key];
+//                     break;
+//                 }
+//             }
+//         }
+
+//         if (emailsData.length > 0) {
+//             console.log("Sample email data structure:", emailsData[0]);
+//         }
+
+//         return emailsData.map((email: any) => ({
+//             id: email.id || email._id || `email-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+//             subject: email.subject || 'No Subject',
+//             content: email.content || email.body?.content || '',
+//             from: email.from || email.sender || 'Unknown Sender',
+//             to: email.to || email.recipient || '',
+//             timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+//             status: email.isUrgent ? "urgent" : "inbox",
+//             isUrgent: Boolean(email.isUrgent || email.is_urgent),
+//             hasAttachment: Boolean(email.hasAttachment || email.has_attachment),
+//             category: email.category || "inbox",
+//             isRead: Boolean(email.isRead || email.is_read)
+//         }));
+//     };
+
+//     // Fetch emails using useCallback
+//     const fetchEmails = useCallback(async () => {
+//         // First load saved data
+//         loadSavedData();
+        
+//         setIsLoading(true);
+//         setError(null);
+
+//         try {
+//             console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+//             if (!token) {
+//                 throw new Error('No access token available');
+//             }
+
+//             const linkedEmailId = getCookie('linkedEmailId') ||
+//                 (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+//             console.log("Linked Email ID:", linkedEmailId);
+
+//             if (!linkedEmailId) {
+//                 throw new Error('No linked email ID found');
+//             }
+
+//             const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//             console.log("Fetching from API endpoint:", apiEndpoint);
+
+//             const response = await fetch(apiEndpoint, {
+//                 method: 'GET',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Authorization': `Bearer ${djombiTokens}`
+//                 }
+//             });
+
+//             const responseText = await response.text();
+//             console.log("Raw response:", responseText);
+
+//             let data;
+//             try {
+//                 data = JSON.parse(responseText);
+//                 console.log("Parsed response data:", data);
+//             } catch (e) {
+//                 console.error("Failed to parse response as JSON:", e);
+//                 throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
+//             }
+
+//             if (data.success === false) {
+//                 const errorMessage = data.message || response.statusText;
+//                 console.error("API error:", errorMessage);
+//                 throw new Error(`API error: ${errorMessage}`);
+//             }
+
+//             const formattedEmails = processEmailData(data);
+            
+//             // Merge with existing saved emails, preserving status changes
+//             const savedEmails = JSON.parse(localStorage.getItem('emailInboxData') || '[]');
+//             const mergedEmails = formattedEmails.map(newEmail => {
+//                 const existingEmail = savedEmails.find((saved: Email) => saved.id === newEmail.id);
+//                 return existingEmail ? { ...newEmail, status: existingEmail.status } : newEmail;
+//             });
+            
+//             setEmails(mergedEmails);
+//         } catch (err) {
+//             console.error('Error fetching emails:', err);
+//             setError(err instanceof Error ? err.message : 'Failed to fetch emails');
+//         } finally {
+//             setIsLoading(false);
+//         }
+//     }, [token, djombiTokens]);
+
+//     // Fetch emails on component mount
+//     useEffect(() => {
+//         fetchEmails();
+//     }, [fetchEmails]);
+
+//     // Initialize pagination when columns change
+//     useEffect(() => {
+//         initializePagination(columns);
+//     }, [columns]);
+
+//     // Handle adding a new column
+//     const handleAddColumn = (newColumn: Omit<EmailColumnType, 'id'> & { id?: string }) => {
+//         const columnWithId = {
+//             ...newColumn,
+//             id: newColumn.id || newColumn.title.toLowerCase().replace(/\s+/g, '-')
+//         };
+        
+//         const updatedColumns = [...columns, columnWithId];
+//         setColumns(updatedColumns);
+        
+//         // Save to localStorage immediately
+//         try {
+//             localStorage.setItem('emailColumnsData', JSON.stringify(updatedColumns));
+//         } catch (error) {
+//             console.error('Error saving columns after addition:', error);
+//         }
+        
+//         toast.success(`Created new "${columnWithId.title}" column`);
+//     };
+
+//     // Handle column icon update
+//     const handleUpdateColumnIcon = (columnId: string, icon: string) => {
+//         const updatedColumns = columns.map(col =>
+//             col.id === columnId
+//                 ? { ...col, icon: icon }
+//                 : col
+//         );
+        
+//         setColumns(updatedColumns);
+        
+//         // Save to localStorage immediately
+//         try {
+//             localStorage.setItem('emailColumnsData', JSON.stringify(updatedColumns));
+//         } catch (error) {
+//             console.error('Error saving columns after icon update:', error);
+//         }
+        
+//         toast.success("Column icon updated");
+//     };
+
+//     // Handle drag start
+//     const handleDragStart = () => {
+//         setIsDragging(true);
+//     };
+
+//     // Handle drag end
+//     const handleDragEnd = (result: DropResult) => {
+//         setIsDragging(false);
+
+//         if (!result.destination) {
+//             return;
+//         }
+
+//         const { draggableId, source, destination } = result;
+//         const emailId = draggableId;
+//         const sourceColumnId = source.droppableId;
+//         const destinationColumnId = destination.droppableId;
+
+//         if (sourceColumnId === destinationColumnId && source.index === destination.index) {
+//             return;
+//         }
+
+//         setEmails(prevEmails => {
+//             const updatedEmails = prevEmails.map(email => {
+//                 if (email.id === emailId) {
+//                     return { ...email, status: destinationColumnId };
+//                 }
+//                 return email;
+//             });
+
+//             return updatedEmails;
+//         });
+
+//         const destinationColumn = columns.find(col => col.id === destinationColumnId);
+//         toast.success(`Email moved to ${destinationColumn?.title || destinationColumnId}`);
+//     };
+
+//     // Handle column editing - Trello style
+//     const handleEditColumn = (column: EmailColumnType) => {
+//         setEditingColumnId(column.id);
+//         setEditingColumnName(column.title);
+//     };
+
+//     const handleSaveColumnEdit = () => {
+//         if (!editingColumnId || !editingColumnName.trim()) {
+//             toast.error("Please enter a valid column name");
+//             return;
+//         }
+
+//         const updatedColumns = columns.map(col =>
+//             col.id === editingColumnId
+//                 ? { ...col, title: editingColumnName.trim() }
+//                 : col
+//         );
+        
+//         setColumns(updatedColumns);
+        
+//         // Save to localStorage immediately
+//         try {
+//             localStorage.setItem('emailColumnsData', JSON.stringify(updatedColumns));
+//         } catch (error) {
+//             console.error('Error saving columns after edit:', error);
+//         }
+
+//         setEditingColumnId(null);
+//         setEditingColumnName("");
+//         toast.success("Column updated successfully");
+//     };
+
+//     const handleCancelColumnEdit = () => {
+//         setEditingColumnId(null);
+//         setEditingColumnName("");
+//     };
+
+//     const handleDeleteColumn = (column: EmailColumnType) => {
+//         if (["inbox", "urgent", "archive"].includes(column.id)) {
+//             toast.error("Default columns cannot be deleted.");
+//             return;
+//         }
+        
+//         const updatedColumns = columns.filter(col => col.id !== column.id);
+//         setColumns(updatedColumns);
+        
+//         // Save to localStorage immediately
+//         try {
+//             localStorage.setItem('emailColumnsData', JSON.stringify(updatedColumns));
+//         } catch (error) {
+//             console.error('Error saving columns after deletion:', error);
+//         }
+        
+//         toast.success(`Deleted "${column.title}" column`);
+//     };
+
+//     // Handle email move via drag and drop selector
+//     const handleEmailMove = (emailId: string, targetColumnId: string) => {
+//         setEmails(prevEmails => {
+//             const updatedEmails = prevEmails.map(email => {
+//                 if (email.id === emailId) {
+//                     return { ...email, status: targetColumnId };
+//                 }
+//                 return email;
+//             });
+//             return updatedEmails;
+//         });
+
+//         const targetColumn = columns.find(col => col.id === targetColumnId);
+//         toast.success(`Email moved to ${targetColumn?.title || targetColumnId}`);
+//     };
+
+//     // Loading state - Trello style
+//     if (isLoading) {
+//         return (
+//             <div className="w-full min-h-screen flex items-center justify-center" style={{ backgroundColor: 'hsl(0, 0.00%, 100.00%)' }}>
+//                 <div className="text-center space-y-4">
+//                     <div className="relative">
+//                         <div className="w-12 h-12 mx-auto rounded-full bg-blue-500 animate-spin">
+//                             <div className="absolute inset-1 bg-white rounded-full"></div>
+//                         </div>
+//                     </div>
+//                     <p className="text-base font-normal text-gray-700">Loading email board...</p>
+//                 </div>
+//             </div>
+//         );
+//     }
+
+//     // Error state
+//     if (error) {
+//         if (error === 'No linked email ID found') {
+//             console.error('Error loading emails: No linked email ID found');
+//             return <NoEmailState message="Please link an email to continue" />;
+//         }
+
+//         return (
+//             <ErrorState 
+//                 error={error} 
+//                 onRetry={() => window.location.reload()} 
+//             />
+//         );
+//     }
+
+//     return (
+//         <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
+//             <div 
+//                 className="min-h-screen"
+//                 style={{ 
+//                     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+//                 }}
+//             >
+//                 <div className="max-w-full mx-auto">
+//                     {/* Header Section */}
+//                     <div className="mb-6">
+//                         <div className="mb-4">
+//                             <div>
+//                                 <SearchFilterBar
+//                                     emailFilter={emailFilter}
+//                                     onFilterChange={setEmailFilter}
+//                                     emailAccountType={emailAccountType}
+//                                     onAccountTypeChange={setEmailAccountType}
+//                                 />
+//                             </div>
+//                         </div>
+//                     </div>
+
+//                     {/* Email Board Container with horizontal scroll */}
+//                     <div className="board-container mt-5">
+//                         <EmailBoard
+//                             columns={columns}
+//                             emails={filteredEmails}
+//                             pagination={pagination}
+//                             itemsPerPage={itemsPerPage}
+//                             onEditColumn={handleEditColumn}
+//                             onDeleteColumn={handleDeleteColumn}
+//                             onUpdateColumnIcon={handleUpdateColumnIcon}
+//                             onPageChange={handlePageChange}
+//                             onAddColumn={handleAddColumn}
+//                             showNewColumnDialog={showNewColumnDialog}
+//                             onNewColumnDialogChange={setShowNewColumnDialog}
+//                             editingColumnId={editingColumnId}
+//                             editingColumnName={editingColumnName}
+//                             onStartEdit={handleEditColumn}
+//                             onSaveEdit={handleSaveColumnEdit}
+//                             onCancelEdit={handleCancelColumnEdit}
+//                             onEditNameChange={setEditingColumnName}
+//                             onEmailMove={handleEmailMove}
+//                         />
+//                     </div>
+//                 </div>
+
+//                 {/* Compose Modal */}
+//                 <ComposeModal
+//                     isOpen={showComposeDialog}
+//                     onClose={() => setShowComposeDialog(false)}
+//                 />
+
+//                 {/* Trello-style custom scrollbar */}
+//                 <style jsx>{`
+//                     .board-container {
+//                         position: relative;
+//                     }
+
+//                     .board-scroll::-webkit-scrollbar {
+//                         height: 12px;
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-track {
+//                         background: rgba(255, 255, 255, 0.3);
+//                         border-radius: 6px;
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-thumb {
+//                         background-color: rgba(0,0,0,0.3);
+//                         border-radius: 6px;
+//                         border: 2px solid hsl(214,91.3%,95.5%);
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-thumb:hover {
+//                         background-color: rgba(0,0,0,0.5);
+//                     }
+
+//                     .board-scroll {
+//                         scrollbar-width: thin;
+//                         scrollbar-color: rgba(0,0,0,0.3) rgba(255, 255, 255, 0.3);
+//                     }
+
+//                     .line-clamp-2 {
+//                         display: -webkit-box;
+//                         -webkit-line-clamp: 2;
+//                         -webkit-box-orient: vertical;
+//                         overflow: hidden;
+//                     }
+
+//                     .group:hover {
+//                         transform: translateY(-1px);
+//                     }
+//                 `}</style>
+//             </div>
+//         </DragDropContext>
+//     );
+// };
+
+// export default ProfessionalEmailInbox;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 28/6/2025 2:32
+// /* eslint-disable @typescript-eslint/no-explicit-any */
+// "use client";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { DragDropContext, DropResult } from "react-beautiful-dnd";
+// import { Mail, Archive, AlertCircle, Inbox, Star, CheckCircle, Plus, MoreHorizontal, Check, X } from "lucide-react";
+// import { toast } from "sonner";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu";
+// import { getCookie } from "@/lib/utils/cookies";
+// import { AuthContext } from "@/lib/context/auth";
+// import { Email, EmailColumn as EmailColumnType, EmailCompose, EmailFilter, EmailAccountType, PaginationState } from "@/lib/types/email2";
+// import { useCombinedAuth } from "@/components/providers/useCombinedAuth";
+
+// // Import our new components
+// import SearchFilterBar from "./SearchFilterBar";
+// import { LoadingState, ErrorState, NoEmailState } from "./InboxStates";
+// import EmailBoard from "./EmailBoard";
+// import { ComposeModal } from "../AddEmailComponents/ComposeModal";
+
+// const ProfessionalEmailInbox = () => {
+//     // Move all hooks to the top level
+//     const { token, user } = useContext(AuthContext);
+//     const { djombi } = useCombinedAuth();
+//     const djombiTokens = djombi.token || "";
+
+//     // State
+//     const [emails, setEmails] = useState<Email[]>([]);
+//     const [columns, setColumns] = useState<EmailColumnType[]>([
+//         { id: "inbox", title: "Inbox", icon: Inbox, gradient: "from-blue-500 to-cyan-500" },
+//         { id: "urgent", title: "Urgent", icon: AlertCircle, gradient: "from-red-500 to-orange-500" },
+//         { id: "follow-up", title: "Follow-Up", icon: Archive, gradient: "from-gray-500 to-slate-500" }
+//     ]);
+//     const [isLoading, setIsLoading] = useState(true);
+//     const [error, setError] = useState<string | null>(null);
+//     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
+//     const [showComposeDialog, setShowComposeDialog] = useState(false);
+//     const [isDragging, setIsDragging] = useState(false);
+//     const [emailAccountType, setEmailAccountType] = useState<EmailAccountType>("personal");
+//     const [emailFilter, setEmailFilter] = useState<EmailFilter>({
+//         searchTerm: "",
+//         dateRange: "all",
+//         hasAttachment: null,
+//         isRead: null
+//     });
+//     const [composeEmail, setComposeEmail] = useState<EmailCompose>({
+//         to: "",
+//         subject: "",
+//         content: ""
+//     });
+//     const [pagination, setPagination] = useState<PaginationState>({});
+//     const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+//     const [editingColumnName, setEditingColumnName] = useState("");
+
+//     const itemsPerPage = 12;
+
+//     // Initialize pagination state for each column
+//     const initializePagination = (columns: EmailColumnType[]) => {
+//         const initialPagination: PaginationState = {};
+//         columns.forEach(column => {
+//             initialPagination[column.id] = {
+//                 currentPage: 1,
+//                 itemsPerPage: itemsPerPage
+//             };
+//         });
+//         setPagination(initialPagination);
+//     };
+
+//     // Filter emails based on filters
+//     const getFilteredEmails = (emails: Email[]): Email[] => {
+//         let filtered = [...emails];
+
+//         // Apply search filter
+//         if (emailFilter.searchTerm) {
+//             const searchTerm = emailFilter.searchTerm.toLowerCase();
+//             filtered = filtered.filter(email =>
+//                 email.subject.toLowerCase().includes(searchTerm) ||
+//                 email.from.toLowerCase().includes(searchTerm) ||
+//                 email.content.toLowerCase().includes(searchTerm)
+//             );
+//         }
+
+//         // Apply attachment filter
+//         if (emailFilter.hasAttachment !== null) {
+//             filtered = filtered.filter(email => email.hasAttachment === emailFilter.hasAttachment);
+//         }
+
+//         // Apply read status filter
+//         if (emailFilter.isRead !== null) {
+//             filtered = filtered.filter(email => email.isRead === emailFilter.isRead);
+//         }
+
+//         return filtered;
+//     };
+
+//     const filteredEmails = getFilteredEmails(emails);
+
+//     // Handle pagination
+//     const handlePageChange = (columnId: string, page: number) => {
+//         setPagination(prev => ({
+//             ...prev,
+//             [columnId]: {
+//                 ...prev[columnId],
+//                 currentPage: page
+//             }
+//         }));
+//     };
+
+//     // Handle compose email
+//     const handleComposeEmail = (compose: EmailCompose) => {
+//         setComposeEmail(compose);
+//         setShowComposeDialog(true);
+//     };
+
+//     const handleSendEmail = async () => {
+//         try {
+//             // Implement your email sending logic here
+//             console.log("Sending email:", composeEmail);
+            
+//             // For now, just show success message
+//             toast.success("Email sent successfully!");
+//             setShowComposeDialog(false);
+//             setComposeEmail({ to: "", subject: "", content: "" });
+//         } catch (error) {
+//             toast.error("Failed to send email");
+//         }
+//     };
+
+//     // Process email data from API response
+//     const processEmailData = (data: any): Email[] => {
+//         let emailsData: any[] = [];
+
+//         if (Array.isArray(data)) {
+//             emailsData = data;
+//         } else if (data.data && Array.isArray(data.data)) {
+//             emailsData = data.data;
+//         } else if (data.emails && Array.isArray(data.emails)) {
+//             emailsData = data.emails;
+//         } else if (data.inbox && Array.isArray(data.inbox)) {
+//             emailsData = data.inbox;
+//         } else {
+//             console.log("Response structure different than expected:", data);
+//             for (const key in data) {
+//                 if (Array.isArray(data[key]) && data[key].length > 0) {
+//                     console.log(`Found array in response at key: ${key}`, data[key]);
+//                     emailsData = data[key];
+//                     break;
+//                 }
+//             }
+//         }
+
+//         if (emailsData.length > 0) {
+//             console.log("Sample email data structure:", emailsData[0]);
+//         }
+
+//         return emailsData.map((email: any) => ({
+//             id: email.id || email._id || `email-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+//             subject: email.subject || 'No Subject',
+//             content: email.content || email.body?.content || '',
+//             from: email.from || email.sender || 'Unknown Sender',
+//             to: email.to || email.recipient || '',
+//             timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+//             status: email.isUrgent ? "urgent" : "inbox",
+//             isUrgent: Boolean(email.isUrgent || email.is_urgent),
+//             hasAttachment: Boolean(email.hasAttachment || email.has_attachment),
+//             category: email.category || "inbox",
+//             isRead: Boolean(email.isRead || email.is_read)
+//         }));
+//     };
+
+//     // Fetch emails using useCallback
+//     const fetchEmails = useCallback(async () => {
+//         setIsLoading(true);
+//         setError(null);
+
+//         try {
+//             console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+//             if (!token) {
+//                 throw new Error('No access token available');
+//             }
+
+//             const linkedEmailId = getCookie('linkedEmailId') ||
+//                 (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+//             console.log("Linked Email ID:", linkedEmailId);
+
+//             if (!linkedEmailId) {
+//                 throw new Error('No linked email ID found');
+//             }
+
+//             const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//             console.log("Fetching from API endpoint:", apiEndpoint);
+
+//             const response = await fetch(apiEndpoint, {
+//                 method: 'GET',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Authorization': `Bearer ${djombiTokens}`
+//                 }
+//             });
+
+//             const responseText = await response.text();
+//             console.log("Raw response:", responseText);
+
+//             let data;
+//             try {
+//                 data = JSON.parse(responseText);
+//                 console.log("Parsed response data:", data);
+//             } catch (e) {
+//                 console.error("Failed to parse response as JSON:", e);
+//                 throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
+//             }
+
+//             if (data.success === false) {
+//                 const errorMessage = data.message || response.statusText;
+//                 console.error("API error:", errorMessage);
+//                 throw new Error(`API error: ${errorMessage}`);
+//             }
+
+//             const formattedEmails = processEmailData(data);
+//             setEmails(formattedEmails);
+//         } catch (err) {
+//             console.error('Error fetching emails:', err);
+//             setError(err instanceof Error ? err.message : 'Failed to fetch emails');
+//         } finally {
+//             setIsLoading(false);
+//         }
+//     }, [token, djombiTokens]);
+
+//     // Fetch emails
+//     useEffect(() => {
+//         fetchEmails();
+//     }, [fetchEmails]);
+
+//     // Initialize pagination when columns change
+//     useEffect(() => {
+//         initializePagination(columns);
+//     }, [columns]);
+
+//     // Handle adding a new column
+//     const handleAddColumn = (newColumn: Omit<EmailColumnType, 'id'> & { id?: string }) => {
+//         const columnWithId = {
+//             ...newColumn,
+//             id: newColumn.id || newColumn.title.toLowerCase().replace(/\s+/g, '-')
+//         };
+        
+//         setColumns([...columns, columnWithId]);
+//         toast.success(`Created new "${columnWithId.title}" column`);
+//     };
+
+//     // Handle drag start
+//     const handleDragStart = () => {
+//         setIsDragging(true);
+//     };
+
+//     // Handle drag end
+//     const handleDragEnd = (result: DropResult) => {
+//         setIsDragging(false);
+
+//         if (!result.destination) {
+//             return;
+//         }
+
+//         const { draggableId, source, destination } = result;
+//         const emailId = draggableId;
+//         const sourceColumnId = source.droppableId;
+//         const destinationColumnId = destination.droppableId;
+
+//         if (sourceColumnId === destinationColumnId && source.index === destination.index) {
+//             return;
+//         }
+
+//         setEmails(prevEmails => {
+//             const updatedEmails = prevEmails.map(email => {
+//                 if (email.id === emailId) {
+//                     return { ...email, status: destinationColumnId };
+//                 }
+//                 return email;
+//             });
+
+//             return updatedEmails;
+//         });
+
+//         const destinationColumn = columns.find(col => col.id === destinationColumnId);
+//         toast.success(`Email moved to ${destinationColumn?.title || destinationColumnId}`);
+//     };
+
+//     // Handle column editing - Trello style
+//     const handleEditColumn = (column: EmailColumnType) => {
+//         setEditingColumnId(column.id);
+//         setEditingColumnName(column.title);
+//     };
+
+//     const handleSaveColumnEdit = () => {
+//         if (!editingColumnId || !editingColumnName.trim()) {
+//             toast.error("Please enter a valid column name");
+//             return;
+//         }
+
+//         setColumns(prevColumns =>
+//             prevColumns.map(col =>
+//                 col.id === editingColumnId
+//                     ? { ...col, title: editingColumnName.trim() }
+//                     : col
+//             )
+//         );
+
+//         setEditingColumnId(null);
+//         setEditingColumnName("");
+//         toast.success("Column updated successfully");
+//     };
+
+//     const handleCancelColumnEdit = () => {
+//         setEditingColumnId(null);
+//         setEditingColumnName("");
+//     };
+
+//     const handleDeleteColumn = (column: EmailColumnType) => {
+//         if (["inbox", "urgent", "archive"].includes(column.id)) {
+//             toast.error("Default columns cannot be deleted.");
+//             return;
+//         }
+        
+//         setColumns(columns.filter(col => col.id !== column.id));
+//         toast.success(`Deleted "${column.title}" column`);
+//     };
+
+//     // Handle email move via drag and drop selector
+//     const handleEmailMove = (emailId: string, targetColumnId: string) => {
+//         setEmails(prevEmails => {
+//             const updatedEmails = prevEmails.map(email => {
+//                 if (email.id === emailId) {
+//                     return { ...email, status: targetColumnId };
+//                 }
+//                 return email;
+//             });
+//             return updatedEmails;
+//         });
+
+//         const targetColumn = columns.find(col => col.id === targetColumnId);
+//         toast.success(`Email moved to ${targetColumn?.title || targetColumnId}`);
+//     };
+
+//     // Loading state - Trello style
+//     if (isLoading) {
+//         return (
+//             <div className="w-full min-h-screen flex items-center justify-center" style={{ backgroundColor: 'hsl(0, 0.00%, 100.00%)' }}>
+//                 <div className="text-center space-y-4">
+//                     <div className="relative">
+//                         <div className="w-12 h-12 mx-auto rounded-full bg-blue-500 animate-spin">
+//                             <div className="absolute inset-1 bg-white rounded-full"></div>
+//                         </div>
+//                     </div>
+//                     <p className="text-base font-normal text-gray-700">Loading email board...</p>
+//                 </div>
+//             </div>
+//         );
+//     }
+
+//     // Error state
+//     if (error) {
+//         if (error === 'No linked email ID found') {
+//             console.error('Error loading emails: No linked email ID found');
+//             return <NoEmailState message="Please link an email to continue" />;
+//         }
+
+//         return (
+//             <ErrorState 
+//                 error={error} 
+//                 onRetry={() => window.location.reload()} 
+//             />
+//         );
+//     }
+
+//     return (
+//         <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
+//             <div 
+//                 className="min-h-screen"
+//                 style={{ 
+//                     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+//                 }}
+//             >
+//                 <div className="max-w-full mx-auto">
+//                     {/* Header Section */}
+//                     <div className="mb-6">
+//                         <div className="mb-4">
+//                             <div>
+//                                 <SearchFilterBar
+//                                     emailFilter={emailFilter}
+//                                     onFilterChange={setEmailFilter}
+//                                     emailAccountType={emailAccountType}
+//                                     onAccountTypeChange={setEmailAccountType}
+//                                 />
+//                             </div>
+//                         </div>
+//                     </div>
+
+//                     {/* Email Board Container with horizontal scroll */}
+//                     <div className="board-container mt-5">
+//                         <EmailBoard
+//                             columns={columns}
+//                             emails={filteredEmails}
+//                             pagination={pagination}
+//                             itemsPerPage={itemsPerPage}
+//                             onEditColumn={handleEditColumn}
+//                             onDeleteColumn={handleDeleteColumn}
+//                             onPageChange={handlePageChange}
+//                             onAddColumn={handleAddColumn}
+//                             showNewColumnDialog={showNewColumnDialog}
+//                             onNewColumnDialogChange={setShowNewColumnDialog}
+//                             editingColumnId={editingColumnId}
+//                             editingColumnName={editingColumnName}
+//                             onStartEdit={handleEditColumn}
+//                             onSaveEdit={handleSaveColumnEdit}
+//                             onCancelEdit={handleCancelColumnEdit}
+//                             onEditNameChange={setEditingColumnName}
+//                             onEmailMove={handleEmailMove}
+//                         />
+//                     </div>
+//                 </div>
+
+//                 {/* Compose Modal */}
+//                 <ComposeModal
+//                     isOpen={showComposeDialog}
+//                     onClose={() => setShowComposeDialog(false)}
+//                 />
+
+//                 {/* Trello-style custom scrollbar */}
+//                 <style jsx>{`
+//                     .board-container {
+//                         position: relative;
+//                     }
+
+//                     .board-scroll::-webkit-scrollbar {
+//                         height: 12px;
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-track {
+//                         background: rgba(255, 255, 255, 0.3);
+//                         border-radius: 6px;
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-thumb {
+//                         background-color: rgba(0,0,0,0.3);
+//                         border-radius: 6px;
+//                         border: 2px solid hsl(214,91.3%,95.5%);
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-thumb:hover {
+//                         background-color: rgba(0,0,0,0.5);
+//                     }
+
+//                     .board-scroll {
+//                         scrollbar-width: thin;
+//                         scrollbar-color: rgba(0,0,0,0.3) rgba(255, 255, 255, 0.3);
+//                     }
+
+//                     .line-clamp-2 {
+//                         display: -webkit-box;
+//                         -webkit-line-clamp: 2;
+//                         -webkit-box-orient: vertical;
+//                         overflow: hidden;
+//                     }
+
+//                     .group:hover {
+//                         transform: translateY(-1px);
+//                     }
+//                 `}</style>
+//             </div>
+//         </DragDropContext>
+//     );
+// };
+
+// export default ProfessionalEmailInbox;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// /* eslint-disable @typescript-eslint/no-explicit-any */
+// "use client";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { DragDropContext, DropResult } from "react-beautiful-dnd";
+// import { Mail, Archive, AlertCircle, Inbox, Star, CheckCircle, Plus, MoreHorizontal, Check, X } from "lucide-react";
+// import { toast } from "sonner";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu";
+// import { getCookie } from "@/lib/utils/cookies";
+// import { AuthContext } from "@/lib/context/auth";
+// import { Email, EmailColumn as EmailColumnType, EmailCompose, EmailFilter, EmailAccountType, PaginationState } from "@/lib/types/email2";
+// import { useCombinedAuth } from "@/components/providers/useCombinedAuth";
+
+// // Import our new components
+// import SearchFilterBar from "./SearchFilterBar";
+// import { LoadingState, ErrorState, NoEmailState } from "./InboxStates";
+// import EmailBoard from "./EmailBoard";
+// import { ComposeModal } from "../AddEmailComponents/ComposeModal";
+
+// const ProfessionalEmailInbox = () => {
+//     // Move all hooks to the top level
+//     const { token, user } = useContext(AuthContext);
+//     const { djombi } = useCombinedAuth();
+//     const djombiTokens = djombi.token || "";
+
+//     // State
+//     const [emails, setEmails] = useState<Email[]>([]);
+//     const [columns, setColumns] = useState<EmailColumnType[]>([
+//         { id: "inbox", title: "Inbox", icon: Inbox, gradient: "from-blue-500 to-cyan-500" },
+//         { id: "urgent", title: "Urgent", icon: AlertCircle, gradient: "from-red-500 to-orange-500" },
+//         { id: "archive", title: "Archive", icon: Archive, gradient: "from-gray-500 to-slate-500" }
+//     ]);
+//     const [isLoading, setIsLoading] = useState(true);
+//     const [error, setError] = useState<string | null>(null);
+//     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
+//     const [showComposeDialog, setShowComposeDialog] = useState(false);
+//     const [isDragging, setIsDragging] = useState(false);
+//     const [emailAccountType, setEmailAccountType] = useState<EmailAccountType>("personal");
+//     const [emailFilter, setEmailFilter] = useState<EmailFilter>({
+//         searchTerm: "",
+//         dateRange: "all",
+//         hasAttachment: null,
+//         isRead: null
+//     });
+//     const [composeEmail, setComposeEmail] = useState<EmailCompose>({
+//         to: "",
+//         subject: "",
+//         content: ""
+//     });
+//     const [pagination, setPagination] = useState<PaginationState>({});
+//     const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+//     const [editingColumnName, setEditingColumnName] = useState("");
+
+//     const itemsPerPage = 12;
+
+//     // Initialize pagination state for each column
+//     const initializePagination = (columns: EmailColumnType[]) => {
+//         const initialPagination: PaginationState = {};
+//         columns.forEach(column => {
+//             initialPagination[column.id] = {
+//                 currentPage: 1,
+//                 itemsPerPage: itemsPerPage
+//             };
+//         });
+//         setPagination(initialPagination);
+//     };
+
+//     // Filter emails based on filters
+//     const getFilteredEmails = (emails: Email[]): Email[] => {
+//         let filtered = [...emails];
+
+//         // Apply search filter
+//         if (emailFilter.searchTerm) {
+//             const searchTerm = emailFilter.searchTerm.toLowerCase();
+//             filtered = filtered.filter(email =>
+//                 email.subject.toLowerCase().includes(searchTerm) ||
+//                 email.from.toLowerCase().includes(searchTerm) ||
+//                 email.content.toLowerCase().includes(searchTerm)
+//             );
+//         }
+
+//         // Apply attachment filter
+//         if (emailFilter.hasAttachment !== null) {
+//             filtered = filtered.filter(email => email.hasAttachment === emailFilter.hasAttachment);
+//         }
+
+//         // Apply read status filter
+//         if (emailFilter.isRead !== null) {
+//             filtered = filtered.filter(email => email.isRead === emailFilter.isRead);
+//         }
+
+//         return filtered;
+//     };
+
+//     const filteredEmails = getFilteredEmails(emails);
+
+//     // Handle pagination
+//     const handlePageChange = (columnId: string, page: number) => {
+//         setPagination(prev => ({
+//             ...prev,
+//             [columnId]: {
+//                 ...prev[columnId],
+//                 currentPage: page
+//             }
+//         }));
+//     };
+
+//     // Handle compose email
+//     const handleComposeEmail = (compose: EmailCompose) => {
+//         setComposeEmail(compose);
+//         setShowComposeDialog(true);
+//     };
+
+//     const handleSendEmail = async () => {
+//         try {
+//             // Implement your email sending logic here
+//             console.log("Sending email:", composeEmail);
+            
+//             // For now, just show success message
+//             toast.success("Email sent successfully!");
+//             setShowComposeDialog(false);
+//             setComposeEmail({ to: "", subject: "", content: "" });
+//         } catch (error) {
+//             toast.error("Failed to send email");
+//         }
+//     };
+
+//     // Process email data from API response
+//     const processEmailData = (data: any): Email[] => {
+//         let emailsData: any[] = [];
+
+//         if (Array.isArray(data)) {
+//             emailsData = data;
+//         } else if (data.data && Array.isArray(data.data)) {
+//             emailsData = data.data;
+//         } else if (data.emails && Array.isArray(data.emails)) {
+//             emailsData = data.emails;
+//         } else if (data.inbox && Array.isArray(data.inbox)) {
+//             emailsData = data.inbox;
+//         } else {
+//             console.log("Response structure different than expected:", data);
+//             for (const key in data) {
+//                 if (Array.isArray(data[key]) && data[key].length > 0) {
+//                     console.log(`Found array in response at key: ${key}`, data[key]);
+//                     emailsData = data[key];
+//                     break;
+//                 }
+//             }
+//         }
+
+//         if (emailsData.length > 0) {
+//             console.log("Sample email data structure:", emailsData[0]);
+//         }
+
+//         return emailsData.map((email: any) => ({
+//             id: email.id || email._id || `email-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+//             subject: email.subject || 'No Subject',
+//             content: email.content || email.body?.content || '',
+//             from: email.from || email.sender || 'Unknown Sender',
+//             to: email.to || email.recipient || '',
+//             timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+//             status: email.isUrgent ? "urgent" : "inbox",
+//             isUrgent: Boolean(email.isUrgent || email.is_urgent),
+//             hasAttachment: Boolean(email.hasAttachment || email.has_attachment),
+//             category: email.category || "inbox",
+//             isRead: Boolean(email.isRead || email.is_read)
+//         }));
+//     };
+
+//     // Fetch emails using useCallback
+//     const fetchEmails = useCallback(async () => {
+//         setIsLoading(true);
+//         setError(null);
+
+//         try {
+//             console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+//             if (!token) {
+//                 throw new Error('No access token available');
+//             }
+
+//             const linkedEmailId = getCookie('linkedEmailId') ||
+//                 (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+//             console.log("Linked Email ID:", linkedEmailId);
+
+//             if (!linkedEmailId) {
+//                 throw new Error('No linked email ID found');
+//             }
+
+//             const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//             console.log("Fetching from API endpoint:", apiEndpoint);
+
+//             const response = await fetch(apiEndpoint, {
+//                 method: 'GET',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Authorization': `Bearer ${djombiTokens}`
+//                 }
+//             });
+
+//             const responseText = await response.text();
+//             console.log("Raw response:", responseText);
+
+//             let data;
+//             try {
+//                 data = JSON.parse(responseText);
+//                 console.log("Parsed response data:", data);
+//             } catch (e) {
+//                 console.error("Failed to parse response as JSON:", e);
+//                 throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
+//             }
+
+//             if (data.success === false) {
+//                 const errorMessage = data.message || response.statusText;
+//                 console.error("API error:", errorMessage);
+//                 throw new Error(`API error: ${errorMessage}`);
+//             }
+
+//             const formattedEmails = processEmailData(data);
+//             setEmails(formattedEmails);
+//         } catch (err) {
+//             console.error('Error fetching emails:', err);
+//             setError(err instanceof Error ? err.message : 'Failed to fetch emails');
+//         } finally {
+//             setIsLoading(false);
+//         }
+//     }, [token, djombiTokens]);
+
+//     // Fetch emails
+//     useEffect(() => {
+//         fetchEmails();
+//     }, [fetchEmails]);
+
+//     // Initialize pagination when columns change
+//     useEffect(() => {
+//         initializePagination(columns);
+//     }, [columns]);
+
+//     // Handle adding a new column
+//     const handleAddColumn = (newColumn: Omit<EmailColumnType, 'id'> & { id?: string }) => {
+//         const columnWithId = {
+//             ...newColumn,
+//             id: newColumn.id || newColumn.title.toLowerCase().replace(/\s+/g, '-')
+//         };
+        
+//         setColumns([...columns, columnWithId]);
+//         toast.success(`Created new "${columnWithId.title}" column`);
+//     };
+
+//     // Handle drag start
+//     const handleDragStart = () => {
+//         setIsDragging(true);
+//     };
+
+//     // Handle drag end
+//     const handleDragEnd = (result: DropResult) => {
+//         setIsDragging(false);
+
+//         if (!result.destination) {
+//             return;
+//         }
+
+//         const { draggableId, source, destination } = result;
+//         const emailId = draggableId;
+//         const sourceColumnId = source.droppableId;
+//         const destinationColumnId = destination.droppableId;
+
+//         if (sourceColumnId === destinationColumnId && source.index === destination.index) {
+//             return;
+//         }
+
+//         setEmails(prevEmails => {
+//             const updatedEmails = prevEmails.map(email => {
+//                 if (email.id === emailId) {
+//                     return { ...email, status: destinationColumnId };
+//                 }
+//                 return email;
+//             });
+
+//             return updatedEmails;
+//         });
+
+//         const destinationColumn = columns.find(col => col.id === destinationColumnId);
+//         toast.success(`Email moved to ${destinationColumn?.title || destinationColumnId}`);
+//     };
+
+//     // Handle column editing - Trello style
+//     const handleEditColumn = (column: EmailColumnType) => {
+//         setEditingColumnId(column.id);
+//         setEditingColumnName(column.title);
+//     };
+
+//     const handleSaveColumnEdit = () => {
+//         if (!editingColumnId || !editingColumnName.trim()) {
+//             toast.error("Please enter a valid column name");
+//             return;
+//         }
+
+//         setColumns(prevColumns =>
+//             prevColumns.map(col =>
+//                 col.id === editingColumnId
+//                     ? { ...col, title: editingColumnName.trim() }
+//                     : col
+//             )
+//         );
+
+//         setEditingColumnId(null);
+//         setEditingColumnName("");
+//         toast.success("Column updated successfully");
+//     };
+
+//     const handleCancelColumnEdit = () => {
+//         setEditingColumnId(null);
+//         setEditingColumnName("");
+//     };
+
+//     const handleDeleteColumn = (column: EmailColumnType) => {
+//         if (["inbox", "urgent", "archive"].includes(column.id)) {
+//             toast.error("Default columns cannot be deleted.");
+//             return;
+//         }
+        
+//         setColumns(columns.filter(col => col.id !== column.id));
+//         toast.success(`Deleted "${column.title}" column`);
+//     };
+
+//     // Handle email move via drag and drop selector
+//     const handleEmailMove = (emailId: string, targetColumnId: string) => {
+//         setEmails(prevEmails => {
+//             const updatedEmails = prevEmails.map(email => {
+//                 if (email.id === emailId) {
+//                     return { ...email, status: targetColumnId };
+//                 }
+//                 return email;
+//             });
+//             return updatedEmails;
+//         });
+
+//         const targetColumn = columns.find(col => col.id === targetColumnId);
+//         toast.success(`Email moved to ${targetColumn?.title || targetColumnId}`);
+//     };
+
+//     // Loading state - Trello style
+//     if (isLoading) {
+//         return (
+//             <div className="w-full min-h-screen flex items-center justify-center" style={{ backgroundColor: 'hsl(0, 0.00%, 100.00%)' }}>
+//                 <div className="text-center space-y-4">
+//                     <div className="relative">
+//                         <div className="w-12 h-12 mx-auto rounded-full bg-blue-500 animate-spin">
+//                             <div className="absolute inset-1 bg-white rounded-full"></div>
+//                         </div>
+//                     </div>
+//                     <p className="text-base font-normal text-gray-700">Loading email board...</p>
+//                 </div>
+//             </div>
+//         );
+//     }
+
+//     // Error state
+//     if (error) {
+//         if (error === 'No linked email ID found') {
+//             console.error('Error loading emails: No linked email ID found');
+//             return <NoEmailState message="Please link an email to continue" />;
+//         }
+
+//         return (
+//             <ErrorState 
+//                 error={error} 
+//                 onRetry={() => window.location.reload()} 
+//             />
+//         );
+//     }
+
+//     return (
+//         <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
+//             <div 
+//                 className="min-h-screen"
+//                 style={{ 
+//                     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+//                 }}
+//             >
+//                 <div className="max-w-full mx-auto">
+//                     {/* Header Section */}
+//                     <div className="mb-6">
+//                         <div className="mb-4">
+//                             <div>
+//                                 <SearchFilterBar
+//                                     emailFilter={emailFilter}
+//                                     onFilterChange={setEmailFilter}
+//                                     emailAccountType={emailAccountType}
+//                                     onAccountTypeChange={setEmailAccountType}
+//                                 />
+//                             </div>
+//                         </div>
+//                     </div>
+
+//                     {/* Email Board Container with horizontal scroll */}
+//                     <div className="board-container mt-5">
+//                         <EmailBoard
+//                             columns={columns}
+//                             emails={filteredEmails}
+//                             pagination={pagination}
+//                             itemsPerPage={itemsPerPage}
+//                             onEditColumn={handleEditColumn}
+//                             onDeleteColumn={handleDeleteColumn}
+//                             onPageChange={handlePageChange}
+//                             onAddColumn={handleAddColumn}
+//                             showNewColumnDialog={showNewColumnDialog}
+//                             onNewColumnDialogChange={setShowNewColumnDialog}
+//                             editingColumnId={editingColumnId}
+//                             editingColumnName={editingColumnName}
+//                             onStartEdit={handleEditColumn}
+//                             onSaveEdit={handleSaveColumnEdit}
+//                             onCancelEdit={handleCancelColumnEdit}
+//                             onEditNameChange={setEditingColumnName}
+//                             onEmailMove={handleEmailMove}
+//                         />
+//                     </div>
+//                 </div>
+
+//                 {/* Compose Modal */}
+//                 <ComposeModal
+//                     isOpen={showComposeDialog}
+//                     onClose={() => setShowComposeDialog(false)}
+//                 />
+
+//                 {/* Trello-style custom scrollbar */}
+//                 <style jsx>{`
+//                     .board-container {
+//                         position: relative;
+//                     }
+
+//                     .board-scroll::-webkit-scrollbar {
+//                         height: 12px;
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-track {
+//                         background: rgba(255, 255, 255, 0.3);
+//                         border-radius: 6px;
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-thumb {
+//                         background-color: rgba(0,0,0,0.3);
+//                         border-radius: 6px;
+//                         border: 2px solid hsl(214,91.3%,95.5%);
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-thumb:hover {
+//                         background-color: rgba(0,0,0,0.5);
+//                     }
+
+//                     .board-scroll {
+//                         scrollbar-width: thin;
+//                         scrollbar-color: rgba(0,0,0,0.3) rgba(255, 255, 255, 0.3);
+//                     }
+
+//                     .line-clamp-2 {
+//                         display: -webkit-box;
+//                         -webkit-line-clamp: 2;
+//                         -webkit-box-orient: vertical;
+//                         overflow: hidden;
+//                     }
+
+//                     .group:hover {
+//                         transform: translateY(-1px);
+//                     }
+//                 `}</style>
+//             </div>
+//         </DragDropContext>
+//     );
+// };
+
+// export default ProfessionalEmailInbox;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// working latest
+// /* eslint-disable @typescript-eslint/no-explicit-any */
+// "use client";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { DragDropContext, DropResult } from "react-beautiful-dnd";
+// import { Mail, Archive, AlertCircle, Inbox, Star, CheckCircle, Plus, MoreHorizontal, Check, X } from "lucide-react";
+// import { toast } from "sonner";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu";
+// import { getCookie } from "@/lib/utils/cookies";
+// import { AuthContext } from "@/lib/context/auth";
+// import { Email, EmailColumn as EmailColumnType, TabType, TabConfig, EmailCompose, EmailFilter, EmailAccountType, PaginationState } from "@/lib/types/email2";
+// import { useCombinedAuth } from "@/components/providers/useCombinedAuth";
+
+// // Import our new components
+// import SearchFilterBar from "./SearchFilterBar";
+// import TabNavigation from "./TabNavigation";
+// import { LoadingState, ErrorState, NoEmailState } from "./InboxStates";
+// import EmailBoard from "./EmailBoard";
+// import { ComposeModal } from "../AddEmailComponents/ComposeModal";
+
+// const ProfessionalEmailInbox = () => {
+//     // Move all hooks to the top level
+//     const { token, user } = useContext(AuthContext);
+//     const { djombi } = useCombinedAuth();
+//     const djombiTokens = djombi.token || "";
+
+//     // State
+//     const [emails, setEmails] = useState<Email[]>([]);
+//     const [columns, setColumns] = useState<EmailColumnType[]>([
+//         { id: "inbox", title: "Inbox", icon: Inbox, gradient: "from-blue-500 to-cyan-500" },
+//         { id: "urgent", title: "Urgent", icon: AlertCircle, gradient: "from-red-500 to-orange-500" },
+//         { id: "archive", title: "Archive", icon: Archive, gradient: "from-gray-500 to-slate-500" }
+//     ]);
+//     const [activeTab, setActiveTab] = useState<TabType>("viewAll");
+//     const [isLoading, setIsLoading] = useState(true);
+//     const [error, setError] = useState<string | null>(null);
+//     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
+//     const [showComposeDialog, setShowComposeDialog] = useState(false);
+//     const [isDragging, setIsDragging] = useState(false);
+//     const [emailAccountType, setEmailAccountType] = useState<EmailAccountType>("personal");
+//     const [emailFilter, setEmailFilter] = useState<EmailFilter>({
+//         searchTerm: "",
+//         dateRange: "all",
+//         hasAttachment: null,
+//         isRead: null
+//     });
+//     const [composeEmail, setComposeEmail] = useState<EmailCompose>({
+//         to: "",
+//         subject: "",
+//         content: ""
+//     });
+//     const [pagination, setPagination] = useState<PaginationState>({});
+//     const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+//     const [editingColumnName, setEditingColumnName] = useState("");
+
+//     const itemsPerPage = 12;
+
+//     // Tab configuration - Updated with proper icons
+//     const tabs: TabConfig[] = [
+//         { id: "viewAll", label: "View All", icon: Star, gradient: "from-blue-500 to-cyan-500" },
+//         { id: "urgent", label: "Urgent", icon: AlertCircle, gradient: "from-red-500 to-orange-500" },
+//         { id: "archive", label: "Archive", icon: Archive, gradient: "from-gray-500 to-slate-500" }
+//     ];
+
+//     // Initialize pagination state for each column
+//     const initializePagination = (columns: EmailColumnType[]) => {
+//         const initialPagination: PaginationState = {};
+//         columns.forEach(column => {
+//             initialPagination[column.id] = {
+//                 currentPage: 1,
+//                 itemsPerPage: itemsPerPage
+//             };
+//         });
+//         setPagination(initialPagination);
+//     };
+
+//     // Filter emails based on active tab and filters
+//     const getFilteredEmails = (emails: Email[]): Email[] => {
+//         let filtered = [...emails];
+
+//         // Filter by tab
+//         if (activeTab !== "viewAll") {
+//             filtered = filtered.filter(email => {
+//                 switch (activeTab) {
+//                     case "urgent":
+//                         return email.isUrgent;
+//                     case "archive":
+//                         return email.status === "archive";
+//                     default:
+//                         return true;
+//                 }
+//             });
+//         }
+
+//         // Apply search filter
+//         if (emailFilter.searchTerm) {
+//             const searchTerm = emailFilter.searchTerm.toLowerCase();
+//             filtered = filtered.filter(email =>
+//                 email.subject.toLowerCase().includes(searchTerm) ||
+//                 email.from.toLowerCase().includes(searchTerm) ||
+//                 email.content.toLowerCase().includes(searchTerm)
+//             );
+//         }
+
+//         // Apply attachment filter
+//         if (emailFilter.hasAttachment !== null) {
+//             filtered = filtered.filter(email => email.hasAttachment === emailFilter.hasAttachment);
+//         }
+
+//         // Apply read status filter
+//         if (emailFilter.isRead !== null) {
+//             filtered = filtered.filter(email => email.isRead === emailFilter.isRead);
+//         }
+
+//         return filtered;
+//     };
+
+//     const filteredEmails = getFilteredEmails(emails);
+
+//     // Handle pagination
+//     const handlePageChange = (columnId: string, page: number) => {
+//         setPagination(prev => ({
+//             ...prev,
+//             [columnId]: {
+//                 ...prev[columnId],
+//                 currentPage: page
+//             }
+//         }));
+//     };
+
+//     // Handle compose email
+//     const handleComposeEmail = (compose: EmailCompose) => {
+//         setComposeEmail(compose);
+//         setShowComposeDialog(true);
+//     };
+
+//     const handleSendEmail = async () => {
+//         try {
+//             // Implement your email sending logic here
+//             console.log("Sending email:", composeEmail);
+            
+//             // For now, just show success message
+//             toast.success("Email sent successfully!");
+//             setShowComposeDialog(false);
+//             setComposeEmail({ to: "", subject: "", content: "" });
+//         } catch (error) {
+//             toast.error("Failed to send email");
+//         }
+//     };
+
+//     // Process email data from API response
+//     const processEmailData = (data: any): Email[] => {
+//         let emailsData: any[] = [];
+
+//         if (Array.isArray(data)) {
+//             emailsData = data;
+//         } else if (data.data && Array.isArray(data.data)) {
+//             emailsData = data.data;
+//         } else if (data.emails && Array.isArray(data.emails)) {
+//             emailsData = data.emails;
+//         } else if (data.inbox && Array.isArray(data.inbox)) {
+//             emailsData = data.inbox;
+//         } else {
+//             console.log("Response structure different than expected:", data);
+//             for (const key in data) {
+//                 if (Array.isArray(data[key]) && data[key].length > 0) {
+//                     console.log(`Found array in response at key: ${key}`, data[key]);
+//                     emailsData = data[key];
+//                     break;
+//                 }
+//             }
+//         }
+
+//         if (emailsData.length > 0) {
+//             console.log("Sample email data structure:", emailsData[0]);
+//         }
+
+//         return emailsData.map((email: any) => ({
+//             id: email.id || email._id || `email-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+//             subject: email.subject || 'No Subject',
+//             content: email.content || email.body?.content || '',
+//             from: email.from || email.sender || 'Unknown Sender',
+//             to: email.to || email.recipient || '',
+//             timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+//             status: email.isUrgent ? "urgent" : "inbox",
+//             isUrgent: Boolean(email.isUrgent || email.is_urgent),
+//             hasAttachment: Boolean(email.hasAttachment || email.has_attachment),
+//             category: email.category || "inbox",
+//             isRead: Boolean(email.isRead || email.is_read)
+//         }));
+//     };
+
+//     // Fetch emails using useCallback
+//     const fetchEmails = useCallback(async () => {
+//         setIsLoading(true);
+//         setError(null);
+
+//         try {
+//             console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+//             if (!token) {
+//                 throw new Error('No access token available');
+//             }
+
+//             const linkedEmailId = getCookie('linkedEmailId') ||
+//                 (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+//             console.log("Linked Email ID:", linkedEmailId);
+
+//             if (!linkedEmailId) {
+//                 throw new Error('No linked email ID found');
+//             }
+
+//             const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//             console.log("Fetching from API endpoint:", apiEndpoint);
+
+//             const response = await fetch(apiEndpoint, {
+//                 method: 'GET',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Authorization': `Bearer ${djombiTokens}`
+//                 }
+//             });
+
+//             const responseText = await response.text();
+//             console.log("Raw response:", responseText);
+
+//             let data;
+//             try {
+//                 data = JSON.parse(responseText);
+//                 console.log("Parsed response data:", data);
+//             } catch (e) {
+//                 console.error("Failed to parse response as JSON:", e);
+//                 throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
+//             }
+
+//             if (data.success === false) {
+//                 const errorMessage = data.message || response.statusText;
+//                 console.error("API error:", errorMessage);
+//                 throw new Error(`API error: ${errorMessage}`);
+//             }
+
+//             const formattedEmails = processEmailData(data);
+//             setEmails(formattedEmails);
+//         } catch (err) {
+//             console.error('Error fetching emails:', err);
+//             setError(err instanceof Error ? err.message : 'Failed to fetch emails');
+//         } finally {
+//             setIsLoading(false);
+//         }
+//     }, [token, djombiTokens]);
+
+//     // Fetch emails
+//     useEffect(() => {
+//         fetchEmails();
+//     }, [fetchEmails]);
+
+//     // Initialize pagination when columns change
+//     useEffect(() => {
+//         initializePagination(columns);
+//     }, [columns]);
+
+//     // Handle adding a new column
+//     const handleAddColumn = (newColumn: Omit<EmailColumnType, 'id'> & { id?: string }) => {
+//         const columnWithId = {
+//             ...newColumn,
+//             id: newColumn.id || newColumn.title.toLowerCase().replace(/\s+/g, '-')
+//         };
+        
+//         setColumns([...columns, columnWithId]);
+//         toast.success(`Created new "${columnWithId.title}" column`);
+//     };
+
+//     // Handle drag start
+//     const handleDragStart = () => {
+//         setIsDragging(true);
+//     };
+
+//     // Handle drag end
+//     const handleDragEnd = (result: DropResult) => {
+//         setIsDragging(false);
+
+//         if (!result.destination) {
+//             return;
+//         }
+
+//         const { draggableId, source, destination } = result;
+//         const emailId = draggableId;
+//         const sourceColumnId = source.droppableId;
+//         const destinationColumnId = destination.droppableId;
+
+//         if (sourceColumnId === destinationColumnId && source.index === destination.index) {
+//             return;
+//         }
+
+//         setEmails(prevEmails => {
+//             const updatedEmails = prevEmails.map(email => {
+//                 if (email.id === emailId) {
+//                     return { ...email, status: destinationColumnId };
+//                 }
+//                 return email;
+//             });
+
+//             return updatedEmails;
+//         });
+
+//         const destinationColumn = columns.find(col => col.id === destinationColumnId);
+//         toast.success(`Email moved to ${destinationColumn?.title || destinationColumnId}`);
+//     };
+
+//     // Handle column editing - Trello style
+//     const handleEditColumn = (column: EmailColumnType) => {
+//         setEditingColumnId(column.id);
+//         setEditingColumnName(column.title);
+//     };
+
+//     const handleSaveColumnEdit = () => {
+//         if (!editingColumnId || !editingColumnName.trim()) {
+//             toast.error("Please enter a valid column name");
+//             return;
+//         }
+
+//         setColumns(prevColumns =>
+//             prevColumns.map(col =>
+//                 col.id === editingColumnId
+//                     ? { ...col, title: editingColumnName.trim() }
+//                     : col
+//             )
+//         );
+
+//         setEditingColumnId(null);
+//         setEditingColumnName("");
+//         toast.success("Column updated successfully");
+//     };
+
+//     const handleCancelColumnEdit = () => {
+//         setEditingColumnId(null);
+//         setEditingColumnName("");
+//     };
+
+//     const handleDeleteColumn = (column: EmailColumnType) => {
+//         if (["inbox", "urgent", "archive"].includes(column.id)) {
+//             toast.error("Default columns cannot be deleted.");
+//             return;
+//         }
+        
+//         setColumns(columns.filter(col => col.id !== column.id));
+//         toast.success(`Deleted "${column.title}" column`);
+//     };
+
+//     // Loading state - Trello style
+//     if (isLoading) {
+//         return (
+//             <div className="w-full min-h-screen flex items-center justify-center" style={{ backgroundColor: 'hsl(0, 0.00%, 100.00%)' }}>
+//                 <div className="text-center space-y-4">
+//                     <div className="relative">
+//                         <div className="w-12 h-12 mx-auto rounded-full bg-blue-500 animate-spin">
+//                             <div className="absolute inset-1 bg-white rounded-full"></div>
+//                         </div>
+//                     </div>
+//                     <p className="text-base font-normal text-gray-700">Loading email board...</p>
+//                 </div>
+//             </div>
+//         );
+//     }
+
+//     // Error state
+//     if (error) {
+//         if (error === 'No linked email ID found') {
+//             console.error('Error loading emails: No linked email ID found');
+//             return <NoEmailState message="Please link an email to continue" />;
+//         }
+
+//         return (
+//             <ErrorState 
+//                 error={error} 
+//                 onRetry={() => window.location.reload()} 
+//             />
+//         );
+//     }
+
+//     return (
+//         <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
+//             <div 
+//                 className="min-h-screen p-4"
+//                 style={{ 
+//                     // backgroundColor: 'hsl(214,91.3%,95.5%)',
+//                     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+//                 }}
+//             >
+//                 <div className="max-w-full mx-auto">
+//                     {/* Header Section - Trello Style */}
+//                     <div className="mb-6">
+//                         <div className="mb-4">
+//                             <div>
+//                                 {/* <h1 className="text-lg font-bold text-gray-800 mb-2">
+//                                     Email Inbox
+//                                 </h1> */}
+//                                 <SearchFilterBar
+//                                     emailFilter={emailFilter}
+//                                     onFilterChange={setEmailFilter}
+//                                     emailAccountType={emailAccountType}
+//                                     onAccountTypeChange={setEmailAccountType}
+//                                 />
+//                             </div>
+//                         </div>
+
+//                         {/* Enhanced Tab Navigation - Trello Style */}
+//                         <div className="bg-white/70 backdrop-blur-sm p-1 rounded-lg border border-gray-200/50 overflow-x-auto shadow-sm">
+//                             <div className="flex gap-1 min-w-max sm:min-w-0">
+//                                 {tabs.map((tab) => {
+//                                     const IconComponent = tab.icon;
+//                                     const isActive = activeTab === tab.id;
+
+//                                     return (
+//                                         <Button
+//                                             key={tab.id}
+//                                             variant="ghost"
+//                                             className={`relative px-3 py-2 rounded-md font-medium transition-all duration-200 whitespace-nowrap text-sm ${isActive
+//                                                 ? `bg-gradient-to-r ${tab.gradient} text-white shadow-md hover:shadow-lg`
+//                                                 : "text-gray-600 hover:text-gray-800 hover:bg-gray-100/80"
+//                                             }`}
+//                                             onClick={() => setActiveTab(tab.id as TabType)}
+//                                         >
+//                                             <div className="flex items-center gap-2">
+//                                                 <IconComponent className={`w-4 h-4 ${isActive ? 'text-white' : ''}`} />
+//                                                 <span>{tab.label}</span>
+//                                             </div>
+//                                             {isActive && (
+//                                                 <div className="absolute inset-0 rounded-md bg-white/10"></div>
+//                                             )}
+//                                         </Button>
+//                                     );
+//                                 })}
+//                             </div>
+//                         </div>
+//                     </div>
+
+//                     {/* Email Board Container with horizontal scroll */}
+//                     <div className="board-container mt-5">
+//                         <EmailBoard
+//                             columns={columns}
+//                             emails={filteredEmails}
+//                             pagination={pagination}
+//                             itemsPerPage={itemsPerPage}
+//                             onEditColumn={handleEditColumn}
+//                             onDeleteColumn={handleDeleteColumn}
+//                             onPageChange={handlePageChange}
+//                             onAddColumn={handleAddColumn}
+//                             showNewColumnDialog={showNewColumnDialog}
+//                             onNewColumnDialogChange={setShowNewColumnDialog}
+//                             editingColumnId={editingColumnId}
+//                             editingColumnName={editingColumnName}
+//                             onStartEdit={handleEditColumn}
+//                             onSaveEdit={handleSaveColumnEdit}
+//                             onCancelEdit={handleCancelColumnEdit}
+//                             onEditNameChange={setEditingColumnName}
+//                         />
+//                     </div>
+//                 </div>
+
+//                 {/* Trello-style custom scrollbar */}
+//                 <style jsx>{`
+//                     .board-container {
+//                         position: relative;
+//                     }
+
+//                     .board-scroll::-webkit-scrollbar {
+//                         height: 12px;
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-track {
+//                         background: rgba(255, 255, 255, 0.3);
+//                         border-radius: 6px;
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-thumb {
+//                         background-color: rgba(0,0,0,0.3);
+//                         border-radius: 6px;
+//                         border: 2px solid hsl(214,91.3%,95.5%);
+//                     }
+                    
+//                     .board-scroll::-webkit-scrollbar-thumb:hover {
+//                         background-color: rgba(0,0,0,0.5);
+//                     }
+
+//                     .board-scroll {
+//                         scrollbar-width: thin;
+//                         scrollbar-color: rgba(0,0,0,0.3) rgba(255, 255, 255, 0.3);
+//                     }
+
+//                     .line-clamp-2 {
+//                         display: -webkit-box;
+//                         -webkit-line-clamp: 2;
+//                         -webkit-box-orient: vertical;
+//                         overflow: hidden;
+//                     }
+
+//                     .group:hover {
+//                         transform: translateY(-1px);
+//                     }
+//                 `}</style>
+//             </div>
+//         </DragDropContext>
+//     );
+// };
+
+// export default ProfessionalEmailInbox;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Daniel UI Design
+// /* eslint-disable @typescript-eslint/no-explicit-any */
+// "use client";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { DragDropContext, DropResult } from "react-beautiful-dnd";
+// import { Mail, Archive, AlertCircle, Inbox, Star, CheckCircle } from "lucide-react";
+// import { toast } from "sonner";
+// import { getCookie } from "@/lib/utils/cookies";
+// import { AuthContext } from "@/lib/context/auth";
+// import { Email, EmailColumn as EmailColumnType, TabType, TabConfig, EmailCompose, EmailFilter, EmailAccountType, PaginationState } from "@/lib/types/email2";
+// import { useCombinedAuth } from "@/components/providers/useCombinedAuth";
+
+// // Import our new components
+// import SearchFilterBar from "./SearchFilterBar";
+// import TabNavigation from "./TabNavigation";
+// import EmailBoard from "./EmailBoard";
+// import { LoadingState, ErrorState, NoEmailState } from "./InboxStates";
+
+// const ProfessionalEmailInbox = () => {
+//     // Move all hooks to the top level
+//     const { token, user } = useContext(AuthContext);
+//     const { djombi } = useCombinedAuth();
+//     const djombiTokens = djombi.token || "";
+
+//     // State
+//     const [emails, setEmails] = useState<Email[]>([]);
+//     const [columns, setColumns] = useState<EmailColumnType[]>([
+//         { id: "inbox", title: "Inbox", icon: Inbox, gradient: "from-blue-500 to-cyan-500" },
+//         { id: "urgent", title: "Urgent", icon: AlertCircle, gradient: "from-red-500 to-orange-500" },
+//         { id: "archive", title: "Archive", icon: Archive, gradient: "from-gray-500 to-slate-500" }
+//     ]);
+//     const [activeTab, setActiveTab] = useState<TabType>("viewAll");
+//     const [isLoading, setIsLoading] = useState(true);
+//     const [error, setError] = useState<string | null>(null);
+//     const [showNewColumnDialog, setShowNewColumnDialog] = useState(false);
+//     const [showComposeDialog, setShowComposeDialog] = useState(false);
+//     const [isDragging, setIsDragging] = useState(false);
+//     const [emailAccountType, setEmailAccountType] = useState<EmailAccountType>("personal");
+//     const [emailFilter, setEmailFilter] = useState<EmailFilter>({
+//         searchTerm: "",
+//         dateRange: "all",
+//         hasAttachment: null,
+//         isRead: null
+//     });
+//     const [composeEmail, setComposeEmail] = useState<EmailCompose>({
+//         to: "",
+//         subject: "",
+//         content: ""
+//     });
+//     const [pagination, setPagination] = useState<PaginationState>({});
+
+//     const itemsPerPage = 12;
+
+//     // Tab configuration - Updated with proper icons
+//     const tabs: TabConfig[] = [
+//         { id: "viewAll", label: "View All", icon: Star, gradient: "from-blue-500 to-cyan-500" },
+//         { id: "urgent", label: "Urgent", icon: AlertCircle, gradient: "from-red-500 to-orange-500" },
+//         { id: "archive", label: "Archive", icon: Archive, gradient: "from-gray-500 to-slate-500" }
+//     ];
+
+//     // Initialize pagination state for each column
+//     const initializePagination = (columns: EmailColumnType[]) => {
+//         const initialPagination: PaginationState = {};
+//         columns.forEach(column => {
+//             initialPagination[column.id] = {
+//                 currentPage: 1,
+//                 itemsPerPage: itemsPerPage
+//             };
+//         });
+//         setPagination(initialPagination);
+//     };
+
+//     // Filter emails based on active tab and filters
+//     const getFilteredEmails = (emails: Email[]): Email[] => {
+//         let filtered = [...emails];
+
+//         // Filter by tab
+//         if (activeTab !== "viewAll") {
+//             filtered = filtered.filter(email => {
+//                 switch (activeTab) {
+//                     case "urgent":
+//                         return email.isUrgent;
+//                     case "archive":
+//                         return email.status === "archive";
+//                     default:
+//                         return true;
+//                 }
+//             });
+//         }
+
+//         // Apply search filter
+//         if (emailFilter.searchTerm) {
+//             const searchTerm = emailFilter.searchTerm.toLowerCase();
+//             filtered = filtered.filter(email =>
+//                 email.subject.toLowerCase().includes(searchTerm) ||
+//                 email.from.toLowerCase().includes(searchTerm) ||
+//                 email.content.toLowerCase().includes(searchTerm)
+//             );
+//         }
+
+//         // Apply attachment filter
+//         if (emailFilter.hasAttachment !== null) {
+//             filtered = filtered.filter(email => email.hasAttachment === emailFilter.hasAttachment);
+//         }
+
+//         // Apply read status filter
+//         if (emailFilter.isRead !== null) {
+//             filtered = filtered.filter(email => email.isRead === emailFilter.isRead);
+//         }
+
+//         return filtered;
+//     };
+
+//     const filteredEmails = getFilteredEmails(emails);
+
+//     // Handle pagination
+//     const handlePageChange = (columnId: string, page: number) => {
+//         setPagination(prev => ({
+//             ...prev,
+//             [columnId]: {
+//                 ...prev[columnId],
+//                 currentPage: page
+//             }
+//         }));
+//     };
+
+//     // Handle compose email
+//     const handleComposeEmail = (compose: EmailCompose) => {
+//         setComposeEmail(compose);
+//         setShowComposeDialog(true);
+//     };
+
+//     const handleSendEmail = async () => {
+//         try {
+//             // Implement your email sending logic here
+//             console.log("Sending email:", composeEmail);
+            
+//             // For now, just show success message
+//             toast.success("Email sent successfully!");
+//             setShowComposeDialog(false);
+//             setComposeEmail({ to: "", subject: "", content: "" });
+//         } catch (error) {
+//             toast.error("Failed to send email");
+//         }
+//     };
+
+//     // Process email data from API response
+//     const processEmailData = (data: any): Email[] => {
+//         let emailsData: any[] = [];
+
+//         if (Array.isArray(data)) {
+//             emailsData = data;
+//         } else if (data.data && Array.isArray(data.data)) {
+//             emailsData = data.data;
+//         } else if (data.emails && Array.isArray(data.emails)) {
+//             emailsData = data.emails;
+//         } else if (data.inbox && Array.isArray(data.inbox)) {
+//             emailsData = data.inbox;
+//         } else {
+//             console.log("Response structure different than expected:", data);
+//             for (const key in data) {
+//                 if (Array.isArray(data[key]) && data[key].length > 0) {
+//                     console.log(`Found array in response at key: ${key}`, data[key]);
+//                     emailsData = data[key];
+//                     break;
+//                 }
+//             }
+//         }
+
+//         if (emailsData.length > 0) {
+//             console.log("Sample email data structure:", emailsData[0]);
+//         }
+
+//         return emailsData.map((email: any) => ({
+//             id: email.id || email._id || `email-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+//             subject: email.subject || 'No Subject',
+//             content: email.content || email.body?.content || '',
+//             from: email.from || email.sender || 'Unknown Sender',
+//             to: email.to || email.recipient || '',
+//             timestamp: email.timestamp || email.createdAt || email.created_at || new Date().toISOString(),
+//             status: email.isUrgent ? "urgent" : "inbox",
+//             isUrgent: Boolean(email.isUrgent || email.is_urgent),
+//             hasAttachment: Boolean(email.hasAttachment || email.has_attachment),
+//             category: email.category || "inbox",
+//             isRead: Boolean(email.isRead || email.is_read)
+//         }));
+//     };
+
+//     // Fetch emails using useCallback
+//     const fetchEmails = useCallback(async () => {
+//         setIsLoading(true);
+//         setError(null);
+
+//         try {
+//             console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+
+//             if (!token) {
+//                 throw new Error('No access token available');
+//             }
+
+//             const linkedEmailId = getCookie('linkedEmailId') ||
+//                 (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+//             console.log("Linked Email ID:", linkedEmailId);
+
+//             if (!linkedEmailId) {
+//                 throw new Error('No linked email ID found');
+//             }
+
+//             const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//             console.log("Fetching from API endpoint:", apiEndpoint);
+
+//             const response = await fetch(apiEndpoint, {
+//                 method: 'GET',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Authorization': `Bearer ${djombiTokens}`
+//                 }
+//             });
+
+//             const responseText = await response.text();
+//             console.log("Raw response:", responseText);
+
+//             let data;
+//             try {
+//                 data = JSON.parse(responseText);
+//                 console.log("Parsed response data:", data);
+//             } catch (e) {
+//                 console.error("Failed to parse response as JSON:", e);
+//                 throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
+//             }
+
+//             if (data.success === false) {
+//                 const errorMessage = data.message || response.statusText;
+//                 console.error("API error:", errorMessage);
+//                 throw new Error(`API error: ${errorMessage}`);
+//             }
+
+//             const formattedEmails = processEmailData(data);
+//             setEmails(formattedEmails);
+//         } catch (err) {
+//             console.error('Error fetching emails:', err);
+//             setError(err instanceof Error ? err.message : 'Failed to fetch emails');
+//         } finally {
+//             setIsLoading(false);
+//         }
+//     }, [token, djombiTokens]);
+
+//     // Fetch emails
+//     useEffect(() => {
+//         fetchEmails();
+//     }, [fetchEmails]);
+
+//     // Initialize pagination when columns change
+//     useEffect(() => {
+//         initializePagination(columns);
+//     }, [columns]);
+
+//     // Handle adding a new column
+//     const handleAddColumn = (newColumn: Omit<EmailColumnType, 'id'> & { id?: string }) => {
+//         const columnWithId = {
+//             ...newColumn,
+//             id: newColumn.id || newColumn.title.toLowerCase().replace(/\s+/g, '-')
+//         };
+        
+//         setColumns([...columns, columnWithId]);
+//     };
+
+//     // Handle drag start
+//     const handleDragStart = () => {
+//         setIsDragging(true);
+//     };
+
+//     // Handle drag end
+//     const handleDragEnd = (result: DropResult) => {
+//         setIsDragging(false);
+
+//         if (!result.destination) {
+//             return;
+//         }
+
+//         const { draggableId, source, destination } = result;
+//         const emailId = draggableId;
+//         const sourceColumnId = source.droppableId;
+//         const destinationColumnId = destination.droppableId;
+
+//         if (sourceColumnId === destinationColumnId && source.index === destination.index) {
+//             return;
+//         }
+
+//         setEmails(prevEmails => {
+//             const updatedEmails = prevEmails.map(email => {
+//                 if (email.id === emailId) {
+//                     return { ...email, status: destinationColumnId };
+//                 }
+//                 return email;
+//             });
+
+//             return updatedEmails;
+//         });
+
+//         const destinationColumn = columns.find(col => col.id === destinationColumnId);
+//         toast.success(`Email moved to ${destinationColumn?.title || destinationColumnId}`);
+//     };
+
+//     // Handle column actions
+//     const handleEditColumn = (column: EmailColumnType) => {
+//         console.log("Edit column:", column);
+//     };
+
+//     const handleDeleteColumn = (column: EmailColumnType) => {
+//         if (["inbox", "urgent", "archive"].includes(column.id)) {
+//             toast.error("Default columns cannot be deleted.");
+//             return;
+//         }
+        
+//         setColumns(columns.filter(col => col.id !== column.id));
+//         toast.success(`Deleted "${column.title}" column`);
+//     };
+
+//     // Loading state
+//     if (isLoading) {
+//         return <LoadingState message="Loading email inbox..." />;
+//     }
+
+//     // Error state
+//     if (error) {
+//         if (error === 'No linked email ID found') {
+//             console.error('Error loading emails: No linked email ID found');
+//             return <NoEmailState message="Please link an email to continue" />;
+//         }
+
+//         return (
+//             <ErrorState 
+//                 error={error} 
+//                 onRetry={() => window.location.reload()} 
+//             />
+//         );
+//     }
+
+//     return (
+//         <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
+//             <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+//                 <div className="max-w-full mx-auto">
+//                     {/* Header Section */}
+//                     <div className="mb-8">
+//                         <SearchFilterBar
+//                             emailFilter={emailFilter}
+//                             onFilterChange={setEmailFilter}
+//                             emailAccountType={emailAccountType}
+//                             onAccountTypeChange={setEmailAccountType}
+//                         />
+
+//                         {/* Enhanced Tab Navigation */}
+//                         <TabNavigation
+//                             tabs={tabs}
+//                             activeTab={activeTab}
+//                             onTabChange={setActiveTab}
+//                         />
+//                     </div>
+
+//                     {/* Email Board */}
+//                     <EmailBoard
+//                         columns={columns}
+//                         emails={filteredEmails}
+//                         pagination={pagination}
+//                         itemsPerPage={itemsPerPage}
+//                         onEditColumn={handleEditColumn}
+//                         onDeleteColumn={handleDeleteColumn}
+//                         onPageChange={handlePageChange}
+//                         onAddColumn={handleAddColumn}
+//                         showNewColumnDialog={showNewColumnDialog}
+//                         onNewColumnDialogChange={setShowNewColumnDialog}
+//                     />
+//                 </div>
+
+//                 {/* Global Custom Animations and Styles */}
+//                 <style jsx>{`
+//                     @keyframes fadeInUp {
+//                         from {
+//                             opacity: 0;
+//                             transform: translateY(20px);
+//                         }
+//                         to {
+//                             opacity: 1;
+//                             transform: translateY(0);
+//                         }
+//                     }
+//                 `}</style>
+//             </div>
+//         </DragDropContext>
+//     );
+// };
+
+// export default ProfessionalEmailInbox;
 
 
 

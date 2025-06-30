@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ArrowUp, ArrowDown, Eye, EyeOff } from "lucide-react";
 
 interface BalanceCardProps {
@@ -19,13 +19,15 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   const [isBalanceVisible, setIsBalanceVisible] = useState<boolean>(true);
 
   // Function to add money to balance (called from MobileMoneySection)
-  const addToBalance = (amount: number) => {
-    const newBalance = balance + amount;
-    setBalance(newBalance);
-    if (onBalanceUpdate) {
-      onBalanceUpdate(newBalance);
-    }
-  };
+  const addToBalance = useCallback((amount: number) => {
+    setBalance(prevBalance => {
+      const newBalance = prevBalance + amount;
+      if (onBalanceUpdate) {
+        onBalanceUpdate(newBalance);
+      }
+      return newBalance;
+    });
+  }, [onBalanceUpdate]); // Only depend on onBalanceUpdate
 
   // Expose the addToBalance function globally or through a ref
   useEffect(() => {
@@ -42,7 +44,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
     return () => {
       window.removeEventListener('paymentSuccess', handlePaymentSuccess as EventListener);
     };
-  }, [balance]);
+  }, [addToBalance]); // Now we can safely include addToBalance since it's memoized
 
   const toggleBalanceVisibility = () => {
     setIsBalanceVisible(!isBalanceVisible);

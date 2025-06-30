@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { cn } from "@/lib/utils";
 import { getCookie } from "@/lib/utils/cookies";
@@ -30,30 +30,40 @@ export const EmailSection: React.FC<EmailSectionProps> = ({ className }) => {
   const email_id = getCookie('linkedEmailId') || "";
   const token = getCookie('accessToken');
 
-  // Check if email is connected based on cookies or other indicators
-  useEffect(() => {
-    // Check if personal email is connected
-    const personalConnected = !!getCookie('personalEmailConnected') || !!email_id;
+  // Helper function to parse the API response
+  const parseEmailResponse = useCallback((data: any): Email[] => {
+    try {
+      if (!data) return [];
 
-    // Check if professional email is connected
-    const professionalConnected = !!getCookie('professionalEmailConnected');
+      if (Array.isArray(data) && data.length > 0 && 'subject' in data[0]) {
+        return data;
+      }
 
-    setEmailsConnected({
-      personal: personalConnected,
-      professional: professionalConnected
-    });
+      if (data.data && Array.isArray(data.data)) {
+        return data.data;
+      }
 
-    // Initial fetch if tab is already connected
-    if ((activeTab === 'personal' && personalConnected) ||
-        (activeTab === 'professional' && professionalConnected)) {
-      fetchEmails(activeTab);
-    } else {
-      setLoading(false);
+      if (typeof data === 'object') {
+        for (const key in data) {
+          if (Array.isArray(data[key])) {
+            const possibleEmails = data[key];
+            if (possibleEmails.length > 0 && 'subject' in possibleEmails[0]) {
+              return possibleEmails;
+            }
+          }
+        }
+      }
+
+      console.error("Could not parse email data:", data);
+      return [];
+    } catch (error) {
+      console.error("Error parsing email data:", error);
+      return [];
     }
-  }, [activeTab, email_id]);
+  }, []);
 
   // Function to fetch emails based on active tab
-  const fetchEmails = async (tabType: 'personal' | 'professional') => {
+  const fetchEmails = useCallback(async (tabType: 'personal' | 'professional') => {
     try {
       setLoading(true);
 
@@ -105,39 +115,29 @@ export const EmailSection: React.FC<EmailSectionProps> = ({ className }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, email_id, parseEmailResponse]);
 
-  // Helper function to parse the API response
-  const parseEmailResponse = (data: any): Email[] => {
-    try {
-      if (!data) return [];
+  // Check if email is connected based on cookies or other indicators
+  useEffect(() => {
+    // Check if personal email is connected
+    const personalConnected = !!getCookie('personalEmailConnected') || !!email_id;
 
-      if (Array.isArray(data) && data.length > 0 && 'subject' in data[0]) {
-        return data;
-      }
+    // Check if professional email is connected
+    const professionalConnected = !!getCookie('professionalEmailConnected');
 
-      if (data.data && Array.isArray(data.data)) {
-        return data.data;
-      }
+    setEmailsConnected({
+      personal: personalConnected,
+      professional: professionalConnected
+    });
 
-      if (typeof data === 'object') {
-        for (const key in data) {
-          if (Array.isArray(data[key])) {
-            const possibleEmails = data[key];
-            if (possibleEmails.length > 0 && 'subject' in possibleEmails[0]) {
-              return possibleEmails;
-            }
-          }
-        }
-      }
-
-      console.error("Could not parse email data:", data);
-      return [];
-    } catch (error) {
-      console.error("Error parsing email data:", error);
-      return [];
+    // Initial fetch if tab is already connected
+    if ((activeTab === 'personal' && personalConnected) ||
+        (activeTab === 'professional' && professionalConnected)) {
+      fetchEmails(activeTab);
+    } else {
+      setLoading(false);
     }
-  };
+  }, [activeTab, email_id, fetchEmails]);
 
   // Handle tab switch
   const handleTabChange = (tab: 'personal' | 'professional') => {
@@ -163,7 +163,7 @@ export const EmailSection: React.FC<EmailSectionProps> = ({ className }) => {
   };
 
   return (
-    <div className={cn("bg-white rounded-lg border border-gray-200 p-4 flex flex-col", className)}>
+    <div className={cn("bg-white rounded-lg border border-gray-200 p-4 flex flex-col h-[43vh]", className)}>
       <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4 text-center">EMAILS</h3>
 
       {/* Tab buttons */}

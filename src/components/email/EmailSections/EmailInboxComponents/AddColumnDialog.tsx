@@ -9,7 +9,7 @@ import React, { useState, useRef, useEffect } from "react";
 interface ColumnData {
   id?: string;
   title: string;
-  icon?: React.ComponentType<any>;
+  icon?: string; // Updated to match EmailColumn interface
   gradient?: string;
   color?: string;
 }
@@ -38,6 +38,15 @@ const AddColumnDialog: React.FC<AddColumnDialogProps> = ({
     }
   }, [isCreatingList]);
 
+  // Save columns to localStorage
+  const saveColumnsToStorage = (updatedColumns: EmailColumnType[]) => {
+    try {
+      localStorage.setItem('emailColumnsData', JSON.stringify(updatedColumns));
+    } catch (error) {
+      console.error('Error saving columns to storage:', error);
+    }
+  };
+
   const handleAddColumn = () => {
     if (!columnName.trim()) {
       toast.error("Please enter a list name");
@@ -57,10 +66,18 @@ const AddColumnDialog: React.FC<AddColumnDialogProps> = ({
     const columnData: ColumnData = {
       id: columnName.toLowerCase().replace(/\s+/g, '-'),
       title: columnName,
+      icon: "📋", // Default icon for new columns
       gradient: "from-gray-500 to-slate-500", // Default gradient
       color: "#64748b"
     };
 
+    // Create updated columns array with the new column
+    const updatedColumns = [...existingColumns, columnData as EmailColumnType];
+    
+    // Save to localStorage immediately
+    saveColumnsToStorage(updatedColumns);
+
+    // Call the parent handler
     onAddColumn(columnData);
 
     // Reset form
@@ -144,6 +161,223 @@ const AddColumnDialog: React.FC<AddColumnDialogProps> = ({
 };
 
 export default AddColumnDialog;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 28/6/2025 2:32
+// "use client";
+// import { Plus, X } from "lucide-react";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import { toast } from "sonner";
+// import { EmailColumn as EmailColumnType } from "@/lib/types/email2";
+// import React, { useState, useRef, useEffect } from "react";
+
+// interface ColumnData {
+//   id?: string;
+//   title: string;
+//   icon?: React.ComponentType<any>;
+//   gradient?: string;
+//   color?: string;
+// }
+
+// interface AddColumnDialogProps {
+//   open: boolean;
+//   onOpenChange: (open: boolean) => void;
+//   onAddColumn: (column: ColumnData) => void;
+//   existingColumns: EmailColumnType[];
+// }
+
+// const AddColumnDialog: React.FC<AddColumnDialogProps> = ({ 
+//   open, 
+//   onOpenChange, 
+//   onAddColumn, 
+//   existingColumns 
+// }) => {
+//   const [columnName, setColumnName] = useState("");
+//   const [isCreatingList, setIsCreatingList] = useState(false);
+//   const inputRef = useRef<HTMLInputElement>(null);
+
+//   // Focus input when creating mode is activated
+//   useEffect(() => {
+//     if (isCreatingList && inputRef.current) {
+//       inputRef.current.focus();
+//     }
+//   }, [isCreatingList]);
+
+//   const handleAddColumn = () => {
+//     if (!columnName.trim()) {
+//       toast.error("Please enter a list name");
+//       return;
+//     }
+
+//     // Check for existing columns by title
+//     const existingColumnNames = existingColumns.map(col => 
+//       col.title.toLowerCase()
+//     );
+    
+//     if (existingColumnNames.includes(columnName.toLowerCase())) {
+//       toast.error("A list with a similar name already exists.");
+//       return;
+//     }
+
+//     const columnData: ColumnData = {
+//       id: columnName.toLowerCase().replace(/\s+/g, '-'),
+//       title: columnName,
+//       gradient: "from-gray-500 to-slate-500", // Default gradient
+//       color: "#64748b"
+//     };
+
+//     onAddColumn(columnData);
+
+//     // Reset form
+//     setColumnName("");
+//     setIsCreatingList(false);
+//     toast.success(`Created new "${columnName}" list`);
+//   };
+
+//   const handleCancel = () => {
+//     setColumnName("");
+//     setIsCreatingList(false);
+//   };
+
+//   const handleKeyDown = (e: React.KeyboardEvent) => {
+//     if (e.key === 'Enter') {
+//       handleAddColumn();
+//     } else if (e.key === 'Escape') {
+//       handleCancel();
+//     }
+//   };
+
+//   if (isCreatingList) {
+//     // Creating mode - Trello input form
+//     return (
+//       <div className="w-72 flex-shrink-0">
+//         <div 
+//           className="rounded-md p-3"
+//           style={{ backgroundColor: '#ebecf0' }} // Same as column background
+//         >
+//           <Input
+//             ref={inputRef}
+//             placeholder="Enter list name..."
+//             value={columnName}
+//             onChange={(e) => setColumnName(e.target.value)}
+//             onKeyDown={handleKeyDown}
+//             className="mb-2 rounded-sm border-2 border-blue-500 focus:border-blue-500 focus:ring-0 bg-white text-sm font-normal h-8 px-3"
+//             style={{ 
+//               fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+//               outline: 'none',
+//               boxShadow: 'none'
+//             }}
+//           />
+//           <div className="flex items-center gap-2">
+//             <Button
+//               onClick={handleAddColumn}
+//               disabled={!columnName.trim()}
+//               className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium text-sm px-3 py-1 h-8 rounded-sm"
+//             >
+//               Add list
+//             </Button>
+//             <Button
+//               onClick={handleCancel}
+//               variant="ghost"
+//               className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 p-1 h-8 w-8 rounded-sm"
+//             >
+//               <X className="h-4 w-4" />
+//             </Button>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   // Default mode - "Add another list" button
+//   return (
+//     <div className="w-72 flex-shrink-0">
+//       <Button
+//         onClick={() => setIsCreatingList(true)}
+//         variant="ghost"
+//         className="w-full justify-start rounded-md p-3 h-auto transition-all hover:shadow-sm text-gray-700 hover:text-gray-900"
+//         style={{ 
+//           backgroundColor: 'hsla(218, 38.20%, 48.20%, 0.16)',
+//           minHeight: '44px' // Match Trello button height
+//         }}
+//       >
+//         <Plus className="w-4 h-4 mr-2" />
+//         <span className="text-sm font-medium">Add another list</span>
+//       </Button>
+//     </div>
+//   );
+// };
+
+// export default AddColumnDialog;
 
 
 

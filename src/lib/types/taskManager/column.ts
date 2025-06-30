@@ -46,5 +46,6 @@ export interface UpdateColumnPayload {
 
 // Extend the existing Column type if needed
 export interface ExtendedColumn extends BaseColumn {
-  // Add any additional properties your API returns
+  // Reserved for future API properties
+  [key: string]: any;
 }

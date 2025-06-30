@@ -40,12 +40,30 @@ const MessageInput: React.FC<MessageInputProps> = ({
     accept: config.fileUpload.allowedTypes.reduce((acc, type) => ({ ...acc, [type]: [] }), {}),
     maxFiles: config.fileUpload.maxFiles,
     maxSize: config.fileUpload.maxFileSize,
+    noClick: true, // Disable click to open file dialog
+    noKeyboard: true, // Disable keyboard events
     onDrop: (acceptedFiles) => {
       // Concat new files to existing ones, up to max allowed
       const newFiles = [...files, ...acceptedFiles].slice(0, config.fileUpload.maxFiles);
       setFiles(newFiles);
     },
   });
+
+  // Handle file attachment button click
+  const handleFileAttachClick = () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.multiple = true;
+    fileInput.accept = config.fileUpload.allowedTypes.join(',');
+    fileInput.onchange = (e) => {
+      const selectedFiles = Array.from((e.target as HTMLInputElement).files || []);
+      if (selectedFiles.length > 0) {
+        const newFiles = [...files, ...selectedFiles].slice(0, config.fileUpload.maxFiles);
+        setFiles(newFiles);
+      }
+    };
+    fileInput.click();
+  };
   
   // Focus input when component mounts or selection changes
   useEffect(() => {
@@ -162,29 +180,29 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }
   
   return (
-    <div className="p-6 bg-white">
+    <div className="p-3 sm:p-6 bg-white">
       {/* File preview area */}
       {files.length > 0 && (
-        <div className="mb-4 p-4 border border-gray-200 rounded-xl bg-gray-50">
-          <div className="flex flex-wrap gap-3">
+        <div className="mb-3 sm:mb-4 p-3 sm:p-4 border border-gray-200 rounded-xl bg-gray-50">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             {files.map((file, index) => (
               <div 
                 key={index}
-                className="relative flex items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm"
+                className="relative flex items-center bg-white p-2 sm:p-3 rounded-lg border border-gray-200 shadow-sm max-w-full"
               >
-                <div className="flex items-center space-x-2 max-w-xs">
-                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                    <Paperclip size={14} />
+                <div className="flex items-center space-x-2 min-w-0 flex-1">
+                  <div className="p-1 sm:p-2 bg-blue-100 text-blue-600 rounded-lg flex-shrink-0">
+                    <Paperclip size={12} className="sm:w-4 sm:h-4" />
                   </div>
-                  <span className="text-sm truncate font-medium text-gray-700">
+                  <span className="text-xs sm:text-sm truncate font-medium text-gray-700 min-w-0">
                     {file.name}
                   </span>
                 </div>
                 <button
                   onClick={() => handleRemoveFile(index)}
-                  className="ml-3 p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
+                  className="ml-2 sm:ml-3 p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors flex-shrink-0"
                 >
-                  <X size={16} />
+                  <X size={14} className="sm:w-4 sm:h-4" />
                 </button>
               </div>
             ))}
@@ -194,7 +212,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       
       <div 
         className={`
-          flex items-end space-x-3 rounded-2xl border-2 transition-all duration-200
+          flex items-center space-x-2 sm:space-x-3 rounded-2xl border-2 transition-all duration-200 p-2 sm:p-3
           ${isDragActive 
             ? 'border-blue-500 bg-blue-50 shadow-lg' 
             : 'border-gray-200 bg-gray-50 hover:bg-white hover:border-gray-300'
@@ -202,15 +220,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
         `}
         {...getRootProps()}
       >
-        {/* File input */}
+        {/* Hidden file input for dropzone */}
         <input {...getInputProps()} />
         
         <button
           type="button"
-          className="p-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 m-2"
+          onClick={handleFileAttachClick}
+          className="p-2 sm:p-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 flex-shrink-0"
           title="Attach files"
         >
-          <Paperclip size={20} />
+          <Paperclip size={18} className="sm:w-5 sm:h-5" />
         </button>
         
         {/* Message input */}
@@ -221,18 +240,18 @@ const MessageInput: React.FC<MessageInputProps> = ({
           onChange={handleInputChange}
           onKeyPress={handleKeyPress}
           placeholder={isDragActive ? 'Drop files here...' : placeholder}
-          className="flex-1 p-4 bg-transparent focus:outline-none text-gray-900 placeholder-gray-500"
+          className="flex-1 p-2 sm:p-3 bg-transparent focus:outline-none text-gray-900 placeholder-gray-500 text-sm sm:text-base min-w-0"
         />
         
         {/* Emoji picker button */}
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           <button
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="p-3 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-xl transition-all duration-200 m-2"
+            className="p-2 sm:p-3 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-xl transition-all duration-200"
             title="Add emoji"
           >
-            <Smile size={20} />
+            <Smile size={18} className="sm:w-5 sm:h-5" />
           </button>
           
           {/* Emoji picker */}
@@ -241,8 +260,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
               <div className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                 <EmojiPicker
                   onEmojiClick={handleEmojiSelect}
-                  width={320}
-                  height={400}
+                  width={window.innerWidth < 640 ? 280 : 320}
+                  height={window.innerWidth < 640 ? 350 : 400}
                 />
               </div>
             </div>
@@ -253,9 +272,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <button
           onClick={handleSendMessage}
           disabled={message.trim() === '' && files.length === 0}
-          className="p-3 m-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
+          className="p-2 sm:p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex-shrink-0"
         >
-          <Send size={20} />
+          <Send size={18} className="sm:w-5 sm:h-5" />
         </button>
       </div>
     </div>

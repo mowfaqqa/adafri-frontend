@@ -243,7 +243,7 @@ const ColumnActions = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                     onClick={() => onDeleteColumn(column)}
-                    disabled={["inbox", "urgent", "archive"].includes(column.id)}
+                    disabled={["inbox", "urgent", "follow-up"].includes(column.id)}
                     className="text-gray-700 hover:bg-gray-100 text-sm px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Delete

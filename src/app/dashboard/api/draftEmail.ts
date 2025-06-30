@@ -1,19 +1,47 @@
 import { EmailSendData } from '@/lib/types/email';
 import { getAuthToken } from '@/lib/utils/cookies';
+import { DjombiProfileService } from '@/lib/services/DjombiProfileService';
 
 /**
- * Saves a draft email using the stored access token
+ * Get Djombi access token for email service
+ */
+const getDjombiAccessToken = (): string | null => {
+  // First try from DjombiProfileService
+  const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
+  if (accessToken) {
+    return accessToken;
+  }
+  
+  // Fallback to localStorage directly
+  if (typeof window !== 'undefined') {
+    const storedToken = localStorage.getItem('djombi_access_token');
+    if (storedToken) {
+      return storedToken;
+    }
+  }
+  
+  return null;
+};
+
+/**
+ * Saves a draft email using the Djombi access token (not the Adafri token)
  * @param emailData Object containing email details
  * @returns Response from the email service
  */
 export async function saveDraft(emailData: EmailSendData): Promise<any> {
   console.log("saveDraft function called with data:", emailData);
   
-  const token = getAuthToken();
-  console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
+  // Get the Djombi token instead of the general auth token
+  const djombiToken = getDjombiAccessToken();
+  console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
   
-  if (!token) {
-    throw new Error("No access token available");
+  // Also log the regular auth token for comparison
+  const regularToken = getAuthToken();
+  console.log("Regular auth token:", regularToken ? `${regularToken.substring(0, 10)}...` : 'No regular token found');
+  
+  if (!djombiToken) {
+    console.error("No Djombi access token available. Make sure user is authenticated with Djombi.");
+    throw new Error("No Djombi access token available. Please log in again.");
   }
   
   // API endpoint
@@ -39,7 +67,7 @@ export async function saveDraft(emailData: EmailSendData): Promise<any> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${djombiToken}` // Use Djombi token here
       },
       body: JSON.stringify(requestBody)
     });
@@ -49,7 +77,15 @@ export async function saveDraft(emailData: EmailSendData): Promise<any> {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("API error response:", errorText);
-      throw new Error(errorText || `Failed to save draft: ${response.status}`);
+      
+      // Handle specific authentication errors
+      if (response.status === 401) {
+        throw new Error("Authentication failed. Your session may have expired. Please log in again.");
+      } else if (response.status === 403) {
+        throw new Error("Access denied. You don't have permission to save drafts.");
+      } else {
+        throw new Error(errorText || `Failed to save draft: ${response.status}`);
+      }
     }
     
     const responseData = await response.json();
@@ -60,6 +96,107 @@ export async function saveDraft(emailData: EmailSendData): Promise<any> {
     throw error;
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import { EmailSendData } from '@/lib/types/email';
+// import { getAuthToken } from '@/lib/utils/cookies';
+
+// /**
+//  * Saves a draft email using the stored access token
+//  * @param emailData Object containing email details
+//  * @returns Response from the email service
+//  */
+// export async function saveDraft(emailData: EmailSendData): Promise<any> {
+//   console.log("saveDraft function called with data:", emailData);
+  
+//   const token = getAuthToken();
+//   console.log("Token retrieved:", token ? `${token.substring(0, 10)}...` : 'No token found');
+  
+//   if (!token) {
+//     throw new Error("No access token available");
+//   }
+  
+//   // API endpoint
+//   const apiEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts';
+//   console.log("Sending request to API endpoint:", apiEndpoint);
+  
+//   // Prepare the request body
+//   const requestBody = {
+//     to: emailData.to || "", // Using EmailSendData which has 'to' property
+//     subject: emailData.subject || "",
+//     content: emailData.content || "",
+//     email_id: emailData.email_id || "",
+//     // Include optional fields if they exist
+//     ...(emailData.cc && { cc: emailData.cc }),
+//     ...(emailData.bcc && { bcc: emailData.bcc }),
+//     ...(emailData.signature && { signature: emailData.signature })
+//   };
+  
+//   console.log("Prepared request body:", requestBody);
+  
+//   try {
+//     const response = await fetch(apiEndpoint, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'Authorization': `Bearer ${token}`
+//       },
+//       body: JSON.stringify(requestBody)
+//     });
+    
+//     console.log("API response status:", response.status);
+    
+//     if (!response.ok) {
+//       const errorText = await response.text();
+//       console.error("API error response:", errorText);
+//       throw new Error(errorText || `Failed to save draft: ${response.status}`);
+//     }
+    
+//     const responseData = await response.json();
+//     console.log("API success response:", responseData);
+//     return responseData;
+//   } catch (error) {
+//     console.error('Error in saveDraft function:', error);
+//     throw error;
+//   }
+// }
 
 
 

@@ -5,6 +5,45 @@ import { getCookie } from "@/lib/utils/cookies";
 import { AuthContext } from "@/lib/context/auth";
 import axios from "axios";
 import { useCombinedAuth } from "@/components/providers/useCombinedAuth";
+import { DjombiProfileService } from "@/lib/services/DjombiProfileService";
+
+// Helper function to get Djombi access token
+const getDjombiAccessToken = (): string | null => {
+  // First try from DjombiProfileService
+  const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
+  if (accessToken) {
+    return accessToken;
+  }
+  
+  // Fallback to localStorage directly
+  if (typeof window !== 'undefined') {
+    const storedToken = localStorage.getItem('djombi_access_token');
+    if (storedToken) {
+      return storedToken;
+    }
+  }
+  
+  return null;
+};
+
+// Helper function to get linked email ID
+const getLinkedEmailId = (): string | null => {
+  // First try cookies
+  const emailIdFromCookie = getCookie('linkedEmailId');
+  if (emailIdFromCookie) {
+    return emailIdFromCookie;
+  }
+  
+  // Then try localStorage
+  if (typeof window !== 'undefined') {
+    const emailIdFromStorage = localStorage.getItem('linkedEmailId');
+    if (emailIdFromStorage) {
+      return emailIdFromStorage;
+    }
+  }
+  
+  return null;
+};
 
 export const useEmailSpam = () => {
   const { emails, addEmail } = useEmailStore();
@@ -20,6 +59,8 @@ export const useEmailSpam = () => {
 
   // Helper function to process response data
   const processResponseData = useCallback((data: any) => {
+    console.log("Processing spam response data:", data);
+    
     // Check if data contains emails (handle different response structures)
     let emailsData: any[] = [];
     
@@ -50,6 +91,7 @@ export const useEmailSpam = () => {
     }
     
     console.log("Sample email data structure:", emailsData[0]);
+    console.log(`Found ${emailsData.length} spam emails in response`);
     
     // First, filter out invalid emails, then map them to the correct structure
     const validEmailsData = emailsData.filter(email => email && typeof email === 'object');
@@ -95,34 +137,42 @@ export const useEmailSpam = () => {
     setError(null);
     
     try {
-      console.log("Token retrieved:", token ? `${token.access_token.substring(0, 10)}...` : 'No token found');
+      console.log("Starting fetchSpamEmails...");
 
-      const djombiTokens = djombi.token || "";
+      // Get Djombi access token using utility function
+      const djombiToken = getDjombiAccessToken();
+      console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
       
-      if (!token) {
-        throw new Error('No access token available');
+      if (!djombiToken) {
+        throw new Error('No Djombi access token available. Please log in again.');
       }
       
-      // Get linked email ID - use the same approach as ProfessionalEmailInbox
-      const linkedEmailId = getCookie('linkedEmailId') ||
-        (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+      // Get linked email ID using utility function
+      const linkedEmailId = getLinkedEmailId();
       console.log("Linked Email ID:", linkedEmailId);
       
       if (!linkedEmailId) {
-        throw new Error('No linked email ID found');
+        console.log("Checking localStorage for linkedEmailId...");
+        if (typeof window !== 'undefined') {
+          const storageKeys = Object.keys(localStorage);
+          console.log("Available localStorage keys:", storageKeys);
+          console.log("linkedEmailId value:", localStorage.getItem('linkedEmailId'));
+        }
+        throw new Error('No linked email ID found. Please link your email first.');
       }
       
-      // Use axios instead of fetch
+      // Use axios with proper URL encoding and parameters
       const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/spam?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
       console.log("Fetching from API endpoint:", apiEndpoint);
       
       const response = await axios.get(apiEndpoint, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${djombiTokens}`
+          'Authorization': `Bearer ${djombiToken}` // Use Djombi token
         }
       });
       
+      console.log("GET response status:", response.status);
       console.log("GET response data:", response.data);
       
       // Check for success/error in response
@@ -135,12 +185,33 @@ export const useEmailSpam = () => {
       processResponseData(response.data);
     } catch (err) {
       console.error('Failed to fetch spam emails:', err);
+      
+      // Enhanced error logging
+      if (err instanceof Error) {
+        console.error('Error details:', {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        });
+      }
+      
+      if (axios.isAxiosError(err)) {
+        console.error('Axios error details:', {
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+          headers: err.response?.headers
+        });
+      }
+      
       setError(err instanceof Error ? err.message : 'Failed to fetch spam emails');
       
       // Fallback to local data if API fails
       const localSpamEmails = emails.filter(email => email.category === "spam");
       if (localSpamEmails.length > 0) {
         console.log("Using local spam emails as fallback");
+        setApiSpamEmails(localSpamEmails);
+      } else {
         setApiSpamEmails([]);
       }
     } finally {
@@ -152,19 +223,21 @@ export const useEmailSpam = () => {
   // Handle moving email from spam to inbox
   const handleMoveToInbox = useCallback(async (emailId: string) => {
     try {
-      if (!token) {
-        throw new Error('No access token found');
+      // Get Djombi access token
+      const djombiToken = getDjombiAccessToken();
+      
+      if (!djombiToken) {
+        throw new Error('No Djombi access token found');
       }
-
-      const djombiTokens = djombi.token || "";
       
       // Get linked email ID
-      const linkedEmailId = getCookie('linkedEmailId') ||
-        (typeof window !== 'undefined' ? localStorage.getItem('linkedEmailId') : null);
+      const linkedEmailId = getLinkedEmailId();
       
       if (!linkedEmailId) {
         throw new Error('No linked email ID found');
       }
+
+      console.log(`Moving email ${emailId} from spam to inbox...`);
 
       // Make API call to move email from spam to inbox
       const response = await axios.post(
@@ -177,13 +250,13 @@ export const useEmailSpam = () => {
         },
         {
           headers: {
-            'Authorization': `Bearer ${djombiTokens}`,
+            'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
             'Content-Type': 'application/json'
           }
         }
       );
 
-      console.log(`Email ${emailId} moved to inbox successfully`);
+      console.log(`Email ${emailId} moved to inbox successfully:`, response.data);
       
       // Update local state - remove from spam emails
       setApiSpamEmails(prev => prev.filter(email => email.id !== emailId));
@@ -198,15 +271,25 @@ export const useEmailSpam = () => {
       if (emailToUpdate) {
         addEmail({
           ...emailToUpdate,
-          status: "inbox"
+          status: "inbox",
+        //   category: "inbox"
         });
       }
 
     } catch (error) {
       console.error('Error moving email to inbox:', error);
+      
+      if (axios.isAxiosError(error)) {
+        console.error('Move email error details:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data
+        });
+      }
+      
       throw error; // Re-throw to handle in UI
     }
-  }, [token, djombi.token, emails, apiSpamEmails, addEmail]);
+  }, [emails, apiSpamEmails, addEmail]);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);

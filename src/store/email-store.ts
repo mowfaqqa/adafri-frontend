@@ -2,65 +2,53 @@ import { Email, EmailCategory, EmailSegment } from "@/lib/types/email";
 import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
 import { getCookie, getAuthToken } from "@/lib/utils/cookies";
+import { DjombiProfileService } from "@/lib/services/DjombiProfileService";
 
-// Helper function to get auth items from cookies and localStorage
-const getAuthFromCookies = () => {
-  if (typeof window === 'undefined') return { token: null, linkedEmailId: null };
-
-  // Try to get token from cookies with proper error handling
-  let token = null;
-  try {
-    token = getCookie('accessToken') || 
-            getCookie('authToken') || 
-            getCookie('access_token');
-  } catch (error) {
-    console.warn('Error reading token from cookies:', error);
+// Helper function to get Djombi access token
+const getDjombiAccessToken = (): string | null => {
+  // First try from DjombiProfileService
+  const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
+  if (accessToken) {
+    return accessToken;
   }
-
-  // Fallback to localStorage if cookies fail
-  if (!token && typeof window !== 'undefined') {
-    try {
-      token = localStorage.getItem('authToken') || localStorage.getItem('accessToken');
-    } catch (error) {
-      console.warn('Error reading token from localStorage:', error);
+  
+  // Fallback to localStorage directly
+  if (typeof window !== 'undefined') {
+    const storedToken = localStorage.getItem('djombi_access_token');
+    if (storedToken) {
+      return storedToken;
     }
   }
-
-  // Try to get linkedEmailId with proper error handling
-  let linkedEmailId = null;
-  try {
-    linkedEmailId = getCookie('linkedEmailId');
-  } catch (error) {
-    console.warn('Error reading linkedEmailId from cookies:', error);
-  }
-
-  // Fallback to localStorage if cookies fail
-  if (!linkedEmailId && typeof window !== 'undefined') {
-    try {
-      linkedEmailId = localStorage.getItem('linkedEmailId');
-    } catch (error) {
-      console.warn('Error reading linkedEmailId from localStorage:', error);
-    }
-  }
-
-  return {
-    token: token ? (typeof token === 'string' ? token : JSON.stringify(token)) : null,
-    linkedEmailId
-  };
+  
+  return null;
 };
 
-// Helper function to get user data from localStorage
-const getUserFromStorage = () => {
+// Helper function to get linked email ID
+const getLinkedEmailId = (): string | null => {
+  // First try cookies
+  const emailIdFromCookie = getCookie('linkedEmailId');
+  if (emailIdFromCookie) {
+    return emailIdFromCookie;
+  }
+  
+  // Then try localStorage
   if (typeof window !== 'undefined') {
-    try {
-      const userData = localStorage.getItem('userData');
-      return userData ? JSON.parse(userData) : null;
-    } catch (error) {
-      console.error('Error retrieving user data from localStorage:', error);
-      return null;
+    const emailIdFromStorage = localStorage.getItem('linkedEmailId');
+    if (emailIdFromStorage) {
+      return emailIdFromStorage;
     }
   }
+  
   return null;
+};
+
+// Helper function to get auth items using Djombi tokens
+const getAuthFromStorage = () => {
+  return {
+    djombiToken: getDjombiAccessToken(),
+    linkedEmailId: getLinkedEmailId(),
+    regularToken: getAuthToken() // Keep for comparison
+  };
 };
 
 interface EmailStore {
@@ -103,102 +91,59 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     set({ isLoading: true, loadingError: null });
 
     try {
-      // Get email ID from cookies and localStorage with fallback
-      let linkedEmailId = null;
-      try {
-        linkedEmailId = getCookie('linkedEmailId');
-      } catch (error) {
-        console.warn('Error reading linkedEmailId from cookies:', error);
-      }
-      
-      // Fallback to localStorage if cookies fail
-      if (!linkedEmailId && typeof window !== 'undefined') {
-        try {
-          linkedEmailId = localStorage.getItem('linkedEmailId');
-        } catch (error) {
-          console.warn('Error reading linkedEmailId from localStorage:', error);
-        }
-      }
+      // Get linked email ID using enhanced function
+      const linkedEmailId = getLinkedEmailId();
+      console.log("Linked Email ID:", linkedEmailId);
 
       // Validate email ID
       if (!linkedEmailId) {
         throw new Error("Email ID missing. Please link your email first.");
       }
 
-      // Get auth token with proper error handling
-      let token = null;
-      try {
-        token = getAuthToken();
-      } catch (error) {
-        console.warn('Error calling getAuthToken():', error);
-      }
+      // Get Djombi access token
+      const djombiToken = getDjombiAccessToken();
+      console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
       
-      // If getAuthToken() fails, try alternative methods with error handling
-      if (!token) {
-        try {
-          const authData = getAuthFromCookies();
-          token = authData.token;
-        } catch (error) {
-          console.warn('Error getting auth from cookies:', error);
-        }
-      }
-      
-      // Try localStorage as final fallback
-      if (!token && typeof window !== 'undefined') {
-        try {
-          const storedToken = localStorage.getItem('authToken');
-          if (storedToken) {
-            try {
-              const parsedToken = JSON.parse(storedToken);
-              token = parsedToken.access_token || parsedToken;
-            } catch {
-              token = storedToken;
-            }
-          }
-        } catch (error) {
-          console.warn('Error reading token from localStorage:', error);
-        }
-      }
-      
-      if (!token) {
-        throw new Error("Authentication token missing. Please log in again.");
+      if (!djombiToken) {
+        throw new Error("Djombi authentication token missing. Please log in again.");
       }
 
-      // Build the appropriate endpoint based on category
+      // Build the appropriate endpoint based on category with proper URL parameters
       let endpoint = '';
 
       if (category === 'inbox' || category === 'sent' || category === 'spam') {
-        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/${category}?email_id=${linkedEmailId}`;
+        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/${category}?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
       } else if (category === 'draft') {
-        // Use the specific drafts endpoint that works in EmailDraft.tsx
-        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${linkedEmailId}`;
+        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
       } else {
-        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${linkedEmailId}`;
+        // Default to inbox with proper parameters
+        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
       }
 
-      // Extract the actual token value
-      const bearerToken = typeof token === 'string' ? token : token.access_token || token;
+      console.log(`Fetching ${category} emails from:`, endpoint);
 
-      // Make API request with authorization header
+      // Make API request with Djombi authorization header
       const response = await fetch(endpoint, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${bearerToken}`
+          'Authorization': `Bearer ${djombiToken}` // Use Djombi token
         }
       });
+
+      console.log(`API response status for ${category}:`, response.status);
 
       // Handle API errors
       if (!response.ok) {
         console.error(`Failed to fetch ${category} emails. Status: ${response.status}`);
         
-        // For draft emails, try the alternative POST method as in EmailDraft.tsx
+        // For draft emails, try the alternative POST method
         if (category === 'draft') {
           const postEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts';
           const postResponse = await fetch(postEndpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${bearerToken}`
+              'Authorization': `Bearer ${djombiToken}` // Use Djombi token
             },
             body: JSON.stringify({
               email_id: linkedEmailId,
@@ -207,14 +152,15 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
           });
           
           if (!postResponse.ok) {
-            throw new Error(`Failed to fetch ${category} emails: ${postResponse.statusText}`);
+            throw new Error(`Failed to fetch ${category} emails: ${postResponse.status} ${postResponse.statusText}`);
           }
           
           const postData = await postResponse.json();
           processEmailData(postData, category);
           return;
         } else {
-          throw new Error(`Failed to fetch ${category} emails: ${response.statusText}`);
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch ${category} emails: ${response.status} ${response.statusText} - ${errorText}`);
         }
       }
 
@@ -224,6 +170,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       
       try {
         data = JSON.parse(responseText);
+        console.log(`Parsed ${category} response:`, data);
       } catch (error) {
         console.error("Error parsing response:", error, responseText);
         throw new Error("Invalid response format from server");
@@ -231,7 +178,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 
       processEmailData(data, category);
     } catch (error) {
-      console.error("Error fetching emails:", error);
+      console.error(`Error fetching ${category} emails:`, error);
       set({
         isLoading: false,
         loadingError: error instanceof Error ? error.message : 'Unknown error fetching emails'
@@ -252,6 +199,9 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       } else if (data.drafts && Array.isArray(data.drafts)) {
         // Handle drafts specific response format
         emailsData = data.drafts;
+      } else if (data.emails && Array.isArray(data.emails)) {
+        // Handle emails specific response format
+        emailsData = data.emails;
       } else if (typeof data === 'object') {
         // If we can't find an obvious array, look for any array property
         for (const key in data) {
@@ -264,9 +214,11 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 
       // If we still don't have an array, create an empty one
       if (!Array.isArray(emailsData)) {
-        console.warn("Could not find email array in response:", data);
+        console.warn(`Could not find email array in ${category} response:`, data);
         emailsData = [];
       }
+
+      console.log(`Processing ${emailsData.length} ${category} emails`);
 
       // Update store with fetched emails
       set((state) => ({
@@ -285,7 +237,8 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
             hasAttachment: item.hasAttachment || false,
             status: category,
             category: category,
-            isRead: item.isRead || false
+            isRead: item.isRead || false,
+            contentType: item.contentType || 'text'
           }))
         ],
         isLoading: false
@@ -302,13 +255,14 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       isUrgent: false,
       category: get().activeCategory,
       status: emailData.status || get().activeCategory,
-      isRead: false, // Add this missing required field
+      isRead: false,
       // Ensure all required fields from Email interface are set
       from: emailData.from || "",
       to: emailData.to || "",
       subject: emailData.subject || "",
       content: emailData.content || "",
-      hasAttachment: emailData.hasAttachment || false
+      hasAttachment: emailData.hasAttachment || false,
+      contentType: emailData.contentType || 'text'
     };
 
     // Add to local state
@@ -318,19 +272,20 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 
     // Send to API if it's not a draft
     if (emailData.status !== "draft") {
-      const authData = getAuthFromCookies();
-      const { token, linkedEmailId } = authData;
+      const { djombiToken, linkedEmailId } = getAuthFromStorage();
 
-      if (token && linkedEmailId) {
-        // Send email via API
-        fetch('https://email-service-latest-agqz.onrender.com/api/emails/send', {
+      if (djombiToken && linkedEmailId) {
+        // Send email via API using Djombi token
+        fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails/send', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-Email-Id': linkedEmailId
+            'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
           },
-          body: JSON.stringify(newEmail)
+          body: JSON.stringify({
+            ...newEmail,
+            email_id: linkedEmailId
+          })
         }).catch(error => {
           console.error("Error sending email:", error);
         });
@@ -360,18 +315,19 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     }));
 
     // Update via API
-    const authData = getAuthFromCookies();
-    const { token, linkedEmailId } = authData;
+    const { djombiToken, linkedEmailId } = getAuthFromStorage();
 
-    if (token && linkedEmailId) {
-      fetch(`/api/emails/${emailId}/move`, {
+    if (djombiToken && linkedEmailId) {
+      fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/${emailId}/move`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'X-Email-Id': linkedEmailId
+          'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
         },
-        body: JSON.stringify({ category })
+        body: JSON.stringify({ 
+          category,
+          email_id: linkedEmailId
+        })
       }).catch(error => {
         console.error("Error moving email:", error);
       });
@@ -403,16 +359,14 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     }));
 
     // Delete via API
-    const authData = getAuthFromCookies();
-    const { token, linkedEmailId } = authData;
+    const { djombiToken, linkedEmailId } = getAuthFromStorage();
 
-    if (token && linkedEmailId) {
-      fetch(`https://email-service-latest-agqz.onrender.com/api/emails/drafts/${id}`, {
+    if (djombiToken && linkedEmailId) {
+      fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${id}?email_id=${linkedEmailId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'X-Email-Id': linkedEmailId
+          'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
         }
       }).catch(error => {
         console.error("Error deleting email:", error);
@@ -431,18 +385,19 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       }));
 
       // Update via API
-      const authData = getAuthFromCookies();
-      const { token, linkedEmailId } = authData;
+      const { djombiToken, linkedEmailId } = getAuthFromStorage();
 
-      if (token && linkedEmailId) {
-        fetch(`https://email-service-latest-agqz.onrender.com/api/emails/drafts/${draft.id}`, {
+      if (djombiToken && linkedEmailId) {
+        fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${draft.id}?email_id=${linkedEmailId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-Email-Id': linkedEmailId
+            'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
           },
-          body: JSON.stringify(draft)
+          body: JSON.stringify({
+            ...draft,
+            email_id: linkedEmailId
+          })
         }).catch(error => {
           console.error("Error updating draft:", error);
         });
@@ -462,7 +417,8 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         to: draft.to || "",
         subject: draft.subject || "",
         content: draft.content || "",
-        isRead: true // For drafts, set as read
+        isRead: true, // For drafts, set as read
+        contentType: draft.contentType || 'text'
       };
 
       // Add to local state
@@ -470,7 +426,24 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         emails: [...state.emails, newDraft],
       }));
 
-      // Send to API code remains the same...
+      // Send to API
+      const { djombiToken, linkedEmailId } = getAuthFromStorage();
+
+      if (djombiToken && linkedEmailId) {
+        fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
+          },
+          body: JSON.stringify({
+            ...newDraft,
+            email_id: linkedEmailId
+          })
+        }).catch(error => {
+          console.error("Error creating draft:", error);
+        });
+      }
     }
   },
 

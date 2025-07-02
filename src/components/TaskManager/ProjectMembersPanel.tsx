@@ -198,7 +198,7 @@ const ProjectMembersPanel: React.FC = () => {
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={`/api/placeholder/32/32`} />
                     <AvatarFallback>
-                      {member?.userId.substring(0, 2).toUpperCase()}
+                      {member?.userId?.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
@@ -220,7 +220,7 @@ const ProjectMembersPanel: React.FC = () => {
                   )}
                 </TableCell>
                 <TableCell>
-                  {new Date(member?.addedAt).toLocaleDateString()}
+                  {new Date(member?.addedAt)?.toLocaleDateString()}
                 </TableCell>
                 {isProjectAdmin && (
                   <TableCell>

@@ -28,6 +28,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [files, setFiles] = useState<File[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isSending, setIsSending] = useState(false); // Add sending state to prevent double sends
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -117,8 +118,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
   
   // Handle sending a message
   const handleSendMessage = async () => {
-    if (message.trim() === '' && files.length === 0) return;
-    if (!selectedWorkspaceId) return;
+    // Prevent sending if already sending, no content, or no workspace
+    if (isSending || message.trim() === '' && files.length === 0 || !selectedWorkspaceId) return;
+    
+    // Set sending state to prevent multiple sends
+    setIsSending(true);
     
     try {
       if (threadId) {
@@ -147,6 +151,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
       }
     } catch (error) {
       console.log('Error sending message:', error);
+    } finally {
+      // Always reset sending state
+      setIsSending(false);
     }
   };
   
@@ -180,7 +187,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }
   
   return (
-    <div className="p-3 sm:p-6 bg-white">
+    <div className="p-3 sm:p-6">
       {/* File preview area */}
       {files.length > 0 && (
         <div className="mb-3 sm:mb-4 p-3 sm:p-4 border border-gray-200 rounded-xl bg-gray-50">
@@ -271,7 +278,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         {/* Send button */}
         <button
           onClick={handleSendMessage}
-          disabled={message.trim() === '' && files.length === 0}
+          disabled={isSending || (message.trim() === '' && files.length === 0)}
           className="p-2 sm:p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex-shrink-0"
         >
           <Send size={18} className="sm:w-5 sm:h-5" />

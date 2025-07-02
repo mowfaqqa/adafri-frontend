@@ -448,7 +448,8 @@ const MessagingLayout: React.FC = () => {
       <CreateChannelModal />
       <InviteTeamMembersModal 
         isOpen={isInviteModalOpen} 
-        onClose={handleCloseInviteModal} 
+        onClose={handleCloseInviteModal}
+        workspaceId={currentWorkspace?.id || ''} 
       />
     </div>
   );

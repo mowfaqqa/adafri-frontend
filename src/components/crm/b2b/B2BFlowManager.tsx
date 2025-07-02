@@ -3,7 +3,6 @@
 import { useState, useContext, useCallback } from 'react';
 import { AuthContext } from "@/lib/context/auth";
 import { Search, Filter, Menu, X, Building, DollarSign, FileText, Plus, Eye } from 'lucide-react';
-import { CompanyDealsView } from './CompanyDealsView';
 import { SettingsView } from '../b2c/SettingsView';
 import { ContactsView } from '../b2c/ContactsView';
 import { InvoiceModal } from './modals/InvoiceModal';
@@ -13,6 +12,7 @@ import { InvoiceTypeConverter } from '@/lib/utils/invoice/invoiceTypeConverter';
 // Import the new refactored components
 import { InvoiceSettingsProvider } from '@/lib/context/invoices/InvoiceSettingsProvider';
 import MinimalIntegratedInvoiceSystem from './MinimalIntegratedInvoiceSystem';
+import { CompanyDealsView } from './companydealcomponents/CompanyDealsView';
 
 interface Contact {
   id: string;

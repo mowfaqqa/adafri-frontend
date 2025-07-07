@@ -121,9 +121,9 @@ export const PendingInvitationsModal: React.FC<PendingInvitationsModalProps> = (
                         <div>
                           <p className="font-semibold text-gray-900">{invite.email}</p>
                           <div className="flex items-center space-x-3 text-sm text-gray-500">
-                            <span>Role: <span className="font-medium capitalize">{invite.role}</span></span>
+                            <span>Type: <span className="font-medium capitalize">{invite.invitationType}</span></span>
                             <span>•</span>
-                            <span>Sent: {new Date(invite.createdAt).toLocaleDateString()}</span>
+                            <span>Sent: {invite.createdAt ? new Date(invite.createdAt).toLocaleDateString() : 'N/A'}</span>
                           </div>
                         </div>
                       </div>

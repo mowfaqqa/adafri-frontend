@@ -62,38 +62,76 @@ interface TaskDetailsModalProps {
 }
 
 // Cover Modal Component
-const CoverModal = ({ 
-  isOpen, 
-  onClose, 
-  onSelectCover, 
-  taskFiles, 
-  currentCover 
+const CoverModal = ({
+  isOpen,
+  onClose,
+  onSelectCover,
+  taskFiles,
+  currentCover,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSelectCover: (cover: { type: 'gradient' | 'image'; value: string } | null) => void;
+  onSelectCover: (
+    cover: { type: "gradient" | "image"; value: string } | null
+  ) => void;
   taskFiles: any[];
-  currentCover?: { type: 'gradient' | 'image'; value: string } | null;
+  currentCover?: { type: "gradient" | "image"; value: string } | null;
 }) => {
   // Updated gradient options with more modern gradients
   const gradientOptions = [
-    { name: 'Ocean Blue', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-    { name: 'Sunset', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-    { name: 'Fresh Green', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-    { name: 'Tropical', value: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
-    { name: 'Warm Sunset', value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
-    { name: 'Mint Fresh', value: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
-    { name: 'Deep Purple', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-    { name: 'Peach Cream', value: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' },
-    { name: 'Royal Blue', value: 'linear-gradient(135deg, #2196F3 0%, #3F51B5 100%)' },
-    { name: 'Forest Green', value: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)' },
-    { name: 'Fire Red', value: 'linear-gradient(135deg, #FF5722 0%, #D32F2F 100%)' },
-    { name: 'Golden Hour', value: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)' },
+    {
+      name: "Ocean Blue",
+      value: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    },
+    {
+      name: "Sunset",
+      value: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+    },
+    {
+      name: "Fresh Green",
+      value: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+    },
+    {
+      name: "Tropical",
+      value: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+    },
+    {
+      name: "Warm Sunset",
+      value: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+    },
+    {
+      name: "Mint Fresh",
+      value: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
+    },
+    {
+      name: "Deep Purple",
+      value: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    },
+    {
+      name: "Peach Cream",
+      value: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
+    },
+    {
+      name: "Royal Blue",
+      value: "linear-gradient(135deg, #2196F3 0%, #3F51B5 100%)",
+    },
+    {
+      name: "Forest Green",
+      value: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+    },
+    {
+      name: "Fire Red",
+      value: "linear-gradient(135deg, #FF5722 0%, #D32F2F 100%)",
+    },
+    {
+      name: "Golden Hour",
+      value: "linear-gradient(135deg, #FF9800 0%, #F57C00 100%)",
+    },
   ];
 
   // Get image files
-  const imageFiles = taskFiles.filter(file => 
-    file.mimetype && file.mimetype.startsWith('image/')
+  const imageFiles = taskFiles.filter(
+    (file) => file.mimetype && file.mimetype.startsWith("image/")
   );
 
   return (
@@ -110,16 +148,18 @@ const CoverModal = ({
           {/* Current Cover */}
           {currentCover && (
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-gray-700">Current Cover</h4>
-              <div 
+              <h4 className="text-sm font-semibold text-gray-700">
+                Current Cover
+              </h4>
+              <div
                 className="w-full h-20 rounded-lg border border-gray-200"
                 style={
-                  currentCover.type === 'gradient' 
+                  currentCover.type === "gradient"
                     ? { background: currentCover.value }
-                    : { 
+                    : {
                         backgroundImage: `url(${currentCover.value})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
                       }
                 }
               ></div>
@@ -141,7 +181,9 @@ const CoverModal = ({
               {gradientOptions.map((gradient) => (
                 <button
                   key={gradient.name}
-                  onClick={() => onSelectCover({ type: 'gradient', value: gradient.value })}
+                  onClick={() =>
+                    onSelectCover({ type: "gradient", value: gradient.value })
+                  }
                   className="w-full h-12 rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all duration-200 hover:scale-105"
                   style={{ background: gradient.value }}
                   title={gradient.name}
@@ -158,11 +200,13 @@ const CoverModal = ({
                 {imageFiles.map((file) => (
                   <button
                     key={file.id}
-                    onClick={() => onSelectCover({ type: 'image', value: getFileUrl(file) })}
+                    onClick={() =>
+                      onSelectCover({ type: "image", value: getFileUrl(file) })
+                    }
                     className="aspect-square rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all duration-200 hover:scale-105 overflow-hidden"
                   >
-                    <img 
-                      src={getFileUrl(file)} 
+                    <img
+                      src={getFileUrl(file)}
                       alt={file.originalname}
                       className="w-full h-full object-cover"
                     />
@@ -175,7 +219,9 @@ const CoverModal = ({
           {imageFiles.length === 0 && !currentCover && (
             <div className="text-center py-8">
               <Image className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-gray-500">Upload images to use as covers</p>
+              <p className="text-sm text-gray-500">
+                Upload images to use as covers
+              </p>
             </div>
           )}
         </div>
@@ -187,13 +233,21 @@ const CoverModal = ({
 // Helper function to get the appropriate file icon based on mimetype
 const getFileIcon = (mimetype: string) => {
   if (mimetype.startsWith("image/")) {
-    return <Image className="h-4 w-4 mr-2 text-gradient-to-r from-pink-500 to-violet-500" />;
+    return (
+      <Image className="h-4 w-4 mr-2 text-gradient-to-r from-pink-500 to-violet-500" />
+    );
   } else if (mimetype.startsWith("video/")) {
-    return <Video className="h-4 w-4 mr-2 text-gradient-to-r from-blue-500 to-purple-500" />;
+    return (
+      <Video className="h-4 w-4 mr-2 text-gradient-to-r from-blue-500 to-purple-500" />
+    );
   } else if (mimetype.startsWith("audio/")) {
-    return <Music className="h-4 w-4 mr-2 text-gradient-to-r from-green-500 to-blue-500" />;
+    return (
+      <Music className="h-4 w-4 mr-2 text-gradient-to-r from-green-500 to-blue-500" />
+    );
   } else if (mimetype.startsWith("text/") || mimetype.includes("document")) {
-    return <FileText className="h-4 w-4 mr-2 text-gradient-to-r from-orange-500 to-red-500" />;
+    return (
+      <FileText className="h-4 w-4 mr-2 text-gradient-to-r from-orange-500 to-red-500" />
+    );
   } else {
     return <File className="h-4 w-4 mr-2 text-slate-500" />;
   }
@@ -202,15 +256,23 @@ const getFileIcon = (mimetype: string) => {
 // Status color mapping
 const getStatusColor = (status: string) => {
   const statusColors: Record<string, string> = {
-    'todo': 'bg-gradient-to-r from-slate-100 to-slate-200 text-slate-800 border-slate-300',
-    'in-progress': 'bg-gradient-to-r from-blue-100 to-indigo-200 text-blue-800 border-blue-300',
-    'in progress': 'bg-gradient-to-r from-blue-100 to-indigo-200 text-blue-800 border-blue-300',
-    'done': 'bg-gradient-to-r from-green-100 to-emerald-200 text-green-800 border-green-300',
-    'completed': 'bg-gradient-to-r from-green-100 to-emerald-200 text-green-800 border-green-300',
-    'blocked': 'bg-gradient-to-r from-red-100 to-rose-200 text-red-800 border-red-300',
-    'review': 'bg-gradient-to-r from-yellow-100 to-amber-200 text-yellow-800 border-yellow-300',
+    todo: "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-800 border-slate-300",
+    "in-progress":
+      "bg-gradient-to-r from-blue-100 to-indigo-200 text-blue-800 border-blue-300",
+    "in progress":
+      "bg-gradient-to-r from-blue-100 to-indigo-200 text-blue-800 border-blue-300",
+    done: "bg-gradient-to-r from-green-100 to-emerald-200 text-green-800 border-green-300",
+    completed:
+      "bg-gradient-to-r from-green-100 to-emerald-200 text-green-800 border-green-300",
+    blocked:
+      "bg-gradient-to-r from-red-100 to-rose-200 text-red-800 border-red-300",
+    review:
+      "bg-gradient-to-r from-yellow-100 to-amber-200 text-yellow-800 border-yellow-300",
   };
-  return statusColors[status.toLowerCase()] || 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-gray-300';
+  return (
+    statusColors[status.toLowerCase()] ||
+    "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-gray-300"
+  );
 };
 
 const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
@@ -336,31 +398,37 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   };
 
   const handleProgressUpdate = () => {
-    updateProgressMutation.mutate({
-      projectId: projectId || "",
-      taskId: task.id as string,
-      progress: currentProgress,
-    }, {
-      onSuccess: () => {
-        if (onTaskUpdate) {
-          onTaskUpdate();
-        }
+    updateProgressMutation.mutate(
+      {
+        projectId: projectId || "",
+        taskId: task.id as string,
+        progress: currentProgress,
+      },
+      {
+        onSuccess: () => {
+          if (onTaskUpdate) {
+            onTaskUpdate();
+          }
+        },
       }
-    });
+    );
   };
 
   const handleStatusChange = (newStatus: string) => {
-    updateStatusMutation.mutate({
-      projectId: projectId || "",
-      taskId: task.id as string,
-      status: newStatus,
-    }, {
-      onSuccess: () => {
-        if (onTaskUpdate) {
-          onTaskUpdate();
-        }
+    updateStatusMutation.mutate(
+      {
+        projectId: projectId || "",
+        taskId: task.id as string,
+        status: newStatus,
+      },
+      {
+        onSuccess: () => {
+          if (onTaskUpdate) {
+            onTaskUpdate();
+          }
+        },
       }
-    });
+    );
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -380,20 +448,24 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   };
 
   // Cover functionality - Fixed implementation
-  const handleCoverSelect = (cover: { type: 'gradient' | 'image'; value: string } | null) => {
+  const handleCoverSelect = (
+    cover: { type: "gradient" | "image"; value: string } | null
+  ) => {
     updateTaskMutation.mutate(
       {
         projectId: projectId || "",
         taskId: task.id as string,
-        updates: { 
-          cover: cover 
+        updates: {
+          cover: cover,
         },
       },
       {
         onSuccess: () => {
           setShowCoverModal(false);
-          toast.success(cover ? "Cover updated successfully" : "Cover removed successfully");
-          
+          toast.success(
+            cover ? "Cover updated successfully" : "Cover removed successfully"
+          );
+
           // Call the parent callback to refresh the task list
           if (onTaskUpdate) {
             onTaskUpdate();
@@ -402,7 +474,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
         onError: (error) => {
           console.error("Failed to update cover:", error);
           toast.error("Failed to update cover. Please try again.");
-        }
+        },
       }
     );
   };
@@ -452,17 +524,19 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
               </DialogTitle>
 
               <div className="flex items-center gap-2 justify-start ">
-                <Button variant="outline" size="sm" onClick={handleEditToggle}>
-                  {isEditMode
-                    ? updateTaskMutation.isPending
-                      ? "Saving..."
-                      : "Save"
-                    : "Edit"}
-                </Button>
+                {isEditMode && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEditToggle}
+                  >
+                    {updateTaskMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                )}
                 <TaskActionButtons
                   task={task}
                   projectId={projectId || ""}
-                  onView={() => { }}
+                  onView={() => {}}
                   onEdit={() => setIsEditMode(true)}
                   variant="modal"
                 />
@@ -471,7 +545,11 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
           </DialogHeader>
 
           <div className="relative z-10 overflow-y-auto flex-1">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="mt-4"
+            >
               <TabsList className="grid grid-cols-3 mb-8 bg-white/60 backdrop-blur-sm rounded-xl p-1 border border-slate-200/50 mx-4 sm:mx-0">
                 <TabsTrigger
                   value="overview"
@@ -494,7 +572,10 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                   <Paperclip className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline">Files</span>
                   <span className="sm:hidden">({taskFiles.length})</span>
-                  <span className="hidden sm:inline"> ({taskFiles.length})</span>
+                  <span className="hidden sm:inline">
+                    {" "}
+                    ({taskFiles.length})
+                  </span>
                 </TabsTrigger>
               </TabsList>
 
@@ -511,20 +592,30 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                               Status
                             </h3>
                             <div className="flex gap-2">
-                              <Select value={task.status} onValueChange={handleStatusChange}>
-                                <SelectTrigger className={`w-full border-2 rounded-xl px-3 py-2 text-sm font-medium ${getStatusColor(task.status)}`}>
+                              <Select
+                                value={task.status}
+                                onValueChange={handleStatusChange}
+                              >
+                                <SelectTrigger
+                                  className={`w-full border-2 rounded-xl px-3 py-2 text-sm font-medium ${getStatusColor(task.status)}`}
+                                >
                                   <SelectValue placeholder="Select status" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {projectStatuses.map((status) => (
-                                    <SelectItem key={status.id} value={status.name}>
+                                    <SelectItem
+                                      key={status.id}
+                                      value={status.name}
+                                    >
                                       {status.name}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                               {updateStatusMutation.isPending && (
-                                <span className="text-xs text-slate-500 self-center">Updating...</span>
+                                <span className="text-xs text-slate-500 self-center">
+                                  Updating...
+                                </span>
                               )}
                             </div>
                           </div>
@@ -566,7 +657,9 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                                 size="sm"
                                 className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl px-3 py-1 text-xs transition-all duration-200"
                               >
-                                {updateProgressMutation.isPending ? "Updating..." : "Update"}
+                                {updateProgressMutation.isPending
+                                  ? "Updating..."
+                                  : "Update"}
                               </Button>
                             </div>
                           </div>
@@ -625,7 +718,9 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                         ) : (
                           <div className="flex items-center bg-slate-50/50 rounded-xl p-2 border border-slate-200/30">
                             <Calendar className="h-4 w-4 mr-2 text-slate-400" />
-                            <span className="font-medium text-slate-700 text-sm">{task.date || "No due date"}</span>
+                            <span className="font-medium text-slate-700 text-sm">
+                              {task.date || "No due date"}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -640,7 +735,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                         </h3>
                         {isEditMode && isSprintTask(task) ? (
                           <Select
-                            value={editedTask.epicId || ""}
+                            value={editedTask.epicId || "none"}
                             onValueChange={handleEpicChange}
                           >
                             <SelectTrigger className="w-full bg-white/60 border-2 border-slate-200 focus:border-purple-400 rounded-xl text-sm">
@@ -668,16 +763,19 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                         </h3>
                         {isEditMode ? (
                           <Select
-                            value={editedTask.milestoneId || ""}
+                            value={editedTask.milestoneId! || "none"}
                             onValueChange={handleMilestoneChange}
                           >
                             <SelectTrigger className="w-full bg-white/60 border-2 border-slate-200 focus:border-purple-400 rounded-xl text-sm">
                               <SelectValue placeholder="Select a milestone" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="none">None</SelectItem>
                               {milestones.map((milestone) => (
-                                <SelectItem key={milestone.id} value={milestone.id}>
+                                <SelectItem
+                                  key={milestone.id}
+                                  value={milestone.id}
+                                >
                                   {milestone.title}
                                 </SelectItem>
                               ))}
@@ -750,17 +848,21 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                           Tags
                         </h3>
                         <div className="flex flex-wrap gap-1">
-                          {task.tags.length > 0 ? task.tags.map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="secondary"
-                              className="flex items-center gap-1 bg-gradient-to-r from-pink-100 to-purple-100 text-pink-800 hover:from-pink-200 hover:to-purple-200 border border-pink-200 px-2 py-1 rounded-xl font-medium text-xs"
-                            >
-                              <Tag className="h-2 w-2" />
-                              {tag}
-                            </Badge>
-                          )) : (
-                            <span className="text-slate-500 italic text-sm">No tags assigned</span>
+                          {task.tags.length > 0 ? (
+                            task.tags.map((tag, index) => (
+                              <Badge
+                                key={index}
+                                variant="secondary"
+                                className="flex items-center gap-1 bg-gradient-to-r from-pink-100 to-purple-100 text-pink-800 hover:from-pink-200 hover:to-purple-200 border border-pink-200 px-2 py-1 rounded-xl font-medium text-xs"
+                              >
+                                <Tag className="h-2 w-2" />
+                                {tag}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-slate-500 italic text-sm">
+                              No tags assigned
+                            </span>
                           )}
                         </div>
                       </div>
@@ -771,15 +873,22 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                           Assignees
                         </h3>
                         <div className="flex -space-x-1">
-                          {task.assignees.length > 0 ? task.assignees.map((assignee, index) => (
-                            <Avatar key={index} className="h-8 w-8 border-2 border-white shadow-lg hover:scale-110 transition-transform duration-200">
-                              <AvatarImage src={assignee} />
-                              <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white font-bold text-xs">
-                                {`U${index + 1}`}
-                              </AvatarFallback>
-                            </Avatar>
-                          )) : (
-                            <span className="text-slate-500 italic text-sm">No assignees</span>
+                          {task.assignees.length > 0 ? (
+                            task.assignees.map((assignee, index) => (
+                              <Avatar
+                                key={index}
+                                className="h-8 w-8 border-2 border-white shadow-lg hover:scale-110 transition-transform duration-200"
+                              >
+                                <AvatarImage src={assignee} />
+                                <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white font-bold text-xs">
+                                  {`U${index + 1}`}
+                                </AvatarFallback>
+                              </Avatar>
+                            ))
+                          ) : (
+                            <span className="text-slate-500 italic text-sm">
+                              No assignees
+                            </span>
                           )}
                         </div>
                       </div>
@@ -846,7 +955,9 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                                     {log.action.charAt(0).toUpperCase() +
                                       log.action.slice(1).replace(/_/g, " ")}
                                   </p>
-                                  <p className="text-sm text-slate-600 mb-2">{log.description}</p>
+                                  <p className="text-sm text-slate-600 mb-2">
+                                    {log.description}
+                                  </p>
                                   <div className="flex items-center gap-4 text-xs text-slate-500">
                                     <span className="flex items-center gap-1">
                                       <Users className="h-3 w-3" />
@@ -864,7 +975,9 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                       ) : (
                         <div className="text-center py-12">
                           <Zap className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                          <p className="text-slate-500 italic">No activity recorded yet.</p>
+                          <p className="text-slate-500 italic">
+                            No activity recorded yet.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -889,7 +1002,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                           <Palette className="h-4 w-4 mr-2" />
                           Cover
                         </Button>
-                        
+
                         {/* Add File Button */}
                         <div>
                           <input
@@ -909,7 +1022,9 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                             >
                               <div className="cursor-pointer flex items-center">
                                 <Plus className="h-4 w-4 mr-2" />
-                                {uploadFileMutation.isPending ? "Uploading..." : "Add File"}
+                                {uploadFileMutation.isPending
+                                  ? "Uploading..."
+                                  : "Add File"}
                               </div>
                             </Button>
                           </label>
@@ -934,14 +1049,20 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                               {file.mimetype.startsWith("image/") ? (
                                 <div className="flex items-center mr-3">
                                   <div className="w-12 h-12 rounded-lg overflow-hidden border-2 border-slate-200 shadow-sm">
-                                    <img 
-                                      src={getFileUrl(file)} 
+                                    <img
+                                      src={getFileUrl(file)}
                                       alt={file.originalname}
                                       className="w-full h-full object-cover"
                                       onError={(e) => {
                                         // Fallback to icon if image fails to load
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                        (e.target as HTMLImageElement).nextElementSibling!.classList.remove('hidden');
+                                        (
+                                          e.target as HTMLImageElement
+                                        ).style.display = "none";
+                                        (
+                                          e.target as HTMLImageElement
+                                        ).nextElementSibling!.classList.remove(
+                                          "hidden"
+                                        );
                                       }}
                                     />
                                     <div className="hidden w-full h-full flex items-center justify-center bg-slate-100">
@@ -952,15 +1073,21 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                               ) : (
                                 getFileIcon(file.mimetype)
                               )}
-                              
+
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium text-slate-800 truncate">
                                   {file.originalname}
                                 </p>
                                 <p className="text-xs text-slate-500 flex items-center gap-3">
-                                  <span>{(file.size / 1024).toFixed(2)} KB</span>
+                                  <span>
+                                    {(file.size / 1024).toFixed(2)} KB
+                                  </span>
                                   <span>•</span>
-                                  <span>{new Date(file.createdAt).toLocaleDateString()}</span>
+                                  <span>
+                                    {new Date(
+                                      file.createdAt
+                                    ).toLocaleDateString()}
+                                  </span>
                                 </p>
                               </div>
                             </div>
@@ -994,8 +1121,12 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                     ) : (
                       <div className="text-center py-12">
                         <Paperclip className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                        <p className="text-slate-500 italic mb-4">No attachments yet.</p>
-                        <p className="text-xs text-slate-400">Click "Add File" to upload your first attachment.</p>
+                        <p className="text-slate-500 italic mb-4">
+                          No attachments yet.
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          Click "Add File" to upload your first attachment.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1019,104 +1150,6 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
 };
 
 export default TaskDetailsModal;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Standard UI Design
 // "use client";
@@ -1924,59 +1957,6 @@ export default TaskDetailsModal;
 // };
 
 // export default TaskDetailsModal;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // "use client";
 

@@ -6,40 +6,50 @@ import { DjombiProfileService } from "@/lib/services/DjombiProfileService";
 
 // Helper function to get Djombi access token
 const getDjombiAccessToken = (): string | null => {
-  // First try from DjombiProfileService
-  const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
-  if (accessToken) {
-    return accessToken;
-  }
-  
-  // Fallback to localStorage directly
-  if (typeof window !== 'undefined') {
-    const storedToken = localStorage.getItem('djombi_access_token');
-    if (storedToken) {
-      return storedToken;
+  try {
+    // First try from DjombiProfileService
+    const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
+    if (accessToken) {
+      return accessToken;
     }
+    
+    // Fallback to localStorage directly
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('djombi_access_token');
+      if (storedToken) {
+        return storedToken;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error getting Djombi access token:", error);
+    return null;
   }
-  
-  return null;
 };
 
 // Helper function to get linked email ID
 const getLinkedEmailId = (): string | null => {
-  // First try cookies
-  const emailIdFromCookie = getCookie('linkedEmailId');
-  if (emailIdFromCookie) {
-    return emailIdFromCookie;
-  }
-  
-  // Then try localStorage
-  if (typeof window !== 'undefined') {
-    const emailIdFromStorage = localStorage.getItem('linkedEmailId');
-    if (emailIdFromStorage) {
-      return emailIdFromStorage;
+  try {
+    // First try cookies
+    const emailIdFromCookie = getCookie('linkedEmailId');
+    if (emailIdFromCookie) {
+      return emailIdFromCookie;
     }
+    
+    // Then try localStorage
+    if (typeof window !== 'undefined') {
+      const emailIdFromStorage = localStorage.getItem('linkedEmailId');
+      if (emailIdFromStorage) {
+        return emailIdFromStorage;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error getting linked email ID:", error);
+    return null;
   }
-  
-  return null;
 };
 
 // Helper function to get auth items using Djombi tokens
@@ -64,8 +74,11 @@ interface EmailStore {
   isLoading: boolean;
   loadingError: string | null;
 
+  // Add refresh tracking
+  lastFetch: Record<string, number>;
+  
   // Actions
-  fetchEmails: (category: EmailCategory) => Promise<void>;
+  fetchEmails: (category: EmailCategory, forceRefresh?: boolean) => Promise<void>;
   addEmail: (emailData: Omit<Email, "id" | "timestamp" | "isUrgent" | "category">) => void;
   moveEmail: (emailId: string, segment: EmailSegment) => void;
   moveEmailToCategory: (emailId: string, category: EmailCategory) => void;
@@ -84,204 +97,255 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   draftEmail: null,
   isLoading: false,
   loadingError: null,
+  lastFetch: {},
 
   // Fetch emails from API based on category
-  fetchEmails: async (category) => {
+  fetchEmails: async (category, forceRefresh = false) => {
+    const state = get();
+    
+    // Prevent concurrent fetches of the same category
+    if (state.isLoading && !forceRefresh) {
+      console.log(`Already fetching ${category} emails, skipping...`);
+      return;
+    }
+
+    // Check if we need to refresh (avoid fetching too frequently)
+    const lastFetchTime = state.lastFetch[category] || 0;
+    const timeSinceLastFetch = Date.now() - lastFetchTime;
+    const MINIMUM_FETCH_INTERVAL = 5000; // 5 seconds
+    
+    if (!forceRefresh && timeSinceLastFetch < MINIMUM_FETCH_INTERVAL) {
+      console.log(`Skipping ${category} fetch, too soon since last fetch`);
+      return;
+    }
+
     // Set loading state
     set({ isLoading: true, loadingError: null });
 
     try {
-      // Get linked email ID using enhanced function
+      // Get authentication details
       const linkedEmailId = getLinkedEmailId();
-      console.log("Linked Email ID:", linkedEmailId);
-
-      // Validate email ID
-      if (!linkedEmailId) {
-        throw new Error("Email ID missing. Please link your email first.");
-      }
-
-      // Get Djombi access token
       const djombiToken = getDjombiAccessToken();
-      console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
       
-      if (!djombiToken) {
-        throw new Error("Djombi authentication token missing. Please log in again.");
-      }
-
-      // Build the appropriate endpoint based on category with correct parameters
-      let endpoint = '';
-
-      if (category === 'inbox') {
-        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
-      } else if (category === 'sent') {
-        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
-      } else if (category === 'spam') {
-        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/spam?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
-      } else if (category === 'draft') {
-        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
-      } else {
-        // Default to inbox
-        endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
-      }
-
-      console.log(`Fetching ${category} emails from:`, endpoint);
-
-      // Make API request with Djombi authorization header
-      const response = await fetch(endpoint, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${djombiToken}`
-        },
-        method: 'GET'
+      console.log("Fetching emails with:", {
+        category,
+        linkedEmailId: linkedEmailId ? `${linkedEmailId.substring(0, 20)}...` : 'Not found',
+        djombiToken: djombiToken ? `${djombiToken.substring(0, 10)}...` : 'Not found'
       });
 
-      console.log(`API response status for ${category}:`, response.status);
-      console.log(`API response headers:`, response.headers);
+      // Validate authentication
+      if (!linkedEmailId) {
+        throw new Error("Email ID missing. Please link your email account in settings.");
+      }
 
-      // Parse response first to see what we get
+      if (!djombiToken) {
+        throw new Error("Authentication token missing. Please log in again.");
+      }
+
+      // Build the appropriate endpoint based on category
+      const baseUrl = 'https://email-service-latest-agqz.onrender.com/api/v1/emails';
+      let endpoint = '';
+
+      switch (category) {
+        case 'inbox':
+          endpoint = `${baseUrl}/inbox`;
+          break;
+        case 'sent':
+          endpoint = `${baseUrl}/sent`;
+          break;
+        case 'spam':
+          endpoint = `${baseUrl}/spam`;
+          break;
+        case 'draft':
+          endpoint = `${baseUrl}/drafts`;
+          break;
+        default:
+          endpoint = `${baseUrl}/inbox`;
+          break;
+      }
+
+      // Add query parameters
+      const params = new URLSearchParams({
+        email_id: linkedEmailId,
+        offset: '0', // Changed from 1 to 0 (more standard)
+        limit: '100' // Increased limit to get more emails
+      });
+
+      const fullUrl = `${endpoint}?${params.toString()}`;
+      console.log(`Fetching ${category} emails from:`, fullUrl);
+
+      // Make API request with proper headers
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${djombiToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      console.log(`API response for ${category}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
+      // Get response text first
       const responseText = await response.text();
-      console.log(`Raw response for ${category}:`, responseText);
+      console.log(`Raw response for ${category}:`, responseText.substring(0, 500));
 
+      // Parse JSON response
       let data;
       try {
-        data = JSON.parse(responseText);
-        console.log(`Parsed ${category} response:`, data);
-      } catch (error) {
-        console.error("Error parsing response:", error, responseText);
-        throw new Error("Invalid response format from server");
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
       }
 
-      // Handle different response scenarios
+      // Handle HTTP errors
       if (!response.ok) {
-        console.error(`Failed to fetch ${category} emails. Status: ${response.status}`);
+        console.error(`HTTP error for ${category}:`, response.status, data);
         
-        // Check if it's a "no emails found" type of response vs a real error
-        if (response.status === 404 || 
-            (data && data.message && data.message.toLowerCase().includes('not found')) ||
-            (data && data.message && data.message.toLowerCase().includes('no emails'))) {
-          console.log(`No ${category} emails found - setting empty array`);
+        // Handle specific error cases
+        if (response.status === 401) {
+          throw new Error("Authentication failed. Please log in again.");
+        } else if (response.status === 403) {
+          throw new Error("Access denied. Please check your permissions.");
+        } else if (response.status === 404) {
+          // 404 might mean no emails found, which is OK
+          console.log(`No ${category} emails found (404)`);
           processEmailData([], category);
           return;
+        } else {
+          throw new Error(`Server error (${response.status}): ${data.message || response.statusText}`);
         }
-        
-        throw new Error(`Failed to fetch ${category} emails: ${response.status} ${response.statusText} - ${responseText}`);
       }
 
-      // Check for success/error in response data
+      // Handle API success/error flags
       if (data.success === false) {
-        const errorMessage = data.message || 'API request failed';
-        console.error("API error:", errorMessage);
+        const errorMessage = data.message || data.error || 'API request failed';
+        console.error("API returned error:", errorMessage);
         
-        // If it's a "no emails" message, treat as empty result
-        if (errorMessage.toLowerCase().includes('no') && errorMessage.toLowerCase().includes('email')) {
-          console.log(`API says no ${category} emails - setting empty array`);
+        // Check if it's a "no emails" scenario
+        if (errorMessage.toLowerCase().includes('no') && 
+            (errorMessage.toLowerCase().includes('email') || errorMessage.toLowerCase().includes('found'))) {
+          console.log(`API says no ${category} emails found`);
           processEmailData([], category);
           return;
         }
         
-        throw new Error(`API error: ${errorMessage}`);
+        throw new Error(errorMessage);
       }
 
       // Process successful response
+      console.log(`Successfully fetched ${category} data:`, data);
       processEmailData(data, category);
 
     } catch (error) {
       console.error(`Error fetching ${category} emails:`, error);
       set({
         isLoading: false,
-        loadingError: error instanceof Error ? error.message : 'Unknown error fetching emails'
+        loadingError: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     }
     
     // Helper function to process email data from API response
-    function processEmailData(data: any, category: string) {
+    function processEmailData(data: any, category: EmailCategory) {
       console.log(`Processing ${category} email data:`, data);
       
-      // Process the data, handling different possible response formats
-      let emailsData = [];
+      // Initialize emails array
+      let emailsData: any[] = [];
       
+      // Try to extract emails from various possible response structures
       if (Array.isArray(data)) {
         emailsData = data;
-      } else if (data.data && Array.isArray(data.data)) {
-        emailsData = data.data;
-      } else if (data[category] && Array.isArray(data[category])) {
-        emailsData = data[category];
-      } else if (data.drafts && Array.isArray(data.drafts)) {
-        emailsData = data.drafts;
-      } else if (data.sent && Array.isArray(data.sent)) {
-        emailsData = data.sent;
-      } else if (data.sentEmails && Array.isArray(data.sentEmails)) {
-        emailsData = data.sentEmails;
-      } else if (data.emails && Array.isArray(data.emails)) {
-        emailsData = data.emails;
-      } else if (data.inbox && Array.isArray(data.inbox)) {
-        emailsData = data.inbox;
-      } else if (data.spam && Array.isArray(data.spam)) {
-        emailsData = data.spam;
-      } else if (data.result && Array.isArray(data.result)) {
-        emailsData = data.result;
-      } else if (data.items && Array.isArray(data.items)) {
-        emailsData = data.items;
-      } else if (data.messages && Array.isArray(data.messages)) {
-        emailsData = data.messages;
-      } else if (typeof data === 'object') {
-        // If we can't find an obvious array, look for any array property
-        console.log("Searching for array in response object...");
-        for (const key in data) {
-          if (Array.isArray(data[key])) {
-            console.log(`Found array at key: ${key}`, data[key]);
+      } else if (data && typeof data === 'object') {
+        // Try common property names
+        const possibleArrayKeys = [
+          'data', 'emails', 'messages', 'items', 'results', 'content',
+          category, // Try the category name itself
+          `${category}s`, // Try pluralized category
+          'inbox', 'sent', 'drafts', 'spam'
+        ];
+        
+        for (const key of possibleArrayKeys) {
+          if (data[key] && Array.isArray(data[key])) {
             emailsData = data[key];
+            console.log(`Found emails array at key: ${key}`);
             break;
+          }
+        }
+        
+        // If still no array found, look for any array property
+        if (emailsData.length === 0) {
+          for (const key in data) {
+            if (Array.isArray(data[key]) && data[key].length > 0) {
+              emailsData = data[key];
+              console.log(`Found emails array at unexpected key: ${key}`);
+              break;
+            }
           }
         }
       }
 
-      // If we still don't have an array, create an empty one
-      if (!Array.isArray(emailsData)) {
-        console.warn(`Could not find email array in ${category} response:`, data);
-        emailsData = [];
-      }
+      console.log(`Extracted ${emailsData.length} raw email items for ${category}`);
 
-      console.log(`Processing ${emailsData.length} ${category} emails`);
+      // Process and normalize email data
+      const processedEmails: Email[] = emailsData.map((item: any, index: number) => {
+        // Generate a unique ID if none exists
+        const emailId = item.id || 
+                       item.email_id || 
+                       item._id || 
+                       item.messageId || 
+                       item.message_id || 
+                       `${category}-${Date.now()}-${index}`;
 
-      // Map the emails to the correct format
-      const processedEmails = emailsData.map((item: any, index: number) => {
         const email: Email = {
-          id: item.id || item.email_id || item._id || item.messageId || item.message_id || `${category}-${Date.now()}-${index}`,
-          email_id: item.email_id || item.id || item._id,
+          id: emailId,
+          email_id: item.email_id || emailId,
           from: item.from || item.sender || item.From || "unknown@example.com",
           to: item.to || item.recipient || item.To || item.recipients || "",
-          subject: item.subject || item.Subject || "(No Subject)",
-          content: item.content || item.body || item.Body || item.textContent || item.htmlContent || "",
+          subject: item.subject || item.Subject || item.title || "(No Subject)",
+          content: item.content || item.body || item.Body || item.text || item.textContent || item.htmlContent || "",
           timestamp: item.timestamp || item.createdAt || item.created_at || item.date || item.Date || new Date().toISOString(),
-          createdAt: item.created_at || item.createdAt || Date.now(),
-          isUrgent: Boolean(item.isUrgent || item.is_urgent || item.priority === 'high'),
-          hasAttachment: Boolean(item.hasAttachment || item.has_attachment || item.attachments),
+          createdAt: item.created_at || item.createdAt || item.timestamp || Date.now(),
+          isUrgent: Boolean(item.isUrgent || item.is_urgent || item.urgent || item.priority === 'high'),
+          hasAttachment: Boolean(item.hasAttachment || item.has_attachment || item.attachments?.length > 0),
           status: category,
           category: category,
-          isRead: Boolean(item.isRead || item.is_read || category === 'sent' || category === 'draft'),
-          contentType: item.contentType || item.content_type || 'text'
+          isRead: Boolean(item.isRead || item.is_read || item.read || category === 'sent' || category === 'draft'),
+          contentType: item.contentType || item.content_type || item.type || 'text'
         };
         
-        console.log(`Processed email ${index + 1}:`, email);
         return email;
       });
 
-      // Update store - REPLACE emails of this category instead of filtering/appending
+      console.log(`Processed ${processedEmails.length} ${category} emails`);
+
+      // Update store state
       set((state) => {
-        // Remove old emails of this category
+        // Remove existing emails of this category
         const otherEmails = state.emails.filter(email => 
-          email.status !== category && email.category !== category
+          email.category !== category && email.status !== category
         );
         
-        // Add new emails
-        const newEmails = [...otherEmails, ...processedEmails];
+        // Combine with new emails
+        const allEmails = [...otherEmails, ...processedEmails];
         
-        console.log(`Updated store with ${processedEmails.length} ${category} emails. Total emails: ${newEmails.length}`);
+        // Update last fetch time
+        const newLastFetch = {
+          ...state.lastFetch,
+          [category]: Date.now()
+        };
+        
+        console.log(`Updated store: ${processedEmails.length} new ${category} emails, ${allEmails.length} total`);
         
         return {
-          emails: newEmails,
-          isLoading: false
+          emails: allEmails,
+          isLoading: false,
+          loadingError: null,
+          lastFetch: newLastFetch
         };
       });
     }
@@ -303,7 +367,8 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       subject: emailData.subject || "",
       content: emailData.content || "",
       hasAttachment: emailData.hasAttachment || false,
-      contentType: emailData.contentType || 'text'
+      contentType: emailData.contentType || 'text',
+      createdAt: Date.now()
     };
 
     // Add to local state immediately for better UX
@@ -319,7 +384,6 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 
       if (djombiToken && linkedEmailId) {
         console.log("Sending email via API...");
-        // Send email via API using Djombi token
         fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails/send', {
           method: 'POST',
           headers: {
@@ -339,9 +403,9 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
           
           if (response.ok) {
             console.log("Email sent successfully");
-            // After sending, refresh the sent emails to get the actual sent email from server
+            // Refresh sent emails after successful send
             setTimeout(() => {
-              get().fetchEmails('sent');
+              get().fetchEmails('sent', true);
             }, 1000);
           } else {
             console.error("Failed to send email:", response.status, responseText);
@@ -403,12 +467,9 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   setActiveCategory: (category) => {
     set({ activeCategory: category });
 
-    // Always fetch fresh emails for the category to ensure we have latest data
-    const state = get();
-    if (!state.isLoading) {
-      console.log(`Setting active category to ${category}, fetching emails...`);
-      get().fetchEmails(category);
-    }
+    // Always fetch fresh emails for the category
+    console.log(`Setting active category to ${category}, fetching emails...`);
+    get().fetchEmails(category, true); // Force refresh when changing category
   },
 
   // Delete email
@@ -474,13 +535,13 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         category: "draft",
         isUrgent: false,
         hasAttachment: !!draft.hasAttachment,
-        // Add required fields that might be missing in the partial draft
         from: draft.from || "",
         to: draft.to || "",
         subject: draft.subject || "",
         content: draft.content || "",
-        isRead: true, // For drafts, set as read
-        contentType: draft.contentType || 'text'
+        isRead: true,
+        contentType: draft.contentType || 'text',
+        createdAt: Date.now()
       };
 
       // Add to local state
@@ -511,7 +572,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     }
   },
 
-  // Fixed parameter name to match the interface
+  // Remove email from store
   removeEmail: (id: string) => {
     set((state) => ({
       emails: state.emails.filter((email) => email.id !== id)
@@ -524,6 +585,599 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     set({ draftEmail: data });
   },
 }));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import { Email, EmailCategory, EmailSegment } from "@/lib/types/email";
+// import { create } from "zustand";
+// import { v4 as uuidv4 } from "uuid";
+// import { getCookie, getAuthToken } from "@/lib/utils/cookies";
+// import { DjombiProfileService } from "@/lib/services/DjombiProfileService";
+
+// // Helper function to get Djombi access token
+// const getDjombiAccessToken = (): string | null => {
+//   // First try from DjombiProfileService
+//   const { accessToken } = DjombiProfileService.getStoredDjombiTokens();
+//   if (accessToken) {
+//     return accessToken;
+//   }
+  
+//   // Fallback to localStorage directly
+//   if (typeof window !== 'undefined') {
+//     const storedToken = localStorage.getItem('djombi_access_token');
+//     if (storedToken) {
+//       return storedToken;
+//     }
+//   }
+  
+//   return null;
+// };
+
+// // Helper function to get linked email ID
+// const getLinkedEmailId = (): string | null => {
+//   // First try cookies
+//   const emailIdFromCookie = getCookie('linkedEmailId');
+//   if (emailIdFromCookie) {
+//     return emailIdFromCookie;
+//   }
+  
+//   // Then try localStorage
+//   if (typeof window !== 'undefined') {
+//     const emailIdFromStorage = localStorage.getItem('linkedEmailId');
+//     if (emailIdFromStorage) {
+//       return emailIdFromStorage;
+//     }
+//   }
+  
+//   return null;
+// };
+
+// // Helper function to get auth items using Djombi tokens
+// const getAuthFromStorage = () => {
+//   return {
+//     djombiToken: getDjombiAccessToken(),
+//     linkedEmailId: getLinkedEmailId(),
+//     regularToken: getAuthToken() // Keep for comparison
+//   };
+// };
+
+// interface EmailStore {
+//   // Draft email state
+//   draftEmail: any;
+
+//   // Main email data
+//   emails: Email[];
+
+//   // UI state
+//   customSegments: string[];
+//   activeCategory: EmailCategory;
+//   isLoading: boolean;
+//   loadingError: string | null;
+
+//   // Actions
+//   fetchEmails: (category: EmailCategory) => Promise<void>;
+//   addEmail: (emailData: Omit<Email, "id" | "timestamp" | "isUrgent" | "category">) => void;
+//   moveEmail: (emailId: string, segment: EmailSegment) => void;
+//   moveEmailToCategory: (emailId: string, category: EmailCategory) => void;
+//   addSegment: (name: string) => void;
+//   setActiveCategory: (category: EmailCategory) => void;
+//   deleteEmail: (id: string) => void;
+//   saveDraft: (draft: Partial<Email>) => void;
+//   updateDraft: (data: any) => void;
+//   removeEmail: (id: string) => void;
+// }
+
+// export const useEmailStore = create<EmailStore>((set, get) => ({
+//   emails: [],
+//   customSegments: [],
+//   activeCategory: "inbox",
+//   draftEmail: null,
+//   isLoading: false,
+//   loadingError: null,
+
+//   // Fetch emails from API based on category
+//   fetchEmails: async (category) => {
+//     // Set loading state
+//     set({ isLoading: true, loadingError: null });
+
+//     try {
+//       // Get linked email ID using enhanced function
+//       const linkedEmailId = getLinkedEmailId();
+//       console.log("Linked Email ID:", linkedEmailId);
+
+//       // Validate email ID
+//       if (!linkedEmailId) {
+//         throw new Error("Email ID missing. Please link your email first.");
+//       }
+
+//       // Get Djombi access token
+//       const djombiToken = getDjombiAccessToken();
+//       console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
+      
+//       if (!djombiToken) {
+//         throw new Error("Djombi authentication token missing. Please log in again.");
+//       }
+
+//       // Build the appropriate endpoint based on category with correct parameters
+//       let endpoint = '';
+
+//       if (category === 'inbox') {
+//         endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
+//       } else if (category === 'sent') {
+//         endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/sent?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
+//       } else if (category === 'spam') {
+//         endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/spam?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
+//       } else if (category === 'draft') {
+//         endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
+//       } else {
+//         // Default to inbox
+//         endpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/inbox?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=50`;
+//       }
+
+//       console.log(`Fetching ${category} emails from:`, endpoint);
+
+//       // Make API request with Djombi authorization header
+//       const response = await fetch(endpoint, {
+//         headers: {
+//           'Content-Type': 'application/json',
+//           'Authorization': `Bearer ${djombiToken}`
+//         },
+//         method: 'GET'
+//       });
+
+//       console.log(`API response status for ${category}:`, response.status);
+//       console.log(`API response headers:`, response.headers);
+
+//       // Parse response first to see what we get
+//       const responseText = await response.text();
+//       console.log(`Raw response for ${category}:`, responseText);
+
+//       let data;
+//       try {
+//         data = JSON.parse(responseText);
+//         console.log(`Parsed ${category} response:`, data);
+//       } catch (error) {
+//         console.error("Error parsing response:", error, responseText);
+//         throw new Error("Invalid response format from server");
+//       }
+
+//       // Handle different response scenarios
+//       if (!response.ok) {
+//         console.error(`Failed to fetch ${category} emails. Status: ${response.status}`);
+        
+//         // Check if it's a "no emails found" type of response vs a real error
+//         if (response.status === 404 || 
+//             (data && data.message && data.message.toLowerCase().includes('not found')) ||
+//             (data && data.message && data.message.toLowerCase().includes('no emails'))) {
+//           console.log(`No ${category} emails found - setting empty array`);
+//           processEmailData([], category);
+//           return;
+//         }
+        
+//         throw new Error(`Failed to fetch ${category} emails: ${response.status} ${response.statusText} - ${responseText}`);
+//       }
+
+//       // Check for success/error in response data
+//       if (data.success === false) {
+//         const errorMessage = data.message || 'API request failed';
+//         console.error("API error:", errorMessage);
+        
+//         // If it's a "no emails" message, treat as empty result
+//         if (errorMessage.toLowerCase().includes('no') && errorMessage.toLowerCase().includes('email')) {
+//           console.log(`API says no ${category} emails - setting empty array`);
+//           processEmailData([], category);
+//           return;
+//         }
+        
+//         throw new Error(`API error: ${errorMessage}`);
+//       }
+
+//       // Process successful response
+//       processEmailData(data, category);
+
+//     } catch (error) {
+//       console.error(`Error fetching ${category} emails:`, error);
+//       set({
+//         isLoading: false,
+//         loadingError: error instanceof Error ? error.message : 'Unknown error fetching emails'
+//       });
+//     }
+    
+//     // Helper function to process email data from API response
+//     function processEmailData(data: any, category: string) {
+//       console.log(`Processing ${category} email data:`, data);
+      
+//       // Process the data, handling different possible response formats
+//       let emailsData = [];
+      
+//       if (Array.isArray(data)) {
+//         emailsData = data;
+//       } else if (data.data && Array.isArray(data.data)) {
+//         emailsData = data.data;
+//       } else if (data[category] && Array.isArray(data[category])) {
+//         emailsData = data[category];
+//       } else if (data.drafts && Array.isArray(data.drafts)) {
+//         emailsData = data.drafts;
+//       } else if (data.sent && Array.isArray(data.sent)) {
+//         emailsData = data.sent;
+//       } else if (data.sentEmails && Array.isArray(data.sentEmails)) {
+//         emailsData = data.sentEmails;
+//       } else if (data.emails && Array.isArray(data.emails)) {
+//         emailsData = data.emails;
+//       } else if (data.inbox && Array.isArray(data.inbox)) {
+//         emailsData = data.inbox;
+//       } else if (data.spam && Array.isArray(data.spam)) {
+//         emailsData = data.spam;
+//       } else if (data.result && Array.isArray(data.result)) {
+//         emailsData = data.result;
+//       } else if (data.items && Array.isArray(data.items)) {
+//         emailsData = data.items;
+//       } else if (data.messages && Array.isArray(data.messages)) {
+//         emailsData = data.messages;
+//       } else if (typeof data === 'object') {
+//         // If we can't find an obvious array, look for any array property
+//         console.log("Searching for array in response object...");
+//         for (const key in data) {
+//           if (Array.isArray(data[key])) {
+//             console.log(`Found array at key: ${key}`, data[key]);
+//             emailsData = data[key];
+//             break;
+//           }
+//         }
+//       }
+
+//       // If we still don't have an array, create an empty one
+//       if (!Array.isArray(emailsData)) {
+//         console.warn(`Could not find email array in ${category} response:`, data);
+//         emailsData = [];
+//       }
+
+//       console.log(`Processing ${emailsData.length} ${category} emails`);
+
+//       // Map the emails to the correct format
+//       const processedEmails = emailsData.map((item: any, index: number) => {
+//         const email: Email = {
+//           id: item.id || item.email_id || item._id || item.messageId || item.message_id || `${category}-${Date.now()}-${index}`,
+//           email_id: item.email_id || item.id || item._id,
+//           from: item.from || item.sender || item.From || "unknown@example.com",
+//           to: item.to || item.recipient || item.To || item.recipients || "",
+//           subject: item.subject || item.Subject || "(No Subject)",
+//           content: item.content || item.body || item.Body || item.textContent || item.htmlContent || "",
+//           timestamp: item.timestamp || item.createdAt || item.created_at || item.date || item.Date || new Date().toISOString(),
+//           createdAt: item.created_at || item.createdAt || Date.now(),
+//           isUrgent: Boolean(item.isUrgent || item.is_urgent || item.priority === 'high'),
+//           hasAttachment: Boolean(item.hasAttachment || item.has_attachment || item.attachments),
+//           status: category,
+//           category: category,
+//           isRead: Boolean(item.isRead || item.is_read || category === 'sent' || category === 'draft'),
+//           contentType: item.contentType || item.content_type || 'text'
+//         };
+        
+//         console.log(`Processed email ${index + 1}:`, email);
+//         return email;
+//       });
+
+//       // Update store - REPLACE emails of this category instead of filtering/appending
+//       set((state) => {
+//         // Remove old emails of this category
+//         const otherEmails = state.emails.filter(email => 
+//           email.status !== category && email.category !== category
+//         );
+        
+//         // Add new emails
+//         const newEmails = [...otherEmails, ...processedEmails];
+        
+//         console.log(`Updated store with ${processedEmails.length} ${category} emails. Total emails: ${newEmails.length}`);
+        
+//         return {
+//           emails: newEmails,
+//           isLoading: false
+//         };
+//       });
+//     }
+//   },
+
+//   // Add a new email
+//   addEmail: (emailData) => {
+//     const newEmail: Email = {
+//       ...emailData,
+//       id: uuidv4(),
+//       timestamp: new Date().toISOString(),
+//       isUrgent: false,
+//       category: emailData.status || get().activeCategory,
+//       status: emailData.status || get().activeCategory,
+//       isRead: emailData.status === 'sent' || emailData.status === 'draft',
+//       // Ensure all required fields from Email interface are set
+//       from: emailData.from || "",
+//       to: emailData.to || "",
+//       subject: emailData.subject || "",
+//       content: emailData.content || "",
+//       hasAttachment: emailData.hasAttachment || false,
+//       contentType: emailData.contentType || 'text'
+//     };
+
+//     // Add to local state immediately for better UX
+//     set((state) => ({
+//       emails: [...state.emails, newEmail],
+//     }));
+
+//     console.log("Added email to store:", newEmail);
+
+//     // Send to API if it's not a draft
+//     if (emailData.status !== "draft") {
+//       const { djombiToken, linkedEmailId } = getAuthFromStorage();
+
+//       if (djombiToken && linkedEmailId) {
+//         console.log("Sending email via API...");
+//         // Send email via API using Djombi token
+//         fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails/send', {
+//           method: 'POST',
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': `Bearer ${djombiToken}`,
+//           },
+//           body: JSON.stringify({
+//             to: newEmail.to,
+//             subject: newEmail.subject,
+//             content: newEmail.content,
+//             email_id: linkedEmailId
+//           })
+//         })
+//         .then(async (response) => {
+//           const responseText = await response.text();
+//           console.log("Send email response:", response.status, responseText);
+          
+//           if (response.ok) {
+//             console.log("Email sent successfully");
+//             // After sending, refresh the sent emails to get the actual sent email from server
+//             setTimeout(() => {
+//               get().fetchEmails('sent');
+//             }, 1000);
+//           } else {
+//             console.error("Failed to send email:", response.status, responseText);
+//           }
+//         })
+//         .catch(error => {
+//           console.error("Error sending email:", error);
+//         });
+//       }
+//     }
+//   },
+
+//   // Move email between segments (urgent, all)
+//   moveEmail: (emailId, segment) =>
+//     set((state) => ({
+//       emails: state.emails.map((email) =>
+//         email.id === emailId
+//           ? { ...email, isUrgent: segment === "urgent" }
+//           : email
+//       ),
+//     })),
+
+//   // Move email between categories (inbox, sent, draft, etc.)
+//   moveEmailToCategory: (emailId, category) => {
+//     // Update local state
+//     set((state) => ({
+//       emails: state.emails.map((email) =>
+//         email.id === emailId
+//           ? { ...email, status: category, category: category }
+//           : email
+//       ),
+//     }));
+
+//     // Update via API
+//     const { djombiToken, linkedEmailId } = getAuthFromStorage();
+
+//     if (djombiToken && linkedEmailId) {
+//       fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/${emailId}/move`, {
+//         method: 'PUT',
+//         headers: {
+//           'Content-Type': 'application/json',
+//           'Authorization': `Bearer ${djombiToken}`,
+//         },
+//         body: JSON.stringify({ 
+//           category,
+//           email_id: linkedEmailId
+//         })
+//       }).catch(error => {
+//         console.error("Error moving email:", error);
+//       });
+//     }
+//   },
+
+//   // Add a new segment
+//   addSegment: (name) =>
+//     set((state) => ({ customSegments: [...state.customSegments, name] })),
+
+//   // Set active category
+//   setActiveCategory: (category) => {
+//     set({ activeCategory: category });
+
+//     // Always fetch fresh emails for the category to ensure we have latest data
+//     const state = get();
+//     if (!state.isLoading) {
+//       console.log(`Setting active category to ${category}, fetching emails...`);
+//       get().fetchEmails(category);
+//     }
+//   },
+
+//   // Delete email
+//   deleteEmail: (id) => {
+//     // Remove from local state
+//     set((state) => ({
+//       emails: state.emails.filter((email) => email.id !== id),
+//     }));
+
+//     // Delete via API
+//     const { djombiToken, linkedEmailId } = getAuthFromStorage();
+
+//     if (djombiToken && linkedEmailId) {
+//       fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${id}?email_id=${linkedEmailId}`, {
+//         method: 'DELETE',
+//         headers: {
+//           'Content-Type': 'application/json',
+//           'Authorization': `Bearer ${djombiToken}`,
+//         }
+//       }).catch(error => {
+//         console.error("Error deleting email:", error);
+//       });
+//     }
+//   },
+
+//   // Save draft
+//   saveDraft: (draft: Partial<Email>) => {
+//     if (draft.id) {
+//       // Update existing draft
+//       set((state) => ({
+//         emails: state.emails.map((email) =>
+//           email.id === draft.id ? { ...email, ...draft } : email
+//         ),
+//       }));
+
+//       // Update via API
+//       const { djombiToken, linkedEmailId } = getAuthFromStorage();
+
+//       if (djombiToken && linkedEmailId) {
+//         fetch(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${draft.id}?email_id=${linkedEmailId}`, {
+//           method: 'PUT',
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': `Bearer ${djombiToken}`,
+//           },
+//           body: JSON.stringify({
+//             to: draft.to,
+//             subject: draft.subject,
+//             content: draft.content,
+//             email_id: linkedEmailId
+//           })
+//         }).catch(error => {
+//           console.error("Error updating draft:", error);
+//         });
+//       }
+//     } else {
+//       // Create new draft with all required Email properties
+//       const newDraft: Email = {
+//         ...draft,
+//         id: uuidv4(),
+//         timestamp: new Date().toISOString(),
+//         status: "draft",
+//         category: "draft",
+//         isUrgent: false,
+//         hasAttachment: !!draft.hasAttachment,
+//         // Add required fields that might be missing in the partial draft
+//         from: draft.from || "",
+//         to: draft.to || "",
+//         subject: draft.subject || "",
+//         content: draft.content || "",
+//         isRead: true, // For drafts, set as read
+//         contentType: draft.contentType || 'text'
+//       };
+
+//       // Add to local state
+//       set((state) => ({
+//         emails: [...state.emails, newDraft],
+//       }));
+
+//       // Send to API
+//       const { djombiToken, linkedEmailId } = getAuthFromStorage();
+
+//       if (djombiToken && linkedEmailId) {
+//         fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts', {
+//           method: 'POST',
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': `Bearer ${djombiToken}`,
+//           },
+//           body: JSON.stringify({
+//             to: newDraft.to,
+//             subject: newDraft.subject,
+//             content: newDraft.content,
+//             email_id: linkedEmailId
+//           })
+//         }).catch(error => {
+//           console.error("Error creating draft:", error);
+//         });
+//       }
+//     }
+//   },
+
+//   // Fixed parameter name to match the interface
+//   removeEmail: (id: string) => {
+//     set((state) => ({
+//       emails: state.emails.filter((email) => email.id !== id)
+//     }));
+//   },
+
+//   // Update draft state
+//   updateDraft: (data) => {
+//     console.log("Updating draft state:", data);
+//     set({ draftEmail: data });
+//   },
+// }));
 
 
 

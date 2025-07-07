@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { InviteTeamMembersModal } from './InviteTeamMembersModal';
+import useWorkspaceStore from '@/lib/store/messaging/workspaceStore';
 
 export const UnlockLevelCard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Get workspace data from store
+  const { selectedWorkspaceId, workspaces } = useWorkspaceStore();
+  const currentWorkspace = selectedWorkspaceId 
+    ? workspaces.find(w => w.id === selectedWorkspaceId)
+    : null;
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -56,6 +63,7 @@ export const UnlockLevelCard: React.FC = () => {
       <InviteTeamMembersModal 
         isOpen={isModalOpen} 
         onClose={handleCloseModal} 
+        workspaceId={currentWorkspace?.id || ''}
       />
     </>
   );

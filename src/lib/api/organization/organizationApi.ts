@@ -1,5 +1,9 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+
+import { ApiError } from "../errors/apiErrors";
+
 // lib/api/organizationApi.ts
-const API_BASE_URL = 'https://email-service-latest-agqz.onrender.com/api/v1';
+const API_BASE_URL = "https://be-auth-server.onrender.com/api/v1";
 
 export interface CreateOrganizationData {
   business_name: string;
@@ -8,7 +12,14 @@ export interface CreateOrganizationData {
   business_taxId: string;
   business_industry: string;
 }
-
+export interface UpdateOrganizationData {
+  organizationId: string;
+  business_name?: string;
+  business_address?: string;
+  business_phone?: string;
+  business_taxId?: string;
+  business_industry?: string;
+}
 export interface Organization {
   id: string;
   business_name: string;
@@ -21,405 +32,288 @@ export interface Organization {
 }
 
 export interface OrganizationMember {
-  role: string;
+  id: string;
+  role: "ADMIN" | "MEMBER" | "GUEST";
   permissions: string[];
   twoFactorEnabled: boolean;
+  status: "active" | "pending" | "suspended";
+  joinedAt: string;
+  user: {
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+  };
   organization: Organization;
-}
-
-export interface OrganizationsResponse {
-  status: string;
-  message: string;
-  data: OrganizationMember[];
-}
-
-export interface CreateOrganizationResponse {
-  status: string;
-  message: string;
-  data: Organization;
 }
 
 export interface SwitchOrganizationData {
   organizationId: string;
 }
-
-export interface SwitchOrganizationResponse {
-  status: string;
-  message: string;
-  data?: any;
+export interface InviteMemberData {
+  organizationId: string;
+  email: string;
+  role: "ADMIN" | "MEMBER" | "GUEST";
 }
 
+export interface UpdateMemberRoleData {
+  organizationId: string;
+  memberId: string;
+  role: string;
+  twoFactorCode?: string; // Optional for 2FA
+}
+export interface TwoFactorOperation {
+  operation: string;
+  data: any;
+  twoFactorCode: string;
+}
+export interface Member {
+  id: string;
+  email: string;
+  role: string;
+  status: "active" | "pending" | "suspended";
+  joinedAt: string;
+}
+// Response interfaces
+export interface ApiResponse<T> {
+  status: string;
+  message: string;
+  data: T;
+  meta?: {
+    access_token?: string;
+    refresh_token?: string;
+  };
+}
+export interface OrganizationsResponse
+  extends ApiResponse<OrganizationMember[]> {}
+export interface CreateOrganizationResponse extends ApiResponse<Organization> {}
+export interface UpdateOrganizationResponse extends ApiResponse<Organization> {}
+export interface SwitchOrganizationResponse extends ApiResponse<Organization> {}
+export interface InviteMemberResponse extends ApiResponse<any> {}
+export interface MemberResponse extends ApiResponse<OrganizationMember> {}
 class OrganizationApiService {
-  private getDjombiAuthData(): {
-    accessToken: string | null;
-    refreshToken: string | null;
-    authStatus: any;
-    cacheTimestamp: number | null;
-    isAuthenticated: boolean;
-  } {
-    if (typeof window === 'undefined') {
-      return {
-        accessToken: null,
-        refreshToken: null,
-        authStatus: null,
-        cacheTimestamp: null,
-        isAuthenticated: false
-      };
-    }
-    
+  private pendingTwoFactorOperation: TwoFactorOperation | null = null;
+
+  private async makeRequest<T>(
+    url: string,
+    options: RequestInit = {},
+    requiresAuth: boolean = true
+  ): Promise<T> {
     try {
-      // Get djombi access token
-      let accessToken = null;
-      const djombiTokenData = localStorage.getItem('djombi_access_token');
-      if (djombiTokenData) {
-        try {
-          const parsedToken = JSON.parse(djombiTokenData);
-          accessToken = parsedToken.access_token || parsedToken;
-        } catch {
-          // If it's not JSON, treat as plain string
-          accessToken = djombiTokenData;
-        }
-      }
-      
-      // Fallback: try to get from djombi_tokens
-      if (!accessToken) {
-        const djombiTokens = localStorage.getItem('djombi_tokens');
-        if (djombiTokens) {
-          const tokens = JSON.parse(djombiTokens);
-          accessToken = tokens.accessTokenDjombi;
-        }
-      }
-
-      // Get djombi refresh token
-      let refreshToken = null;
-      const djombiRefreshTokenData = localStorage.getItem('djombi_refresh_token');
-      if (djombiRefreshTokenData) {
-        try {
-          const parsedRefreshToken = JSON.parse(djombiRefreshTokenData);
-          refreshToken = parsedRefreshToken.refresh_token || parsedRefreshToken;
-        } catch {
-          // If it's not JSON, treat as plain string
-          refreshToken = djombiRefreshTokenData;
-        }
-      }
-
-      // Fallback: try to get refresh token from djombi_tokens
-      if (!refreshToken) {
-        const djombiTokens = localStorage.getItem('djombi_tokens');
-        if (djombiTokens) {
-          const tokens = JSON.parse(djombiTokens);
-          refreshToken = tokens.refreshTokenDjombi;
-        }
-      }
-
-      // Get djombi auth status
-      let authStatus = null;
-      const djombiAuthStatusData = localStorage.getItem('djombi_auth_status');
-      if (djombiAuthStatusData) {
-        try {
-          authStatus = JSON.parse(djombiAuthStatusData);
-        } catch {
-          authStatus = djombiAuthStatusData;
-        }
-      }
-
-      // Get djombi cache timestamp
-      let cacheTimestamp = null;
-      const djombiCacheTimestampData = localStorage.getItem('djombi_cache_timestamp');
-      if (djombiCacheTimestampData) {
-        try {
-          cacheTimestamp = JSON.parse(djombiCacheTimestampData);
-        } catch {
-          cacheTimestamp = parseInt(djombiCacheTimestampData, 10);
-        }
-      }
-
-      // Check if authentication is valid
-      const isAuthenticated = !!(accessToken && authStatus !== 'expired' && authStatus !== 'invalid');
-
-      // Check if cache is still valid (optional - you can set your own cache duration)
-      const cacheValidDuration = 60 * 60 * 1000; // 1 hour in milliseconds
-      const isCacheValid = cacheTimestamp ? 
-        (Date.now() - cacheTimestamp) < cacheValidDuration : false;
-
-      return {
-        accessToken,
-        refreshToken,
-        authStatus,
-        cacheTimestamp,
-        isAuthenticated: isAuthenticated && (isCacheValid || !cacheTimestamp)
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(options.headers as Record<string, string>),
       };
-    } catch (error) {
-      console.error('Error getting Djombi auth data:', error);
-      return {
-        accessToken: null,
-        refreshToken: null,
-        authStatus: null,
-        cacheTimestamp: null,
-        isAuthenticated: false
-      };
-    }
-  }
 
-  private async refreshTokenIfNeeded(): Promise<string | null> {
-    const authData = this.getDjombiAuthData();
-    
-    // If we have a valid access token, use it
-    if (authData.isAuthenticated && authData.accessToken) {
-      return authData.accessToken;
-    }
+      if (requiresAuth) {
+        const token = localStorage.getItem("djombi_access_token")!;
 
-    // If we have a refresh token, try to refresh
-    if (authData.refreshToken && authData.authStatus !== 'expired') {
-      try {
-        // You can implement token refresh logic here
-        // For now, we'll just log and return null
-        console.log('Token refresh needed but not implemented');
-        return null;
-      } catch (error) {
-        console.error('Token refresh failed:', error);
-        return null;
+        console.log(token, "TOKEN")
+        if (!token) {
+          throw new Error("No access token found");
+        }
+        headers["Authorization"] = `Bearer ${token}`;
       }
-    }
-
-    return null;
-  }
-
-  private async makeRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
-    try {
-      // Get authentication data
-      const authData = this.getDjombiAuthData();
-      
-      console.log('Djombi Auth Data:', {
-        hasAccessToken: !!authData.accessToken,
-        hasRefreshToken: !!authData.refreshToken,
-        authStatus: authData.authStatus,
-        cacheTimestamp: authData.cacheTimestamp,
-        isAuthenticated: authData.isAuthenticated,
-        cacheAge: authData.cacheTimestamp ? Date.now() - authData.cacheTimestamp : null
-      });
-
-      // Try to get a valid access token
-      let accessToken = authData.accessToken;
-      
-      if (!authData.isAuthenticated) {
-        // Try to refresh token if needed
-        accessToken = await this.refreshTokenIfNeeded();
-      }
-
-      if (!accessToken) {
-        throw new Error('Djombi authentication token not found or expired. Please log in again.');
-      }
-
       const response = await fetch(`${API_BASE_URL}${url}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-          ...options.headers,
-        },
+        headers,
+        credentials: "include",
         ...options,
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          // Clear invalid auth data
-          this.clearInvalidAuthData();
-          throw new Error('Authentication failed. Please log in again.');
-        }
-        
-        // Try to get error message from response
-        let errorMessage = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch {
-          // Ignore JSON parsing errors
-        }
-        
-        throw new Error(errorMessage);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      const data = await response.json();
 
-      return await response.json();
+      if (data.meta?.access_token && data.meta?.refresh_token) {
+        localStorage.setItem(
+          "access_token",
+          JSON.stringify({
+            access_token: data.meta.access_token,
+            refresh_token: data.meta.refresh_token,
+          })
+        );
+      }
+      return data;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error("API request failed:", error);
       throw error;
     }
   }
 
-  private clearInvalidAuthData(): void {
-    if (typeof window === 'undefined') return;
-    
+  private async getErrorMessage(response: Response): Promise<string> {
     try {
-      // Update auth status to expired
-      localStorage.setItem('djombi_auth_status', JSON.stringify('expired'));
-      
-      // Optionally clear tokens (uncomment if you want to clear them)
-      // localStorage.removeItem('djombi_access_token');
-      // localStorage.removeItem('djombi_refresh_token');
-      // localStorage.removeItem('djombi_tokens');
-      
-      console.log('Marked Djombi auth as expired');
-    } catch (error) {
-      console.error('Error clearing invalid auth data:', error);
+      const errorData = await response.json();
+      return errorData.message || `HTTP error! status: ${response.status}`;
+    } catch {
+      return `HTTP error! status: ${response.status}`;
     }
   }
 
+  // Enhanced retry with 2FA support
+  private async makeRequestWith2FA<T>(
+    operation: string,
+    requestFn: (twoFactorCode?: string) => Promise<T>,
+    requiresTwoFactor: boolean = true
+  ): Promise<T> {
+    try {
+      return await requestFn();
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.status === 403 &&
+        requiresTwoFactor
+      ) {
+        // Store operation for retry after 2FA
+        this.pendingTwoFactorOperation = {
+          operation,
+          data: null,
+          twoFactorCode: "",
+        };
+        throw new ApiError(403, "Two-factor authentication required");
+      }
+      throw error;
+    }
+  }
+
+  // Retry operation with 2FA code
+  async retryWithTwoFactor(twoFactorCode: string): Promise<any> {
+    if (!this.pendingTwoFactorOperation) {
+      throw new Error("No pending two-factor operation");
+    }
+
+    const operation = this.pendingTwoFactorOperation;
+    this.pendingTwoFactorOperation = null;
+
+    switch (operation.operation) {
+      case "updateOrganization":
+        return this.updateOrganization(operation.data, twoFactorCode);
+      case "updateMemberRole":
+        return this.updateMemberRole({ ...operation.data, twoFactorCode });
+      case "removeMember":
+        return this.removeMember(
+          operation.data.organizationId,
+          operation.data.memberId,
+          twoFactorCode
+        );
+      case "inviteMember":
+        return this.inviteMember(operation.data, twoFactorCode);
+      default:
+        throw new Error("Unknown operation");
+    }
+  }
+
+  // Organization CRUD operations
   async getOrganizations(): Promise<OrganizationsResponse> {
-    return this.makeRequest<OrganizationsResponse>('/organizations');
+    return this.makeRequest<OrganizationsResponse>("/organizations");
   }
 
-  async createOrganization(data: CreateOrganizationData): Promise<CreateOrganizationResponse> {
-    return this.makeRequest<CreateOrganizationResponse>('/organizations', {
-      method: 'POST',
+  async createOrganization(
+    data: CreateOrganizationData
+  ): Promise<CreateOrganizationResponse> {
+    return this.makeRequest<CreateOrganizationResponse>("/organizations", {
+      method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async switchOrganization(data: SwitchOrganizationData): Promise<SwitchOrganizationResponse> {
-    return this.makeRequest<SwitchOrganizationResponse>('/organizations/switch', {
-      method: 'POST',
-      body: JSON.stringify(data),
+  async updateOrganization(
+    data: UpdateOrganizationData,
+    twoFactorCode?: string
+  ): Promise<UpdateOrganizationResponse> {
+    const requestData = twoFactorCode ? { ...data, twoFactorCode } : data;
+
+    return this.makeRequestWith2FA("updateOrganization", () =>
+      this.makeRequest<UpdateOrganizationResponse>("/organizations", {
+        method: "PATCH",
+        body: JSON.stringify(requestData),
+      })
+    );
+  }
+
+  async switchOrganization(
+    data: SwitchOrganizationData
+  ): Promise<SwitchOrganizationResponse> {
+    return this.makeRequest<SwitchOrganizationResponse>(
+      "/organizations/switch",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  // Member management operations
+  async getMembers(
+    organizationId: string
+  ): Promise<ApiResponse<OrganizationMember[]>> {
+    return this.makeRequest<ApiResponse<OrganizationMember[]>>(
+      `/organizations/members?organizationId=${organizationId}`
+    );
+  }
+
+  async inviteMember(
+    data: InviteMemberData,
+    twoFactorCode?: string
+  ): Promise<InviteMemberResponse> {
+    const requestData = twoFactorCode ? { ...data, twoFactorCode } : data;
+
+    return this.makeRequestWith2FA("inviteMember", () =>
+      this.makeRequest<InviteMemberResponse>("/organizations/invite", {
+        method: "POST",
+        body: JSON.stringify(requestData),
+      })
+    );
+  }
+
+  async updateMemberRole(data: UpdateMemberRoleData): Promise<MemberResponse> {
+    return this.makeRequestWith2FA("updateMemberRole", () =>
+      this.makeRequest<MemberResponse>("/organizations/members/role", {
+        method: "POST",
+        body: JSON.stringify(data),
+      })
+    );
+  }
+
+  async removeMember(
+    organizationId: string,
+    memberId: string,
+    twoFactorCode?: string
+  ): Promise<void> {
+    const url = `/organizations/members?organizationId=${organizationId}&memberId=${memberId}`;
+    const body = twoFactorCode ? JSON.stringify({ twoFactorCode }) : undefined;
+
+    return this.makeRequestWith2FA("removeMember", () =>
+      this.makeRequest<void>(url, {
+        method: "DELETE",
+        body,
+      })
+    );
+  }
+
+  // Invitation operations
+  async acceptInvitation(token: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<ApiResponse<any>>("/organizations/invite/accept", {
+      method: "POST",
+      body: JSON.stringify({ token }),
     });
+  }
+
+  async rejectInvitation(token: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<ApiResponse<any>>("/organizations/invite/reject", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+  }
+
+  // Utility methods
+  hasPendingTwoFactorOperation(): boolean {
+    return this.pendingTwoFactorOperation !== null;
+  }
+
+  clearPendingOperation(): void {
+    this.pendingTwoFactorOperation = null;
   }
 }
 
 export const organizationApi = new OrganizationApiService();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// // lib/api/organizationApi.ts
-// const API_BASE_URL = 'https://email-service-latest-agqz.onrender.com/api/v1';
-
-// export interface CreateOrganizationData {
-//   business_name: string;
-//   business_address: string;
-//   business_phone: string;
-//   business_taxId: string;
-//   business_industry: string;
-// }
-
-// export interface Organization {
-//   id: string;
-//   business_name: string;
-//   business_address: string;
-//   business_phone: string;
-//   business_taxId: string;
-//   business_industry: string;
-//   createdAt: string;
-//   updatedAt: string;
-// }
-
-// export interface OrganizationMember {
-//   role: string;
-//   permissions: string[];
-//   twoFactorEnabled: boolean;
-//   organization: Organization;
-// }
-
-// export interface OrganizationsResponse {
-//   status: string;
-//   message: string;
-//   data: OrganizationMember[];
-// }
-
-// export interface CreateOrganizationResponse {
-//   status: string;
-//   message: string;
-//   data: Organization;
-// }
-
-// export interface SwitchOrganizationData {
-//   organizationId: string;
-// }
-
-// export interface SwitchOrganizationResponse {
-//   status: string;
-//   message: string;
-//   data?: any;
-// }
-
-// class OrganizationApiService {
-//   private async makeRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
-//     try {
-//       const response = await fetch(`${API_BASE_URL}${url}`, {
-//         headers: {
-//           'Content-Type': 'application/json',
-//           ...options.headers,
-//         },
-//         ...options,
-//       });
-
-//       if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//       }
-
-//       return await response.json();
-//     } catch (error) {
-//       console.error('API request failed:', error);
-//       throw error;
-//     }
-//   }
-
-//   async getOrganizations(): Promise<OrganizationsResponse> {
-//     return this.makeRequest<OrganizationsResponse>('/organizations');
-//   }
-
-//   async createOrganization(data: CreateOrganizationData): Promise<CreateOrganizationResponse> {
-//     return this.makeRequest<CreateOrganizationResponse>('/organizations', {
-//       method: 'POST',
-//       body: JSON.stringify(data),
-//     });
-//   }
-
-//   async switchOrganization(data: SwitchOrganizationData): Promise<SwitchOrganizationResponse> {
-//     return this.makeRequest<SwitchOrganizationResponse>('/organizations/switch', {
-//       method: 'POST',
-//       body: JSON.stringify(data),
-//     });
-//   }
-// }
-
-// export const organizationApi = new OrganizationApiService();

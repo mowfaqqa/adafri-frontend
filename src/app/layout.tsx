@@ -1,20 +1,14 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Suspense } from "react";
-import dynamic from "next/dynamic";
 
-// Import all components directly to avoid dynamic import issues
+// Import all components directly
 import QueryProvider from "@/components/providers/QueryProviders";
 import { Toaster } from "@/components/ui/sonner";
-import OAuth2 from "@/components/auth/oauth2";
-import SearchProvider from "@/components/FeaturesSearch/SearchProvider";
 import { HotjarInitializer } from "@/components/HotjarInitializer";
-import {
-  DjombiAuthProvider,
-  DjombiAuthLoader,
-} from "@/components/providers/DjombiAuthProvider";
-import BackgroundTokenRefresh from "@/components/auth/BackgroundTokenRefresh";
+import ConditionalAuthWrapper from "@/components/auth/ConditionalAuthWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,23 +43,6 @@ function ProviderErrorBoundary({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Optimized authentication wrapper with better layering
-function AuthWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <OAuth2>
-      <DjombiAuthProvider>
-        <DjombiAuthLoader>
-          <SearchProvider>
-            {/* Background token refresh component */}
-            <BackgroundTokenRefresh />
-            {children}
-          </SearchProvider>
-        </DjombiAuthLoader>
-      </DjombiAuthProvider>
-    </OAuth2>
-  );
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -84,7 +61,9 @@ export default function RootLayout({
         <ProviderErrorBoundary>
           <QueryProvider>
             <HotjarInitializer />
-            <AuthWrapper>{children}</AuthWrapper>
+            <ConditionalAuthWrapper>
+              {children}
+            </ConditionalAuthWrapper>
             <Toaster richColors />
           </QueryProvider>
         </ProviderErrorBoundary>

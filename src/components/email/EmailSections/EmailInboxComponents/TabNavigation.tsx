@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { TabType, TabConfig } from "@/lib/types/email2";
+import { TabType, TabConfig } from "@/lib/types/email";
 
 interface TabNavigationProps {
   tabs: TabConfig[];

@@ -20,7 +20,7 @@ export interface EmailColumn {
     gradient?: string;
 }
 
-export type TabType = "viewAll" | "urgent" | "follow-up";
+export type TabType = "inbox" | "urgent" | "follow-up";
 
 export interface TabConfig {
     id: TabType;

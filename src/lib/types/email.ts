@@ -18,7 +18,6 @@ export interface Email {
   bcc?: string[];
 }
 
-
 export interface ApiResponse<T> {
   success: boolean;
   message?: string;
@@ -47,4 +46,42 @@ export interface EmailData {
 export type EmailCategory = "inbox" | "sent" | "draft" | "spam" | "agenda";
 export type EmailSegment = "all" | "urgent" | string;
 
-// Edited
+// Additional interfaces from email2.ts
+export interface EmailColumn {
+  id: string;
+  title: string;
+  icon?: string; // Updated to support emoji/icon strings
+  gradient?: string;
+}
+
+export type TabType = "inbox" | "urgent" | "follow-up";
+
+export interface TabConfig {
+  id: TabType;
+  label: string;
+  icon: any;
+  gradient: string;
+}
+
+export interface EmailCompose {
+  to: string;
+  subject: string;
+  content: string;
+  attachments?: File[];
+}
+
+export interface EmailFilter {
+  searchTerm: string;
+  dateRange: string;
+  hasAttachment: boolean | null;
+  isRead: boolean | null;
+}
+
+export type EmailAccountType = "personal" | "professional";
+
+export interface PaginationState {
+  [columnId: string]: {
+    currentPage: number;
+    itemsPerPage: number;
+  };
+}

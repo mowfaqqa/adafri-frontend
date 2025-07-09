@@ -3,7 +3,7 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { EmailColumn as EmailColumnType } from "@/lib/types/email2";
+import { EmailColumn as EmailColumnType } from "@/lib/types/email";
 import React, { useState, useRef, useEffect } from "react";
 
 interface ColumnData {

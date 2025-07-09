@@ -1,16 +1,20 @@
 "use client";
 
-import { useEmailStore } from "@/lib/store/email-store";
+import { useEmailStore } from "@/store/email-store";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Filter, RefreshCw } from "lucide-react";
-import { useState, useEffect, useContext, useCallback } from "react";
+import { ArrowLeft, Filter, RefreshCw, Mail, Clock, Edit, Search, Trash2 } from "lucide-react";
+import { useState, useEffect, useContext } from "react";
 import { Email } from "@/lib/types/email";
-import axios from "axios";
 import { AuthContext } from "@/lib/context/auth";
 import { ComposeModal } from "../AddEmailComponents/ComposeModal";
 import { DraftEmailList } from "./DraftEmailList";
-import { getLinkedEmailId, getDjombiAccessToken, processResponseData } from "@/lib/utils/emails/draftEmailUtils";
+import { getSelectedLinkedEmailId, getSelectedLinkedEmailType } from "@/lib/utils/cookies";
 import { useCombinedAuth } from "@/components/providers/useCombinedAuth";
+import { emailApiService } from "@/lib/services/emailApiService";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { useEmailAccountListener } from "@/lib/hooks/email/useEmailAccountListener";
+import Image from "next/image";
 
 
 interface EmailDraftProps {
@@ -18,145 +22,108 @@ interface EmailDraftProps {
 }
 
 export const EmailDraft = ({ onBack }: EmailDraftProps) => {
-  const { updateDraft } = useEmailStore();
+  // Use email store instead of local state management
+  const { 
+    emails, 
+    isLoading, 
+    loadingError, 
+    fetchEmails,
+    setActiveCategory,
+    updateDraft 
+  } = useEmailStore();
   
   // Move all hooks to the top level
   const { token } = useContext(AuthContext);
   const { djombi } = useCombinedAuth();
-  const [apiDraftEmails, setApiDraftEmails] = useState<Email[]>([]);
+  const djombiTokens = djombi.token || "";
+  
+  // Get current selected email info from cookies
+  const currentSelectedEmailId = getSelectedLinkedEmailId();
+  const currentSelectedEmailType = getSelectedLinkedEmailType();
+  
+  // Local UI state only
   const [filterDate, setFilterDate] = useState<string | null>(null);
   const [sortNewest, setSortNewest] = useState(true);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Add state for controlling the ComposeModal
+  // ComposeModal state
   const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
   const [selectedDraft, setSelectedDraft] = useState<Email | null>(null);
 
-  // Add missing toggleSort function
+  // Listen for email account changes
+  useEmailAccountListener({
+    onEmailAccountChange: (detail) => {
+      console.log('EmailDraft component received email account change:', detail);
+      // The email store will automatically refresh draft emails
+    },
+    onRefreshNeeded: () => {
+      console.log('Email account changed, draft emails will refresh automatically');
+    }
+  });
+
+  // Handle client-side mounting
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Set active category to 'draft' and fetch draft emails when component mounts
+  useEffect(() => {
+    console.log('EmailDraft component mounted, setting active category to draft');
+    setActiveCategory('draft');
+  }, [setActiveCategory]);
+
+  // Separate effect for fetching emails to avoid dependency loops
+  useEffect(() => {
+    // Only fetch if we have both the required auth and the component is mounted
+    if (currentSelectedEmailId && djombiTokens && mounted) {
+      console.log('Fetching draft emails for selected account:', currentSelectedEmailId);
+      fetchEmails('draft', true);
+    }
+  }, [currentSelectedEmailId, djombiTokens, mounted, fetchEmails]);
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    console.log('Manual refresh triggered for draft emails');
+    fetchEmails('draft', true);
+  };
+
+  // Toggle sort function
   const toggleSort = () => {
     setSortNewest(!sortNewest);
   };
 
-  // Memoize processResponseData to prevent unnecessary re-renders
-  const memoizedProcessResponseData = useCallback((data: any) => {
-    return processResponseData(data);
-  }, []);
+  // Get draft emails from store
+  const draftEmails = emails.filter(email => 
+    email.status === "draft" || email.category === "draft"
+  );
 
-  // Use useCallback to memoize the function and include only necessary dependencies
-  const fetchDraftEmails = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  // Apply search filter
+  const filteredEmails = searchTerm 
+    ? draftEmails.filter(email =>
+        email.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        email.to.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        email.content.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : draftEmails;
 
-    try {
-      console.log("Starting fetchDraftEmails...");
+  // Sort by date
+  const sortedEmails = [...filteredEmails].sort((a, b) => {
+    const dateA = new Date(a.timestamp || "").getTime();
+    const dateB = new Date(b.timestamp || "").getTime();
+    return sortNewest ? dateB - dateA : dateA - dateB;
+  });
+  
+  // Filter by date if filterDate is set
+  const displayedEmails = filterDate 
+    ? sortedEmails.filter(email => {
+        const emailDate = new Date(email.timestamp || "").toLocaleDateString();
+        return emailDate === filterDate;
+      })
+    : sortedEmails;
 
-      // Get Djombi token using the utility function
-      const djombiToken = getDjombiAccessToken();
-      console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
-
-      if (!djombiToken) {
-        throw new Error('No Djombi access token available. Please log in again.');
-      }
-
-      // Get linked email ID using the utility function
-      const linkedEmailId = getLinkedEmailId();
-      console.log("Linked Email ID:", linkedEmailId);
-
-      if (!linkedEmailId) {
-        console.log("Checking localStorage for linkedEmailId...");
-        if (typeof window !== 'undefined') {
-          const storageKeys = Object.keys(localStorage);
-          console.log("Available localStorage keys:", storageKeys);
-          console.log("linkedEmailId value:", localStorage.getItem('linkedEmailId'));
-        }
-        throw new Error('No linked email ID found. Please link your email first.');
-      }
-
-      // Use axios instead of fetch for GET request
-      const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
-      console.log("Fetching from API endpoint:", apiEndpoint);
-
-      try {
-        const response = await axios.get(apiEndpoint, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${djombiToken}` // Use Djombi token
-          }
-        });
-
-        console.log("GET response data:", response.data);
-        const formattedEmails = memoizedProcessResponseData(response.data);
-        setApiDraftEmails(formattedEmails);
-      } catch (getError) {
-        console.log("GET request failed:", getError);
-
-        // Alternative: Use POST if the API requires sending data in the body
-        const postEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts';
-        console.log("Trying POST request to:", postEndpoint);
-
-        try {
-          const postResponse = await axios.post(postEndpoint,
-            { email_id: linkedEmailId, content: "" }, // Adding empty content as POST requires it
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${djombiToken}` // Use Djombi token
-              }
-            }
-          );
-
-          console.log("POST response data:", postResponse.data);
-
-          // Check for success/error in POST response
-          if (postResponse.data.success === false) {
-            const errorMessage = postResponse.data.message || 'API request failed';
-            console.error("API POST error:", errorMessage);
-            throw new Error(`API POST error: ${errorMessage}`);
-          }
-
-          // Process the successful POST response
-          const formattedEmails = memoizedProcessResponseData(postResponse.data);
-          setApiDraftEmails(formattedEmails);
-        } catch (postError) {
-          console.error("POST request also failed:", postError);
-          throw postError;
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching draft emails:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch draft emails');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [memoizedProcessResponseData]); // Only include memoizedProcessResponseData as dependency
-
-  useEffect(() => {
-    fetchDraftEmails();
-  }, [fetchDraftEmails]); // Now fetchDraftEmails is included as dependency
-
-  // Handle refresh button click
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchDraftEmails();
-  };
-
-  // Sort and filter emails
-  const sortedAndFilteredEmails = [...apiDraftEmails]
-    .filter(email => {
-      if (!filterDate) return true;
-      const emailDate = new Date(email.timestamp ?? Date.now()).toDateString();
-      return emailDate === filterDate;
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.timestamp ?? Date.now()).getTime();
-      const dateB = new Date(b.timestamp ?? Date.now()).getTime();
-      return sortNewest ? dateB - dateA : dateA - dateB;
-    });
-
+  // Toggle select email
   const toggleSelectEmail = (id: string) => {
     setSelectedEmails(prev =>
       prev.includes(id)
@@ -165,127 +132,99 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
     );
   };
 
+  // Select all emails
   const selectAllEmails = () => {
-    if (selectedEmails.length === sortedAndFilteredEmails.length) {
+    if (selectedEmails.length === displayedEmails.length) {
       setSelectedEmails([]);
     } else {
-      setSelectedEmails(sortedAndFilteredEmails.map(email => email.id || ''));
+      setSelectedEmails(displayedEmails.map(email => email.id || ''));
     }
   };
 
-  // Use useCallback for deleteDrafts to access hooks at component level
-  const deleteDrafts = useCallback(async () => {
-    if (selectedEmails.length === 0) return;
+  // Delete drafts using EmailApiService
+  const deleteDrafts = async () => {
+    if (selectedEmails.length === 0) {
+      toast.warning("Please select drafts to delete");
+      return;
+    }
 
     try {
-      const djombiToken = getDjombiAccessToken();
+      console.log(`Deleting ${selectedEmails.length} draft(s) using EmailApiService`);
       
-      if (!djombiToken) {
-        throw new Error('No Djombi access token found');
-      }
-
-      const linkedEmailId = getLinkedEmailId();
-
-      // Use axios for DELETE requests with Djombi token
-      const deletePromises = selectedEmails.map(id =>
-        axios.delete(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${id}?email_id=${linkedEmailId}`, {
-          headers: {
-            'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
-            'Content-Type': 'application/json'
-          }
-        }).catch(error => {
-          console.log(`DELETE request failed for ID ${id}:`, error);
-          return { status: error.response?.status || 500, ok: false };
-        })
-      );
-
-      const responses = await Promise.all(deletePromises);
-
-      // If any DELETE requests failed, try with POST method for deletion
-      const failedDeletes = responses.filter(response => !response.status || response.status >= 400);
-
-      if (failedDeletes.length > 0) {
-        console.log(`${failedDeletes.length} DELETE requests failed. Trying alternative approach...`);
-
-        // Try POST method for deletion if supported by your API
-        const alternativePromises = selectedEmails.map(id =>
-          axios.post(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/delete`,
-            { draft_id: id },  // Only send draft_id without email_id
-            {
-              headers: {
-                'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
-                'Content-Type': 'application/json'
-              }
-            }
-          ).catch(error => {
-            console.log(`POST delete request failed for ID ${id}:`, error);
-            return { status: error.response?.status || 500, ok: false };
-          })
-        );
-
-        const alternativeResponses = await Promise.all(alternativePromises);
-        const stillFailedDeletes = alternativeResponses.filter(response => !response.status || response.status >= 400);
-
-        if (stillFailedDeletes.length > 0) {
-          throw new Error(`Failed to delete ${stillFailedDeletes.length} drafts using alternative method`);
+      // Delete each selected draft using EmailApiService
+      const deletePromises = selectedEmails.map(async (id) => {
+        try {
+          await emailApiService.deleteDraft(id);
+          return { id, success: true };
+        } catch (error) {
+          console.error(`Failed to delete draft ${id}:`, error);
+          return { id, success: false, error };
         }
+      });
+
+      const results = await Promise.all(deletePromises);
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
+
+      if (successful.length > 0) {
+        toast.success(`Successfully deleted ${successful.length} draft(s)`);
+        
+        // Refresh drafts to update the list
+        setTimeout(() => {
+          fetchEmails('draft', true);
+        }, 500);
       }
 
-      // Remove deleted emails from state
-      setApiDraftEmails(prev =>
-        prev.filter(email => !selectedEmails.includes(email.id || ''))
-      );
+      if (failed.length > 0) {
+        toast.error(`Failed to delete ${failed.length} draft(s)`);
+      }
 
       // Clear selection
       setSelectedEmails([]);
 
     } catch (err) {
       console.error('Error deleting drafts:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete drafts');
+      toast.error('Failed to delete drafts. Please try again.');
     }
-  }, [selectedEmails]);
+  };
 
-  // Update draft using axios instead of fetch
-  const updateDraftInApi = useCallback(async (draftId: string, updatedData: any) => {
+  // Update draft using EmailApiService
+  const updateDraftInApi = async (draftId: string, updatedData: any) => {
     try {
-      const djombiToken = getDjombiAccessToken();
-      const linkedEmailId = getLinkedEmailId();
+      console.log(`Updating draft ${draftId} using EmailApiService`);
       
-      if (!djombiToken) {
-        throw new Error('No Djombi access token found');
+      if (!currentSelectedEmailId) {
+        throw new Error('No selected email account found');
       }
 
-      // Use PUT request with axios to update the existing draft
-      const response = await axios.put(
-        `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${draftId}?email_id=${linkedEmailId}`,
-        updatedData,
-        {
-          headers: {
-            'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const response = await emailApiService.updateDraft({
+        id: draftId,
+        to: updatedData.to || "",
+        subject: updatedData.subject || "",
+        content: updatedData.content || "",
+        email_id: currentSelectedEmailId
+      });
 
-      // Update the local state with the updated draft
-      const updatedEmail = response.data;
-      console.log('Draft updated successfully:', updatedEmail);
+      console.log('Draft updated successfully:', response);
+      toast.success('Draft updated successfully');
 
-      setApiDraftEmails(prev =>
-        prev.map(email =>
-          email.id === draftId ? { ...email, ...updatedData } : email
-        )
-      );
+      // Refresh drafts to show updated data
+      setTimeout(() => {
+        fetchEmails('draft', true);
+      }, 500);
 
-      return updatedEmail;
+      return response;
     } catch (err) {
       console.error('Error updating draft:', err);
+      toast.error('Failed to update draft');
       throw err;
     }
-  }, []);
+  };
 
   // Handler to open ComposeModal with selected draft data
   const handleEditDraft = (email: Email) => {
+    console.log('Opening compose modal for draft:', email.id);
+    
     // Set the selected draft in the store for editing
     if (updateDraft) {
       updateDraft({
@@ -305,101 +244,212 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
   };
 
   // Handler for when the ComposeModal is closed
-  const handleComposeModalClose = (savedDraft?: Email) => {
+  const handleComposeModalClose = () => {
     setIsComposeModalOpen(false);
-
-    // If a draft was saved and it's an edit (has an ID), update the local state
-    if (savedDraft && selectedDraft && savedDraft.id === selectedDraft.id) {
-      setApiDraftEmails(prev =>
-        prev.map(email =>
-          email.id === savedDraft.id ? savedDraft : email
-        )
-      );
-    }
-
     setSelectedDraft(null);
+    
+    // Refresh drafts after closing modal
+    setTimeout(() => {
+      fetchEmails('draft', true);
+    }, 500);
   };
 
   // Handler for saving draft changes
   const handleSaveDraft = async (draftData: Email) => {
     try {
       if (draftData.id) {
-        // Update existing draft
         await updateDraftInApi(draftData.id, {
           to: draftData.to,
           subject: draftData.subject,
           content: draftData.content
         });
-
-        // Update local state
-        setApiDraftEmails(prev =>
-          prev.map(email =>
-            email.id === draftData.id ? draftData : email
-          )
-        );
       }
     } catch (err) {
       console.error('Error saving draft:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save draft');
     }
   };
 
   // Handler for single email deletion
   const handleSingleEmailDelete = (email: Email) => {
     setSelectedEmails([email.id || '']);
-    deleteDrafts();
+    setTimeout(() => {
+      deleteDrafts();
+    }, 100);
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchTerm("");
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto pb-4">
-      {/* Header */}
-      <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]">
-        <div className="sticky top-0 bg-background z-10 p-4 border-b">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              {onBack && (
-                <Button variant="ghost" size="icon" onClick={onBack}>
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              )}
-              <h1 className="text-xl font-semibold">Drafts</h1>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleSort}
-              >
-                Sort: {sortNewest ? "Newest" : "Oldest"}
+    <div className="w-full h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-orange-50">
+      {/* Header Section */}
+      <div className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {onBack && (
+              <Button variant="ghost" size="icon" onClick={onBack} className="hover:bg-slate-100">
+                <ArrowLeft className="w-5 h-5" />
               </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button variant="outline" size="icon">
-                <Filter className="h-4 w-4" />
-              </Button>
+            )}
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Edit className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-800">Draft Emails</h1>
+                <p className="text-sm text-slate-600">
+                  {displayedEmails.length} draft{displayedEmails.length !== 1 ? 's' : ''} saved
+                  {currentSelectedEmailType && (
+                    <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                      {currentSelectedEmailType} account
+                    </span>
+                  )}
+                </p>
+              </div>
             </div>
           </div>
+          
+          <div className="flex items-center gap-3">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <Input
+                placeholder="Search drafts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10 w-64 bg-slate-50 border-slate-200 focus:bg-white"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  onClick={clearSearch}
+                >
+                  <ArrowLeft className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+            
+            {/* Selected Actions */}
+            {selectedEmails.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={deleteDrafts}
+                className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete ({selectedEmails.length})
+              </Button>
+            )}
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={toggleSort}
+              className="bg-white hover:bg-slate-50"
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              {sortNewest ? "Newest First" : "Oldest First"}
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="bg-white hover:bg-slate-50"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            
+            <Button variant="outline" size="sm" className="bg-white hover:bg-slate-50">
+              <Filter className="w-4 h-4 mr-2" />
+              Filter
+            </Button>
+          </div>
         </div>
+      </div>
 
-        {/* Email List */}
-        <div className="overflow-y-auto h-[calc(100%-60px)]">
-          <DraftEmailList
-            emails={sortedAndFilteredEmails}
-            selectedEmails={selectedEmails}
-            isLoading={isLoading}
-            error={error}
-            onSelectEmail={toggleSelectEmail}
-            onSelectAll={selectAllEmails}
-            onEditDraft={handleEditDraft}
-            onDeleteDrafts={deleteDrafts}
-            onRefresh={handleRefresh}
-          />
+      {/* Main Content Area */}
+      <div className="h-[calc(100vh-100px)] overflow-hidden">
+        <div className="h-full bg-white mx-6 my-4 rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+          
+          {/* Content Area */}
+          <div className="h-full overflow-y-auto">
+            {isLoading ? (
+              <div className="flex flex-col justify-center items-center h-full bg-gradient-to-br from-orange-50 to-yellow-50">
+                <div className="relative">
+                  <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
+                  <Edit className="w-8 h-8 text-orange-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <p className="text-slate-600 mt-4 font-medium">Loading draft emails...</p>
+                <p className="text-slate-500 text-sm">Fetching drafts from {currentSelectedEmailType || 'selected'} account</p>
+              </div>
+            ) : loadingError ? (
+              <div className="flex flex-col justify-center items-center h-full bg-gradient-to-br from-red-50 to-orange-50">
+                <div className="p-4 bg-red-100 rounded-full mb-4">
+                  <ArrowLeft className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">Failed to Load Draft Emails</h3>
+                <p className="text-red-600 text-center mb-4 max-w-md">{loadingError}</p>
+                <Button 
+                  onClick={handleRefresh}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
+            ) : displayedEmails.length === 0 ? (
+              <div className="flex flex-col justify-center items-center h-full bg-gradient-to-br from-slate-50 to-gray-50">
+                  <div className="flex items-center justify-center mb-6 mx-auto">
+                    <Image
+                      src="/icons/no-data.svg"
+                      alt="No data"
+                      width={70}
+                      height={70}
+                      className="w-56 h-56"
+                    />
+                  </div>
+                <h3 className="text-xl font-semibold text-slate-800 mb-2">No Draft Emails Found</h3>
+                <p className="text-slate-600 text-center max-w-md">
+                  {searchTerm 
+                    ? `No drafts match your search "${searchTerm}"` 
+                    : currentSelectedEmailType 
+                      ? `No draft emails found in your ${currentSelectedEmailType} account`
+                      : "You haven't saved any draft emails yet"
+                  }
+                </p>
+                {searchTerm && (
+                  <Button 
+                    variant="outline" 
+                    onClick={clearSearch}
+                    className="mt-4"
+                  >
+                    Clear Search
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <DraftEmailList
+                emails={displayedEmails}
+                selectedEmails={selectedEmails}
+                isLoading={isLoading}
+                error={loadingError}
+                onSelectEmail={toggleSelectEmail}
+                onSelectAll={selectAllEmails}
+                onEditDraft={handleEditDraft}
+                onDeleteDrafts={deleteDrafts}
+                onRefresh={handleRefresh}
+                // onSingleDelete={handleSingleEmailDelete}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -411,11 +461,489 @@ export const EmailDraft = ({ onBack }: EmailDraftProps) => {
         draftEmail={selectedDraft}
         onSaveDraft={handleSaveDraft}
       />
+
+      {/* Debug Info (Development Only) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 left-4 bg-black text-white p-3 rounded-lg text-xs max-w-xs z-50">
+          <div className="space-y-1">
+            <div>Selected Email ID: {currentSelectedEmailId || 'None'}</div>
+            <div>Email Type: {currentSelectedEmailType || 'None'}</div>
+            <div>Draft Emails: {draftEmails.length}</div>
+            <div>Displayed: {displayedEmails.length}</div>
+            <div>Selected: {selectedEmails.length}</div>
+            <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default EmailDraft;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 7:46
+// "use client";
+
+// import { useEmailStore } from "@/lib/store/email-store";
+// import { Button } from "@/components/ui/button";
+// import { ArrowLeft, Filter, RefreshCw } from "lucide-react";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import { Email } from "@/lib/types/email";
+// import axios from "axios";
+// import { AuthContext } from "@/lib/context/auth";
+// import { ComposeModal } from "../AddEmailComponents/ComposeModal";
+// import { DraftEmailList } from "./DraftEmailList";
+// import { getLinkedEmailId, getDjombiAccessToken, processResponseData } from "@/lib/utils/emails/draftEmailUtils";
+// import { useCombinedAuth } from "@/components/providers/useCombinedAuth";
+
+
+// interface EmailDraftProps {
+//   onBack?: () => void;
+// }
+
+// export const EmailDraft = ({ onBack }: EmailDraftProps) => {
+//   const { updateDraft } = useEmailStore();
+  
+//   // Move all hooks to the top level
+//   const { token } = useContext(AuthContext);
+//   const { djombi } = useCombinedAuth();
+//   const [apiDraftEmails, setApiDraftEmails] = useState<Email[]>([]);
+//   const [filterDate, setFilterDate] = useState<string | null>(null);
+//   const [sortNewest, setSortNewest] = useState(true);
+//   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+//   const [isRefreshing, setIsRefreshing] = useState(false);
+
+//   // Add state for controlling the ComposeModal
+//   const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
+//   const [selectedDraft, setSelectedDraft] = useState<Email | null>(null);
+
+//   // Add missing toggleSort function
+//   const toggleSort = () => {
+//     setSortNewest(!sortNewest);
+//   };
+
+//   // Memoize processResponseData to prevent unnecessary re-renders
+//   const memoizedProcessResponseData = useCallback((data: any) => {
+//     return processResponseData(data);
+//   }, []);
+
+//   // Use useCallback to memoize the function and include only necessary dependencies
+//   const fetchDraftEmails = useCallback(async () => {
+//     setIsLoading(true);
+//     setError(null);
+
+//     try {
+//       console.log("Starting fetchDraftEmails...");
+
+//       // Get Djombi token using the utility function
+//       const djombiToken = getDjombiAccessToken();
+//       console.log("Djombi token retrieved:", djombiToken ? `${djombiToken.substring(0, 10)}...` : 'No Djombi token found');
+
+//       if (!djombiToken) {
+//         throw new Error('No Djombi access token available. Please log in again.');
+//       }
+
+//       // Get linked email ID using the utility function
+//       const linkedEmailId = getLinkedEmailId();
+//       console.log("Linked Email ID:", linkedEmailId);
+
+//       if (!linkedEmailId) {
+//         console.log("Checking localStorage for linkedEmailId...");
+//         if (typeof window !== 'undefined') {
+//           const storageKeys = Object.keys(localStorage);
+//           console.log("Available localStorage keys:", storageKeys);
+//           console.log("linkedEmailId value:", localStorage.getItem('linkedEmailId'));
+//         }
+//         throw new Error('No linked email ID found. Please link your email first.');
+//       }
+
+//       // Use axios instead of fetch for GET request
+//       const apiEndpoint = `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts?email_id=${encodeURIComponent(linkedEmailId)}&offset=1&limit=20`;
+//       console.log("Fetching from API endpoint:", apiEndpoint);
+
+//       try {
+//         const response = await axios.get(apiEndpoint, {
+//           headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': `Bearer ${djombiToken}` // Use Djombi token
+//           }
+//         });
+
+//         console.log("GET response data:", response.data);
+//         const formattedEmails = memoizedProcessResponseData(response.data);
+//         setApiDraftEmails(formattedEmails);
+//       } catch (getError) {
+//         console.log("GET request failed:", getError);
+
+//         // Alternative: Use POST if the API requires sending data in the body
+//         const postEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts';
+//         console.log("Trying POST request to:", postEndpoint);
+
+//         try {
+//           const postResponse = await axios.post(postEndpoint,
+//             { email_id: linkedEmailId, content: "" }, // Adding empty content as POST requires it
+//             {
+//               headers: {
+//                 'Content-Type': 'application/json',
+//                 'Authorization': `Bearer ${djombiToken}` // Use Djombi token
+//               }
+//             }
+//           );
+
+//           console.log("POST response data:", postResponse.data);
+
+//           // Check for success/error in POST response
+//           if (postResponse.data.success === false) {
+//             const errorMessage = postResponse.data.message || 'API request failed';
+//             console.error("API POST error:", errorMessage);
+//             throw new Error(`API POST error: ${errorMessage}`);
+//           }
+
+//           // Process the successful POST response
+//           const formattedEmails = memoizedProcessResponseData(postResponse.data);
+//           setApiDraftEmails(formattedEmails);
+//         } catch (postError) {
+//           console.error("POST request also failed:", postError);
+//           throw postError;
+//         }
+//       }
+//     } catch (err) {
+//       console.error('Error fetching draft emails:', err);
+//       setError(err instanceof Error ? err.message : 'Failed to fetch draft emails');
+//     } finally {
+//       setIsLoading(false);
+//       setIsRefreshing(false);
+//     }
+//   }, [memoizedProcessResponseData]); // Only include memoizedProcessResponseData as dependency
+
+//   useEffect(() => {
+//     fetchDraftEmails();
+//   }, [fetchDraftEmails]); // Now fetchDraftEmails is included as dependency
+
+//   // Handle refresh button click
+//   const handleRefresh = () => {
+//     setIsRefreshing(true);
+//     fetchDraftEmails();
+//   };
+
+//   // Sort and filter emails
+//   const sortedAndFilteredEmails = [...apiDraftEmails]
+//     .filter(email => {
+//       if (!filterDate) return true;
+//       const emailDate = new Date(email.timestamp ?? Date.now()).toDateString();
+//       return emailDate === filterDate;
+//     })
+//     .sort((a, b) => {
+//       const dateA = new Date(a.timestamp ?? Date.now()).getTime();
+//       const dateB = new Date(b.timestamp ?? Date.now()).getTime();
+//       return sortNewest ? dateB - dateA : dateA - dateB;
+//     });
+
+//   const toggleSelectEmail = (id: string) => {
+//     setSelectedEmails(prev =>
+//       prev.includes(id)
+//         ? prev.filter(emailId => emailId !== id)
+//         : [...prev, id]
+//     );
+//   };
+
+//   const selectAllEmails = () => {
+//     if (selectedEmails.length === sortedAndFilteredEmails.length) {
+//       setSelectedEmails([]);
+//     } else {
+//       setSelectedEmails(sortedAndFilteredEmails.map(email => email.id || ''));
+//     }
+//   };
+
+//   // Use useCallback for deleteDrafts to access hooks at component level
+//   const deleteDrafts = useCallback(async () => {
+//     if (selectedEmails.length === 0) return;
+
+//     try {
+//       const djombiToken = getDjombiAccessToken();
+      
+//       if (!djombiToken) {
+//         throw new Error('No Djombi access token found');
+//       }
+
+//       const linkedEmailId = getLinkedEmailId();
+
+//       // Use axios for DELETE requests with Djombi token
+//       const deletePromises = selectedEmails.map(id =>
+//         axios.delete(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${id}?email_id=${linkedEmailId}`, {
+//           headers: {
+//             'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
+//             'Content-Type': 'application/json'
+//           }
+//         }).catch(error => {
+//           console.log(`DELETE request failed for ID ${id}:`, error);
+//           return { status: error.response?.status || 500, ok: false };
+//         })
+//       );
+
+//       const responses = await Promise.all(deletePromises);
+
+//       // If any DELETE requests failed, try with POST method for deletion
+//       const failedDeletes = responses.filter(response => !response.status || response.status >= 400);
+
+//       if (failedDeletes.length > 0) {
+//         console.log(`${failedDeletes.length} DELETE requests failed. Trying alternative approach...`);
+
+//         // Try POST method for deletion if supported by your API
+//         const alternativePromises = selectedEmails.map(id =>
+//           axios.post(`https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/delete`,
+//             { draft_id: id },  // Only send draft_id without email_id
+//             {
+//               headers: {
+//                 'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
+//                 'Content-Type': 'application/json'
+//               }
+//             }
+//           ).catch(error => {
+//             console.log(`POST delete request failed for ID ${id}:`, error);
+//             return { status: error.response?.status || 500, ok: false };
+//           })
+//         );
+
+//         const alternativeResponses = await Promise.all(alternativePromises);
+//         const stillFailedDeletes = alternativeResponses.filter(response => !response.status || response.status >= 400);
+
+//         if (stillFailedDeletes.length > 0) {
+//           throw new Error(`Failed to delete ${stillFailedDeletes.length} drafts using alternative method`);
+//         }
+//       }
+
+//       // Remove deleted emails from state
+//       setApiDraftEmails(prev =>
+//         prev.filter(email => !selectedEmails.includes(email.id || ''))
+//       );
+
+//       // Clear selection
+//       setSelectedEmails([]);
+
+//     } catch (err) {
+//       console.error('Error deleting drafts:', err);
+//       setError(err instanceof Error ? err.message : 'Failed to delete drafts');
+//     }
+//   }, [selectedEmails]);
+
+//   // Update draft using axios instead of fetch
+//   const updateDraftInApi = useCallback(async (draftId: string, updatedData: any) => {
+//     try {
+//       const djombiToken = getDjombiAccessToken();
+//       const linkedEmailId = getLinkedEmailId();
+      
+//       if (!djombiToken) {
+//         throw new Error('No Djombi access token found');
+//       }
+
+//       // Use PUT request with axios to update the existing draft
+//       const response = await axios.put(
+//         `https://email-service-latest-agqz.onrender.com/api/v1/emails/drafts/${draftId}?email_id=${linkedEmailId}`,
+//         updatedData,
+//         {
+//           headers: {
+//             'Authorization': `Bearer ${djombiToken}`, // Use Djombi token
+//             'Content-Type': 'application/json'
+//           }
+//         }
+//       );
+
+//       // Update the local state with the updated draft
+//       const updatedEmail = response.data;
+//       console.log('Draft updated successfully:', updatedEmail);
+
+//       setApiDraftEmails(prev =>
+//         prev.map(email =>
+//           email.id === draftId ? { ...email, ...updatedData } : email
+//         )
+//       );
+
+//       return updatedEmail;
+//     } catch (err) {
+//       console.error('Error updating draft:', err);
+//       throw err;
+//     }
+//   }, []);
+
+//   // Handler to open ComposeModal with selected draft data
+//   const handleEditDraft = (email: Email) => {
+//     // Set the selected draft in the store for editing
+//     if (updateDraft) {
+//       updateDraft({
+//         id: email.id,
+//         to: email.to || "",
+//         subject: email.subject || "",
+//         content: email.content || "",
+//         status: "draft"
+//       });
+//     }
+
+//     // Set the selected draft for the modal
+//     setSelectedDraft(email);
+
+//     // Open the compose modal
+//     setIsComposeModalOpen(true);
+//   };
+
+//   // Handler for when the ComposeModal is closed
+//   const handleComposeModalClose = (savedDraft?: Email) => {
+//     setIsComposeModalOpen(false);
+
+//     // If a draft was saved and it's an edit (has an ID), update the local state
+//     if (savedDraft && selectedDraft && savedDraft.id === selectedDraft.id) {
+//       setApiDraftEmails(prev =>
+//         prev.map(email =>
+//           email.id === savedDraft.id ? savedDraft : email
+//         )
+//       );
+//     }
+
+//     setSelectedDraft(null);
+//   };
+
+//   // Handler for saving draft changes
+//   const handleSaveDraft = async (draftData: Email) => {
+//     try {
+//       if (draftData.id) {
+//         // Update existing draft
+//         await updateDraftInApi(draftData.id, {
+//           to: draftData.to,
+//           subject: draftData.subject,
+//           content: draftData.content
+//         });
+
+//         // Update local state
+//         setApiDraftEmails(prev =>
+//           prev.map(email =>
+//             email.id === draftData.id ? draftData : email
+//           )
+//         );
+//       }
+//     } catch (err) {
+//       console.error('Error saving draft:', err);
+//       setError(err instanceof Error ? err.message : 'Failed to save draft');
+//     }
+//   };
+
+//   // Handler for single email deletion
+//   const handleSingleEmailDelete = (email: Email) => {
+//     setSelectedEmails([email.id || '']);
+//     deleteDrafts();
+//   };
+
+//   return (
+//     <div className="w-full h-full overflow-y-auto pb-4">
+//       {/* Header */}
+//       <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]">
+//         <div className="sticky top-0 bg-background z-10 p-4 border-b">
+//           <div className="flex justify-between items-center">
+//             <div className="flex items-center space-x-4">
+//               {onBack && (
+//                 <Button variant="ghost" size="icon" onClick={onBack}>
+//                   <ArrowLeft className="h-5 w-5" />
+//                 </Button>
+//               )}
+//               <h1 className="text-xl font-semibold">Drafts</h1>
+//             </div>
+//             <div className="flex items-center space-x-2">
+//               <Button
+//                 variant="outline"
+//                 size="sm"
+//                 onClick={toggleSort}
+//               >
+//                 Sort: {sortNewest ? "Newest" : "Oldest"}
+//               </Button>
+//               <Button
+//                 variant="outline"
+//                 size="icon"
+//                 onClick={handleRefresh}
+//                 disabled={isRefreshing}
+//               >
+//                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+//               </Button>
+//               <Button variant="outline" size="icon">
+//                 <Filter className="h-4 w-4" />
+//               </Button>
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* Email List */}
+//         <div className="overflow-y-auto h-[calc(100%-60px)]">
+//           <DraftEmailList
+//             emails={sortedAndFilteredEmails}
+//             selectedEmails={selectedEmails}
+//             isLoading={isLoading}
+//             error={error}
+//             onSelectEmail={toggleSelectEmail}
+//             onSelectAll={selectAllEmails}
+//             onEditDraft={handleEditDraft}
+//             onDeleteDrafts={deleteDrafts}
+//             onRefresh={handleRefresh}
+//           />
+//         </div>
+//       </div>
+
+//       {/* Compose Modal */}
+//       <ComposeModal
+//         isOpen={isComposeModalOpen}
+//         onClose={handleComposeModalClose}
+//         editMode={true}
+//         draftEmail={selectedDraft}
+//         onSaveDraft={handleSaveDraft}
+//       />
+//     </div>
+//   );
+// };
+
+// export default EmailDraft;
 
 
 

@@ -1,3 +1,4 @@
+// 2. EmailColumn.tsx - Enhanced email move handler
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useState } from "react";
@@ -13,7 +14,7 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { EmailCard } from "./EmailCard";
-import { Email, EmailColumn as EmailColumnType } from "@/lib/types/email2";
+import { Email, EmailColumn as EmailColumnType } from "@/lib/types/email";
 
 interface EmailColumnProps {
     column: EmailColumnType;
@@ -143,7 +144,7 @@ const IconEmojiSelector = ({
     );
 };
 
-// Drag and Drop Email Selector Component
+// Enhanced Drag and Drop Email Selector Component
 const DragDropEmailSelector = ({ 
     emails, 
     currentColumnId, 
@@ -153,10 +154,12 @@ const DragDropEmailSelector = ({
     currentColumnId: string,
     onEmailMove: (emailId: string, targetColumnId: string) => void 
 }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
     
     // Get emails from other columns that can be moved
-    const availableEmails = emails.filter(email => email.status !== currentColumnId);
+    const availableEmails = emails.filter(email => 
+        email.status.toLowerCase() !== currentColumnId.toLowerCase()
+    );
     
     if (availableEmails.length === 0) {
         return (
@@ -167,20 +170,68 @@ const DragDropEmailSelector = ({
         );
     }
 
+    const handleEmailSelect = (emailId: string) => {
+        setSelectedEmails(prev => 
+            prev.includes(emailId) 
+                ? prev.filter(id => id !== emailId)
+                : [...prev, emailId]
+        );
+    };
+
+    const handleMoveSelected = () => {
+        if (selectedEmails.length === 0) return;
+        
+        selectedEmails.forEach(emailId => {
+            onEmailMove(emailId, currentColumnId);
+        });
+        
+        setSelectedEmails([]);
+    };
+
+    const handleMoveAll = () => {
+        availableEmails.forEach(email => {
+            onEmailMove(email.id, currentColumnId);
+        });
+        setSelectedEmails([]);
+    };
+
     return (
-        <div className="space-y-2">
-            <div className="text-sm font-medium text-gray-700 mb-3 px-2">
-                Select emails to move here:
+        <div className="space-y-3">
+            <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-medium text-gray-700">
+                    Select emails to move here:
+                </div>
+                <div className="flex gap-2">
+                    {selectedEmails.length > 0 && (
+                        <Button
+                            size="sm"
+                            onClick={handleMoveSelected}
+                            className="text-xs h-7 px-2"
+                        >
+                            Move Selected ({selectedEmails.length})
+                        </Button>
+                    )}
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleMoveAll}
+                        className="text-xs h-7 px-2"
+                    >
+                        Move All
+                    </Button>
+                </div>
             </div>
+            
             <div className="max-h-64 overflow-y-auto space-y-1">
                 {availableEmails.map((email) => (
                     <div
                         key={email.id}
-                        className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all duration-200 group"
-                        onClick={() => {
-                            onEmailMove(email.id, currentColumnId);
-                            setIsOpen(false);
-                        }}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 group ${
+                            selectedEmails.includes(email.id)
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 bg-white'
+                        }`}
+                        onClick={() => handleEmailSelect(email.id)}
                     >
                         <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
@@ -191,6 +242,11 @@ const DragDropEmailSelector = ({
                                     {email.isUrgent && (
                                         <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                                     )}
+                                    {selectedEmails.includes(email.id) && (
+                                        <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                            <Check className="w-2 h-2 text-white" />
+                                        </div>
+                                    )}
                                 </div>
                                 <h4 className="text-sm font-medium text-gray-900 truncate">
                                     {email.subject}
@@ -199,13 +255,17 @@ const DragDropEmailSelector = ({
                                     From: {email.from}
                                 </p>
                             </div>
-                            <Move className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                            <Move className={`w-4 h-4 transition-colors ${
+                                selectedEmails.includes(email.id) 
+                                    ? 'text-blue-500'
+                                    : 'text-gray-400 group-hover:text-blue-500'
+                            }`} />
                         </div>
                     </div>
                 ))}
             </div>
             <div className="text-xs text-gray-500 px-2 mt-2">
-                Click on any email to move it to this column
+                Click to select emails, then use buttons above to move them
             </div>
         </div>
     );
@@ -273,6 +333,7 @@ const EmailColumn = ({
     const [showDragDropSelector, setShowDragDropSelector] = useState(false);
     const [showIconSelector, setShowIconSelector] = useState(false);
 
+    // Email filtering logic - case insensitive comparison
     const emailsInColumn = emails.filter(
         (email) => email?.status.toLowerCase() === column?.id.toLowerCase()
     );
@@ -285,8 +346,23 @@ const EmailColumn = ({
 
     const isEditing = editingColumnId === column.id;
 
-    // Handle email move
+    // Enhanced email move handler with better error handling and logging
     const handleEmailMove = (emailId: string, targetColumnId: string) => {
+        console.log(`EmailColumn: Moving email ${emailId} from ${column.id} to ${targetColumnId}`);
+        
+        // Validate the move
+        const emailToMove = emails.find(email => email.id === emailId);
+        if (!emailToMove) {
+            console.error(`Email with ID ${emailId} not found`);
+            return;
+        }
+
+        if (emailToMove.status.toLowerCase() === targetColumnId.toLowerCase()) {
+            console.log(`Email ${emailId} is already in column ${targetColumnId}`);
+            return;
+        }
+        
+        // Call the parent handler
         onEmailMove(emailId, targetColumnId);
         setShowDragDropSelector(false);
     };
@@ -427,7 +503,7 @@ const EmailColumn = ({
                             {provided.placeholder}
                         </ol>
 
-                        {/* Drag and Drop Email Button - Trello Style */}
+                        {/* Enhanced Drag and Drop Email Button - Trello Style */}
                         <div className={paginatedEmails.length > 0 ? "mt-2" : "mt-1"}>
                             {!showDragDropSelector ? (
                                 <Button
@@ -467,6 +543,543 @@ const EmailColumn = ({
 };
 
 export default EmailColumn;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// /* eslint-disable @typescript-eslint/no-explicit-any */
+// "use client";
+// import { useState } from "react";
+// import { Droppable, Draggable } from "react-beautiful-dnd";
+// import { MoreHorizontal, Check, X, Move, Mail, Palette } from "lucide-react";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import {
+//     DropdownMenu,
+//     DropdownMenuContent,
+//     DropdownMenuItem,
+//     DropdownMenuTrigger,
+//     DropdownMenuSeparator,
+// } from "@/components/ui/dropdown-menu";
+// import { EmailCard } from "./EmailCard";
+// import { Email, EmailColumn as EmailColumnType } from "@/lib/types/email2";
+
+// interface EmailColumnProps {
+//     column: EmailColumnType;
+//     emails: Email[];
+//     onEditColumn: (column: EmailColumnType) => void;
+//     onDeleteColumn: (column: EmailColumnType) => void;
+//     onUpdateColumnIcon?: (columnId: string, icon: string) => void;
+//     currentPage: number;
+//     onPageChange: (columnId: string, page: number) => void;
+//     itemsPerPage: number;
+//     editingColumnId: string | null;
+//     editingColumnName: string;
+//     onStartEdit: (column: EmailColumnType) => void;
+//     onSaveEdit: () => void;
+//     onCancelEdit: () => void;
+//     onEditNameChange: (name: string) => void;
+//     onEmailMove: (emailId: string, targetColumnId: string) => void;
+// }
+
+// // Icon/Emoji Selector Component
+// const IconEmojiSelector = ({
+//     currentIcon,
+//     onIconSelect,
+//     onClose
+// }: {
+//     currentIcon?: string;
+//     onIconSelect: (icon: string) => void;
+//     onClose: () => void;
+// }) => {
+//     const [activeTab, setActiveTab] = useState<'popular' | 'categories'>('popular');
+
+//     const popularIcons = ['📧', '⭐', '🔥', '✅', '⏰', '📝', '💼', '🎯', '📊', '💌', '🚨', '📅'];
+
+//     const iconCategories = {
+//         Priority: ['🔥', '⚡', '❗', '🚨', '⭐', '💎', '👑', '🎯'],
+//         Action: ['✅', '📝', '🏃‍♂️', '⚡', '🔧', '🛠️', '💪', '🎯'],
+//         Time: ['⏰', '⏳', '📅', '⌛', '🕐', '📆', '⏱️', '🔔'],
+//         Work: ['💼', '📊', '📈', '💻', '📋', '📄', '🏢', '👔'],
+//         Communication: ['📧', '💌', '📬', '📭', '📮', '💬', '🗨️', '📞']
+//     };
+
+//     const IconButton = ({ icon }: { icon: string }) => (
+//         <button
+//             onClick={() => onIconSelect(icon)}
+//             className={`w-8 h-8 flex items-center justify-center rounded-md hover:bg-blue-50 transition-colors text-lg ${
+//                 currentIcon === icon ? 'bg-blue-100 ring-2 ring-blue-400' : ''
+//             }`}
+//         >
+//             {icon}
+//         </button>
+//     );
+
+//     return (
+//         <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80 z-50">
+//             <div className="flex items-center justify-between mb-3">
+//                 <h4 className="text-sm font-medium text-gray-700">Choose Icon</h4>
+//                 <Button
+//                     size="sm"
+//                     variant="ghost"
+//                     className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+//                     onClick={onClose}
+//                 >
+//                     <X className="h-4 w-4" />
+//                 </Button>
+//             </div>
+
+//             {/* Tab Navigation */}
+//             <div className="flex border-b border-gray-200 mb-3">
+//                 <button
+//                     onClick={() => setActiveTab('popular')}
+//                     className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+//                         activeTab === 'popular'
+//                             ? 'border-blue-500 text-blue-600'
+//                             : 'border-transparent text-gray-500 hover:text-gray-700'
+//                     }`}
+//                 >
+//                     Popular
+//                 </button>
+//                 <button
+//                     onClick={() => setActiveTab('categories')}
+//                     className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+//                         activeTab === 'categories'
+//                             ? 'border-blue-500 text-blue-600'
+//                             : 'border-transparent text-gray-500 hover:text-gray-700'
+//                     }`}
+//                 >
+//                     Categories
+//                 </button>
+//             </div>
+
+//             {/* Content */}
+//             <div className="max-h-48 overflow-y-auto">
+//                 {activeTab === 'popular' ? (
+//                     <div className="grid grid-cols-6 gap-2">
+//                         {popularIcons.map((icon) => (
+//                             <IconButton key={icon} icon={icon} />
+//                         ))}
+//                     </div>
+//                 ) : (
+//                     <div className="space-y-3">
+//                         {Object.entries(iconCategories).map(([category, icons]) => (
+//                             <div key={category}>
+//                                 <h5 className="text-xs font-medium text-gray-600 mb-2">{category}</h5>
+//                                 <div className="grid grid-cols-8 gap-1">
+//                                     {icons.map((icon) => (
+//                                         <IconButton key={icon} icon={icon} />
+//                                     ))}
+//                                 </div>
+//                             </div>
+//                         ))}
+//                     </div>
+//                 )}
+//             </div>
+
+//             {/* Remove Icon Option */}
+//             {currentIcon && (
+//                 <div className="mt-3 pt-3 border-t border-gray-200">
+//                     <button
+//                         onClick={() => onIconSelect('')}
+//                         className="w-full text-sm text-gray-600 hover:text-gray-800 py-1"
+//                     >
+//                         Remove Icon
+//                     </button>
+//                 </div>
+//             )}
+//         </div>
+//     );
+// };
+
+// // Drag and Drop Email Selector Component
+// const DragDropEmailSelector = ({ 
+//     emails, 
+//     currentColumnId, 
+//     onEmailMove 
+// }: { 
+//     emails: Email[], 
+//     currentColumnId: string,
+//     onEmailMove: (emailId: string, targetColumnId: string) => void 
+// }) => {
+//     const [isOpen, setIsOpen] = useState(false);
+    
+//     // Get emails from other columns that can be moved
+//     const availableEmails = emails.filter(email => email.status !== currentColumnId);
+    
+//     if (availableEmails.length === 0) {
+//         return (
+//             <div className="text-center py-8 text-gray-500">
+//                 <Mail className="w-8 h-8 mx-auto mb-2 opacity-50" />
+//                 <p className="text-sm">No emails available to move</p>
+//             </div>
+//         );
+//     }
+
+//     return (
+//         <div className="space-y-2">
+//             <div className="text-sm font-medium text-gray-700 mb-3 px-2">
+//                 Select emails to move here:
+//             </div>
+//             <div className="max-h-64 overflow-y-auto space-y-1">
+//                 {availableEmails.map((email) => (
+//                     <div
+//                         key={email.id}
+//                         className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all duration-200 group"
+//                         onClick={() => {
+//                             onEmailMove(email.id, currentColumnId);
+//                             setIsOpen(false);
+//                         }}
+//                     >
+//                         <div className="flex items-start justify-between">
+//                             <div className="flex-1 min-w-0">
+//                                 <div className="flex items-center gap-2 mb-1">
+//                                     <div className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded">
+//                                         From: {email.status}
+//                                     </div>
+//                                     {email.isUrgent && (
+//                                         <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+//                                     )}
+//                                 </div>
+//                                 <h4 className="text-sm font-medium text-gray-900 truncate">
+//                                     {email.subject}
+//                                 </h4>
+//                                 <p className="text-xs text-gray-600 truncate">
+//                                     From: {email.from}
+//                                 </p>
+//                             </div>
+//                             <Move className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+//                         </div>
+//                     </div>
+//                 ))}
+//             </div>
+//             <div className="text-xs text-gray-500 px-2 mt-2">
+//                 Click on any email to move it to this column
+//             </div>
+//         </div>
+//     );
+// };
+
+// // Column Actions Component - Trello Style
+// const ColumnActions = ({
+//     column,
+//     onDeleteColumn,
+//     onChangeIcon
+// }: {
+//     column: EmailColumnType;
+//     onDeleteColumn: (column: EmailColumnType) => void;
+//     onChangeIcon: () => void;
+// }) => {
+//     return (
+//         <DropdownMenu>
+//             <DropdownMenuTrigger asChild>
+//                 <Button
+//                     size="sm"
+//                     variant="ghost"
+//                     className="h-6 w-6 p-0 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded"
+//                 >
+//                     <MoreHorizontal className="h-4 w-4" />
+//                 </Button>
+//             </DropdownMenuTrigger>
+//             <DropdownMenuContent align="end" className="w-40 bg-white border border-gray-200 shadow-lg rounded-sm">
+//                 <DropdownMenuItem 
+//                     onClick={onChangeIcon}
+//                     className="text-gray-700 hover:bg-gray-100 text-sm px-3 py-2 cursor-pointer"
+//                 >
+//                     <Palette className="h-4 w-4 mr-2" />
+//                     Change Icon
+//                 </DropdownMenuItem>
+//                 <DropdownMenuSeparator />
+//                 <DropdownMenuItem 
+//                     onClick={() => onDeleteColumn(column)}
+//                     disabled={["inbox", "urgent", "follow-up"].includes(column.id)}
+//                     className="text-gray-700 hover:bg-gray-100 text-sm px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+//                 >
+//                     Delete
+//                 </DropdownMenuItem>
+//             </DropdownMenuContent>
+//         </DropdownMenu>
+//     );
+// };
+
+// const EmailColumn = ({
+//     column,
+//     emails,
+//     onEditColumn,
+//     onDeleteColumn,
+//     onUpdateColumnIcon,
+//     currentPage,
+//     onPageChange,
+//     itemsPerPage,
+//     editingColumnId,
+//     editingColumnName,
+//     onStartEdit,
+//     onSaveEdit,
+//     onCancelEdit,
+//     onEditNameChange,
+//     onEmailMove
+// }: EmailColumnProps) => {
+//     const [showDragDropSelector, setShowDragDropSelector] = useState(false);
+//     const [showIconSelector, setShowIconSelector] = useState(false);
+
+//     const emailsInColumn = emails.filter(
+//         (email) => email?.status.toLowerCase() === column?.id.toLowerCase()
+//     );
+
+//     // Pagination logic
+//     const totalPages = Math.ceil(emailsInColumn.length / itemsPerPage);
+//     const startIndex = (currentPage - 1) * itemsPerPage;
+//     const endIndex = startIndex + itemsPerPage;
+//     const paginatedEmails = emailsInColumn.slice(startIndex, endIndex);
+
+//     const isEditing = editingColumnId === column.id;
+
+//     // Handle email move
+//     const handleEmailMove = (emailId: string, targetColumnId: string) => {
+//         onEmailMove(emailId, targetColumnId);
+//         setShowDragDropSelector(false);
+//     };
+
+//     // Handle icon selection
+//     const handleIconSelect = (icon: string) => {
+//         if (onUpdateColumnIcon) {
+//             onUpdateColumnIcon(column.id, icon);
+//         }
+//         setShowIconSelector(false);
+//     };
+
+//     return (
+//         <Droppable droppableId={column.id}>
+//             {(provided, snapshot) => (
+//                 <div
+//                     ref={provided.innerRef}
+//                     {...provided.droppableProps}
+//                     className="w-72 flex-shrink-0 rounded-2xl p-2 relative"
+//                     style={{ backgroundColor: '#ebecf0' }}
+//                 >
+//                     <div className={`transition-all duration-300 ${
+//                         snapshot.isDraggingOver ? "bg-blue-50/80 border-blue-400" : ""
+//                     }`}>
+//                         {/* Column Header - Trello Style */}
+//                         <div className="flex justify-between items-center mb-2 px-2">
+//                             <div className="flex-1">
+//                                 {isEditing ? (
+//                                     <div className="flex items-center gap-1">
+//                                         <Input
+//                                             value={editingColumnName}
+//                                             onChange={(e) => onEditNameChange(e.target.value)}
+//                                             onKeyDown={(e) => {
+//                                                 if (e.key === 'Enter') {
+//                                                     onSaveEdit();
+//                                                 } else if (e.key === 'Escape') {
+//                                                     onCancelEdit();
+//                                                 }
+//                                             }}
+//                                             className="h-7 text-sm font-semibold text-gray-800 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white rounded-sm"
+//                                             autoFocus
+//                                         />
+//                                         <Button
+//                                             size="sm"
+//                                             variant="ghost"
+//                                             className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-100 rounded"
+//                                             onClick={onSaveEdit}
+//                                         >
+//                                             <Check className="h-3 w-3" />
+//                                         </Button>
+//                                         <Button
+//                                             size="sm"
+//                                             variant="ghost"
+//                                             className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-100 rounded"
+//                                             onClick={onCancelEdit}
+//                                         >
+//                                             <X className="h-3 w-3" />
+//                                         </Button>
+//                                     </div>
+//                                 ) : (
+//                                     <div className="flex items-center gap-2">
+//                                         <div className="flex items-center gap-2">
+//                                             {column.icon && (
+//                                                 <span className="text-sm">{column.icon}</span>
+//                                             )}
+//                                             <h3 
+//                                                 className="text-sm font-semibold text-gray-700 cursor-pointer hover:text-gray-900 font-sans"
+//                                                 onClick={() => onStartEdit(column)}
+//                                                 title="Click to edit"
+//                                                 style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' }}
+//                                             >
+//                                                 {column.title}
+//                                             </h3>
+//                                         </div>
+//                                         <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
+//                                             {emailsInColumn.length}
+//                                         </span>
+//                                     </div>
+//                                 )}
+//                             </div>
+//                             {!isEditing && (
+//                                 <ColumnActions 
+//                                     column={column} 
+//                                     onDeleteColumn={onDeleteColumn}
+//                                     onChangeIcon={() => setShowIconSelector(true)}
+//                                 />
+//                             )}
+//                         </div>
+
+//                         {/* Icon Selector */}
+//                         {showIconSelector && (
+//                             <div className="absolute top-12 right-2 z-50">
+//                                 <IconEmojiSelector
+//                                     currentIcon={column.icon}
+//                                     onIconSelect={handleIconSelect}
+//                                     onClose={() => setShowIconSelector(false)}
+//                                 />
+//                             </div>
+//                         )}
+
+//                         {/* Emails Container - Trello style */}
+//                         <ol className="space-y-2">
+//                             {paginatedEmails.length > 0 ? (
+//                                 paginatedEmails.map((email, index) => (
+//                                     <li key={email.id}>
+//                                         <Draggable key={email.id} draggableId={email.id} index={startIndex + index}>
+//                                             {(provided, snapshot) => (
+//                                                 <div
+//                                                     ref={provided.innerRef}
+//                                                     {...provided.draggableProps}
+//                                                     {...provided.dragHandleProps}
+//                                                     className={`transform hover:scale-[1.02] transition-transform duration-200 ${
+//                                                         snapshot.isDragging ? "shadow-lg opacity-80" : ""
+//                                                     }`}
+//                                                     style={{
+//                                                         ...provided.draggableProps.style,
+//                                                         animationDelay: `${index * 100}ms`,
+//                                                         animation: 'fadeInUp 0.5s ease-out forwards'
+//                                                     }}
+//                                                 >
+//                                                     <div className="relative rounded-lg border hover:shadow-md hover:border-blue-500 hover:border-2 transition-all cursor-pointer group overflow-hidden border-gray-200 shadow-sm bg-white"
+//                                                         style={{ 
+//                                                             boxShadow: '0 1px 0 rgba(9,30,66,.25)',
+//                                                             borderRadius: '10px',
+//                                                             minHeight: '60px',
+//                                                         }}
+//                                                     >
+//                                                         <EmailCard email={email} index={index} />
+//                                                     </div>
+//                                                 </div>
+//                                             )}
+//                                         </Draggable>
+//                                     </li>
+//                                 ))
+//                             ) : (
+//                                 <div className="rounded-xl border-2 border-dashed border-transparent" />
+//                             )}
+//                             {provided.placeholder}
+//                         </ol>
+
+//                         {/* Drag and Drop Email Button - Trello Style */}
+//                         <div className={paginatedEmails.length > 0 ? "mt-2" : "mt-1"}>
+//                             {!showDragDropSelector ? (
+//                                 <Button
+//                                     variant="ghost"
+//                                     className="w-full justify-start text-gray-600 hover:text-gray-800 hover:!bg-gray-400 transition-colors rounded-sm py-1.5 px-2 text-sm font-normal h-auto"
+//                                     onClick={() => setShowDragDropSelector(true)}
+//                                 >
+//                                     <Move className="w-4 h-4 mr-1" />
+//                                     Drag & drop mail
+//                                 </Button>
+//                             ) : (
+//                                 <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+//                                     <div className="flex items-center justify-between mb-3">
+//                                         <h4 className="text-sm font-medium text-gray-700">Move emails here</h4>
+//                                         <Button
+//                                             size="sm"
+//                                             variant="ghost"
+//                                             className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+//                                             onClick={() => setShowDragDropSelector(false)}
+//                                         >
+//                                             <X className="h-4 w-4" />
+//                                         </Button>
+//                                     </div>
+//                                     <DragDropEmailSelector
+//                                         emails={emails}
+//                                         currentColumnId={column.id}
+//                                         onEmailMove={handleEmailMove}
+//                                     />
+//                                 </div>
+//                             )}
+//                         </div>
+//                     </div>
+//                 </div>
+//             )}
+//         </Droppable>
+//     );
+// };
+
+// export default EmailColumn;
 
 
 

@@ -16,6 +16,10 @@ import { Mail } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuthContext } from "@/lib/context/auth";
 import { useCombinedAuth } from "../../providers/useCombinedAuth";
+import { 
+    setSelectedLinkedEmail, 
+    getSelectedLinkedEmailId 
+} from "@/lib/utils/cookies";
 
 // Explicitly define allowed providers
 const ALLOWED_PROVIDERS = [
@@ -33,7 +37,6 @@ interface DjombiTokens {
 
 interface EmailProviderMap {
     [domain: string]: string;
-    // djombiTokens?: DjombiTokens | null;
 }
 
 // Define Email account interface
@@ -41,12 +44,14 @@ interface LinkedEmail {
     id: string;
     email: string;
     provider: string;
-    type?: string;
+    type?: string | null;
     imapHost?: string;
     imapPort?: number;
     smtpHost?: string;
     smtpPort?: number;
-    // Add other fields as needed
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
 }
 
 // Email provider detection configuration
@@ -63,7 +68,7 @@ const EMAIL_PROVIDERS: EmailProviderMap = {
 };
 
 export function LinkEmailModal() {
-    // Get auth context inside the component body
+    // Use consistent auth pattern like your other components
     const { token, user } = useContext(AuthContext);
     const { djombi } = useCombinedAuth();
     const djombiTokens = djombi.token || "";
@@ -83,46 +88,47 @@ export function LinkEmailModal() {
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-    const [linkedEmail, setLinkedEmail] = useState<LinkedEmail | null>(null);
-    const [fetchingLinkedEmail, setFetchingLinkedEmail] = useState(false);
+    const [linkedEmails, setLinkedEmails] = useState<LinkedEmail[]>([]);
+    const [fetchingLinkedEmails, setFetchingLinkedEmails] = useState(false);
+    const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
     
-    // Function to get access token from localStorage
-    const getAccessToken = (): string | null => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('access_token');
-        }
-        return null;
+    // Function to set selected linked email ID and type in cookies
+    const handleSetSelectedLinkedEmail = (emailId: string, type: string | null): void => {
+        setSelectedLinkedEmail(emailId, type);
+        console.log('Stored selected linked email ID and type in cookies:', emailId, type);
     };
 
-    // Function to set access token in localStorage
-    const setAccessTokenInStorage = (tokenValue: string): void => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('access_token', tokenValue);
-        }
+    // Function to get selected linked email ID from cookies
+    const handleGetSelectedLinkedEmailId = (): string | null => {
+        return getSelectedLinkedEmailId();
     };
 
-    // Function to set linked email ID in localStorage
-    const setLinkedEmailId = (emailId: string): void => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('linkedEmailId', emailId);
-            console.log('Stored linked email ID in localStorage:', emailId);
-        }
-    };
-
-    // Function to fetch linked email - memoized to prevent unnecessary re-renders
-    const fetchLinkedEmail = useCallback(async () => {
+    // Function to fetch linked emails with proper auth and offset
+    const fetchLinkedEmails = useCallback(async () => {
         try {
-            setFetchingLinkedEmail(true);
+            setFetchingLinkedEmails(true);
+            setErrorMessage('');
             
-            // Get access token from localStorage or context
-            const accessToken = getAccessToken() || token?.access_token;
-            
-            if (!accessToken) {
-                console.log('User not logged in, cannot fetch linked email');
+            // Check if djombi token is available - consistent with your main component pattern
+            if (!djombiTokens) {
+                console.log('No djombi token available');
+                setErrorMessage('Authentication token not available');
                 return;
             }
 
-            const response = await fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails?offset=1&limit=20', {
+            if (!djombi.isAuthenticated) {
+                console.log('User not authenticated with djombi');
+                setErrorMessage('User not authenticated');
+                return;
+            }
+
+            console.log("Djombi token available:", djombiTokens ? `${djombiTokens.substring(0, 10)}...` : 'No token');
+
+            // Fixed: Use offset=0 instead of offset=1 (API expects 0-based indexing)
+            const apiEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails?offset=1&limit=20';
+            console.log("Fetching linked emails from:", apiEndpoint);
+
+            const response = await fetch(apiEndpoint, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${djombiTokens}`,
@@ -130,34 +136,64 @@ export function LinkEmailModal() {
                 }
             });
 
+            const responseText = await response.text();
+            console.log("Raw response:", responseText);
+
             if (!response.ok) {
-                throw new Error('Failed to fetch linked email');
+                throw new Error(`API error: ${response.status} ${response.statusText}`);
             }
 
-            const data = await response.json();
-            console.log('Fetched linked email:', data);
+            let data;
+            try {
+                data = JSON.parse(responseText);
+                console.log('Parsed linked emails response:', data);
+            } catch (parseError) {
+                console.error("Failed to parse response as JSON:", parseError);
+                throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
+            }
 
-            // Check if there's a linked email account
-            if (data && data.data && data.data.length > 0) {
-                const emailAccount = data.data[0]; // Get first linked email
-                setLinkedEmail(emailAccount);
+            // Check if there are linked email accounts
+            if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
+                setLinkedEmails(data.data);
                 
-                // Store linked email ID in localStorage
-                if (emailAccount.id) {
-                    setLinkedEmailId(emailAccount.id);
+                // Set the first email as selected if none is selected
+                const currentSelectedId = handleGetSelectedLinkedEmailId();
+                if (!currentSelectedId || !data.data.find((email: LinkedEmail) => email.id === currentSelectedId)) {
+                    const firstEmail = data.data[0];
+                    setSelectedEmailId(firstEmail.id);
+                    handleSetSelectedLinkedEmail(firstEmail.id, firstEmail.type ?? null);
+                } else {
+                    setSelectedEmailId(currentSelectedId);
                 }
+            } else {
+                console.log('No linked emails found or invalid response structure');
+                setLinkedEmails([]);
+                setSelectedEmailId(null);
             }
         } catch (error) {
-            console.error('Error fetching linked email:', error);
+            console.error('Error fetching linked emails:', error);
+            setErrorMessage(error instanceof Error ? error.message : 'Failed to fetch linked emails');
+            setLinkedEmails([]);
         } finally {
-            setFetchingLinkedEmail(false);
+            setFetchingLinkedEmails(false);
         }
-    }, [djombiTokens, token?.access_token]);
+    }, [djombiTokens, djombi.isAuthenticated]); // Dependencies match your main component pattern
 
-    // Fetch linked email on component mount
+    // Fetch linked emails when djombi auth is ready - consistent with your main component
     useEffect(() => {
-        fetchLinkedEmail();
-    }, [fetchLinkedEmail]);
+        if (djombi.isAuthenticated && djombiTokens) {
+            fetchLinkedEmails();
+        }
+    }, [djombi.isAuthenticated, djombiTokens, fetchLinkedEmails]);
+
+    // Function to handle email selection
+    const handleEmailSelection = (emailId: string) => {
+        const selectedEmail = linkedEmails.find(email => email.id === emailId);
+        if (selectedEmail) {
+            setSelectedEmailId(emailId);
+            handleSetSelectedLinkedEmail(emailId, selectedEmail.type ?? null);
+        }
+    };
 
     // Detect provider from email address
     const detectProviderFromEmail = (email: string): string | null => {
@@ -208,13 +244,16 @@ export function LinkEmailModal() {
         try {
             setIsLoading(true);
     
-            // Get access token from localStorage or context
-            const accessToken = getAccessToken() || token?.access_token;
-            console.log('Access token from storage/context:', accessToken ? 'Token exists' : 'No token');
-            
-            if (!accessToken) {
-                throw new Error('You must be logged in to link an email');
+            // Check if djombi token is available
+            if (!djombiTokens) {
+                throw new Error('Authentication token not available. Please log in again.');
             }
+
+            if (!djombi.isAuthenticated) {
+                throw new Error('User not authenticated. Please log in again.');
+            }
+
+            console.log("Using djombi token for link email:", djombiTokens ? `${djombiTokens.substring(0, 10)}...` : 'No token');
     
             // Ensure provider is valid
             const provider = emailCredentials.provider || "custom";
@@ -239,8 +278,11 @@ export function LinkEmailModal() {
             };
     
             console.log('Sending request payload:', JSON.stringify(requestPayload));
+
+            const apiEndpoint = 'https://email-service-latest-agqz.onrender.com/api/v1/emails/link';
+            console.log("Linking email to:", apiEndpoint);
     
-            const response = await fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails/link', {
+            const response = await fetch(apiEndpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -248,25 +290,32 @@ export function LinkEmailModal() {
                 },
                 body: JSON.stringify(requestPayload),
             });
+
+            const responseText = await response.text();
+            console.log("Link email raw response:", responseText);
     
             // Check response
             if (!response.ok) {
-                const errorData = await response.json();
+                let errorData;
+                try {
+                    errorData = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 throw new Error(errorData.message || 'Failed to link email');
             }
     
-            const data = await response.json();
-            console.log('Email linked successfully:', data);
-    
-            // Store linked email ID in localStorage
-            if (data.id) {
-                setLinkedEmailId(data.id);
-            } else if (data.data && data.data.id) {
-                setLinkedEmailId(data.data.id);
+            let data;
+            try {
+                data = JSON.parse(responseText);
+                console.log('Email linked successfully:', data);
+            } catch (parseError) {
+                console.error("Failed to parse link response as JSON:", parseError);
+                throw new Error(`Invalid response format from server`);
             }
-            
-            // Fetch the linked email to update our state
-            await fetchLinkedEmail();
+    
+            // Fetch the linked emails to update our state
+            await fetchLinkedEmails();
     
             // Show success and reset
             setSuccessMessage('Email linked successfully!');
@@ -302,13 +351,18 @@ export function LinkEmailModal() {
 
     // Display different button text based on linked email status
     const getButtonText = () => {
-        if (fetchingLinkedEmail) {
+        if (fetchingLinkedEmails) {
             return "Checking...";
         }
-        if (linkedEmail) {
-            return "Update Email";
+        if (linkedEmails.length > 0) {
+            return linkedEmails.length === 1 ? "Manage Email" : "Manage Emails";
         }
         return "Link Email";
+    };
+
+    // Get selected email object
+    const getSelectedEmail = () => {
+        return linkedEmails.find(email => email.id === selectedEmailId) || null;
     };
 
     return (
@@ -325,14 +379,50 @@ export function LinkEmailModal() {
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>
-                            {linkedEmail ? "Update Email Account" : "Link Email Account"}
+                            {linkedEmails.length > 0 ? "Manage Email Accounts" : "Link Email Account"}
                         </DialogTitle>
                         <DialogDescription>
-                            {linkedEmail 
-                                ? `Currently linked to ${linkedEmail.email}${linkedEmail.type ? ` (${linkedEmail.type})` : ''}. You can update your settings or link a different account.` 
+                            {linkedEmails.length > 0 
+                                ? `You have ${linkedEmails.length} linked email account${linkedEmails.length > 1 ? 's' : ''}. Select an active account or add a new one.`
                                 : "Connect your email account to enable automated email processing."}
                         </DialogDescription>
                     </DialogHeader>
+
+                    {/* Display linked emails if any */}
+                    {linkedEmails.length > 0 && (
+                        <div className="mb-4">
+                            <Label className="text-sm font-medium mb-2 block">
+                                Linked Accounts ({linkedEmails.length})
+                            </Label>
+                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                {linkedEmails.map((email) => (
+                                    <div
+                                        key={email.id}
+                                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                            selectedEmailId === email.id 
+                                                ? 'border-blue-500 bg-blue-50' 
+                                                : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                        onClick={() => handleEmailSelection(email.id)}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <div className="font-medium text-sm">{email.email}</div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {email.provider} • {email.type || 'No type'} • {email.isActive ? 'Active' : 'Inactive'}
+                                                </div>
+                                            </div>
+                                            {selectedEmailId === email.id && (
+                                                <div className="text-xs text-blue-600 font-medium">
+                                                    Selected
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {errorMessage && (
                         <Alert variant="destructive" className="mb-4">
@@ -346,177 +436,184 @@ export function LinkEmailModal() {
                         </Alert>
                     )}
 
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="email" className="text-right">
-                                Email
-                            </Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                value={emailCredentials.email}
-                                onChange={(e) => handleEmailChange(e.target.value)}
-                                placeholder={linkedEmail ? linkedEmail.email : "youremail@example.com"}
-                                className="col-span-3"
-                                disabled={isLoading}
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="password" className="text-right">
-                                Password
-                            </Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={emailCredentials.password}
-                                onChange={(e) =>
-                                    setEmailCredentials({
-                                        ...emailCredentials,
-                                        password: e.target.value,
-                                    })
-                                }
-                                className="col-span-3"
-                                disabled={isLoading}
-                            />
-                        </div>
-
-                        {/* Email Type Selection */}
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">
-                                Type
-                            </Label>
-                            <div className="col-span-3">
-                                <RadioGroup
-                                    value={emailCredentials.type}
-                                    onValueChange={(value) =>
+                    <div className="border-t pt-4">
+                        <Label className="text-sm font-medium mb-3 block">
+                            Add New Email Account
+                        </Label>
+                        
+                        <div className="grid gap-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="email" className="text-right">
+                                    Email
+                                </Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    value={emailCredentials.email}
+                                    onChange={(e) => handleEmailChange(e.target.value)}
+                                    placeholder="youremail@example.com"
+                                    className="col-span-3"
+                                    disabled={isLoading}
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="password" className="text-right">
+                                    Password
+                                </Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    value={emailCredentials.password}
+                                    onChange={(e) =>
                                         setEmailCredentials({
                                             ...emailCredentials,
-                                            type: value,
+                                            password: e.target.value,
                                         })
                                     }
-                                    className="flex flex-row space-x-6"
+                                    className="col-span-3"
                                     disabled={isLoading}
-                                >
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="personal" id="personal" />
-                                        <Label htmlFor="personal" className="text-sm font-normal">
-                                            Personal
-                                        </Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="professional" id="professional" />
-                                        <Label htmlFor="professional" className="text-sm font-normal">
-                                            Professional
-                                        </Label>
-                                    </div>
-                                </RadioGroup>
+                                />
                             </div>
-                        </div>
 
-                        {/* Display detected provider */}
-                        {emailCredentials.provider && !showAdvancedSettings && (
+                            {/* Email Type Selection */}
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <div className="text-right text-sm text-gray-500">
-                                    Provider:
-                                </div>
-                                <div className="col-span-3 text-sm">
-                                    <span className="font-medium capitalize">
-                                        {emailCredentials.provider}
-                                    </span>
-                                    <span className="text-gray-500 ml-1">
-                                        {emailCredentials.provider === 'custom' 
-                                            ? 'custom/unknown provider' 
-                                            : 'detected'}
-                                    </span>
+                                <Label className="text-right">
+                                    Type
+                                </Label>
+                                <div className="col-span-3">
+                                    <RadioGroup
+                                        value={emailCredentials.type}
+                                        onValueChange={(value) =>
+                                            setEmailCredentials({
+                                                ...emailCredentials,
+                                                type: value,
+                                            })
+                                        }
+                                        className="flex flex-row space-x-6"
+                                        disabled={isLoading}
+                                    >
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="personal" id="personal" />
+                                            <Label htmlFor="personal" className="text-sm font-normal">
+                                                Personal
+                                            </Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="professional" id="professional" />
+                                            <Label htmlFor="professional" className="text-sm font-normal">
+                                                Professional
+                                            </Label>
+                                        </div>
+                                    </RadioGroup>
                                 </div>
                             </div>
-                        )}
 
-                        {/* Advanced settings for custom email providers */}
-                        {showAdvancedSettings && (
-                            <>
-                                <div className="grid grid-cols-1 gap-2 mt-2">
-                                    <div className="text-sm font-medium text-gray-500 mb-2">
-                                        Custom Server Settings
+                            {/* Display detected provider */}
+                            {emailCredentials.provider && !showAdvancedSettings && (
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <div className="text-right text-sm text-gray-500">
+                                        Provider:
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="imapHost" className="text-right">
-                                            IMAP Host
-                                        </Label>
-                                        <Input
-                                            id="imapHost"
-                                            type="text"
-                                            value={emailCredentials.imapHost}
-                                            onChange={(e) =>
-                                                setEmailCredentials({
-                                                    ...emailCredentials,
-                                                    imapHost: e.target.value,
-                                                })
-                                            }
-                                            placeholder="imap.example.com"
-                                            className="col-span-3"
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="imapPort" className="text-right">
-                                            IMAP Port
-                                        </Label>
-                                        <Input
-                                            id="imapPort"
-                                            type="number"
-                                            value={emailCredentials.imapPort}
-                                            onChange={(e) =>
-                                                setEmailCredentials({
-                                                    ...emailCredentials,
-                                                    imapPort: parseInt(e.target.value) || 993,
-                                                })
-                                            }
-                                            className="col-span-3"
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="smtpHost" className="text-right">
-                                            SMTP Host
-                                        </Label>
-                                        <Input
-                                            id="smtpHost"
-                                            type="text"
-                                            value={emailCredentials.smtpHost}
-                                            onChange={(e) =>
-                                                setEmailCredentials({
-                                                    ...emailCredentials,
-                                                    smtpHost: e.target.value,
-                                                })
-                                            }
-                                            placeholder="smtp.example.com"
-                                            className="col-span-3"
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="smtpPort" className="text-right">
-                                            SMTP Port
-                                        </Label>
-                                        <Input
-                                            id="smtpPort"
-                                            type="number"
-                                            value={emailCredentials.smtpPort}
-                                            onChange={(e) =>
-                                                setEmailCredentials({
-                                                    ...emailCredentials,
-                                                    smtpPort: parseInt(e.target.value) || 587,
-                                                })
-                                            }
-                                            className="col-span-3"
-                                            disabled={isLoading}
-                                        />
+                                    <div className="col-span-3 text-sm">
+                                        <span className="font-medium capitalize">
+                                            {emailCredentials.provider}
+                                        </span>
+                                        <span className="text-gray-500 ml-1">
+                                            {emailCredentials.provider === 'custom' 
+                                                ? 'custom/unknown provider' 
+                                                : 'detected'}
+                                        </span>
                                     </div>
                                 </div>
-                            </>
-                        )}
+                            )}
+
+                            {/* Advanced settings for custom email providers */}
+                            {showAdvancedSettings && (
+                                <>
+                                    <div className="grid grid-cols-1 gap-2 mt-2">
+                                        <div className="text-sm font-medium text-gray-500 mb-2">
+                                            Custom Server Settings
+                                        </div>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="imapHost" className="text-right">
+                                                IMAP Host
+                                            </Label>
+                                            <Input
+                                                id="imapHost"
+                                                type="text"
+                                                value={emailCredentials.imapHost}
+                                                onChange={(e) =>
+                                                    setEmailCredentials({
+                                                        ...emailCredentials,
+                                                        imapHost: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="imap.example.com"
+                                                className="col-span-3"
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="imapPort" className="text-right">
+                                                IMAP Port
+                                            </Label>
+                                            <Input
+                                                id="imapPort"
+                                                type="number"
+                                                value={emailCredentials.imapPort}
+                                                onChange={(e) =>
+                                                    setEmailCredentials({
+                                                        ...emailCredentials,
+                                                        imapPort: parseInt(e.target.value) || 993,
+                                                    })
+                                                }
+                                                className="col-span-3"
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="smtpHost" className="text-right">
+                                                SMTP Host
+                                            </Label>
+                                            <Input
+                                                id="smtpHost"
+                                                type="text"
+                                                value={emailCredentials.smtpHost}
+                                                onChange={(e) =>
+                                                    setEmailCredentials({
+                                                        ...emailCredentials,
+                                                        smtpHost: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="smtp.example.com"
+                                                className="col-span-3"
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="smtpPort" className="text-right">
+                                                SMTP Port
+                                            </Label>
+                                            <Input
+                                                id="smtpPort"
+                                                type="number"
+                                                value={emailCredentials.smtpPort}
+                                                onChange={(e) =>
+                                                    setEmailCredentials({
+                                                        ...emailCredentials,
+                                                        smtpPort: parseInt(e.target.value) || 587,
+                                                    })
+                                                }
+                                                className="col-span-3"
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
+
                     <DialogFooter>
                         <Button
                             type="button"
@@ -531,7 +628,7 @@ export function LinkEmailModal() {
                             onClick={handleLinkEmail}
                             disabled={isLoading}
                         >
-                            {isLoading ? 'Linking...' : linkedEmail ? 'Update Account' : 'Link Account'}
+                            {isLoading ? 'Linking...' : 'Link New Account'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -539,6 +636,622 @@ export function LinkEmailModal() {
         </>
     );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 7/8/2025
+// "use client";
+// import { useState, useEffect, useContext, useCallback } from "react";
+// import {
+//     Dialog,
+//     DialogContent,
+//     DialogHeader,
+//     DialogTitle,
+//     DialogFooter,
+//     DialogDescription,
+// } from "@/components/ui/dialog";
+// import { Label } from "@/components/ui/label";
+// import { Input } from "@/components/ui/input";
+// import { Button } from "@/components/ui/button";
+// import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+// import { Mail } from "lucide-react";
+// import { Alert, AlertDescription } from "@/components/ui/alert";
+// import { AuthContext } from "@/lib/context/auth";
+// import { useCombinedAuth } from "../../providers/useCombinedAuth";
+
+// // Explicitly define allowed providers
+// const ALLOWED_PROVIDERS = [
+//     "gmail", 
+//     "outlook", 
+//     "yahoo", 
+//     "custom", 
+//     "googleWorkspace"
+// ];
+
+// interface DjombiTokens {
+//   accessTokenAdafri: string;
+//   accessTokenDjombi: string;
+// }
+
+// interface EmailProviderMap {
+//     [domain: string]: string;
+//     // djombiTokens?: DjombiTokens | null;
+// }
+
+// // Define Email account interface
+// interface LinkedEmail {
+//     id: string;
+//     email: string;
+//     provider: string;
+//     type?: string;
+//     imapHost?: string;
+//     imapPort?: number;
+//     smtpHost?: string;
+//     smtpPort?: number;
+//     // Add other fields as needed
+// }
+
+// // Email provider detection configuration
+// const EMAIL_PROVIDERS: EmailProviderMap = {
+//     "gmail.com": "gmail",
+//     "googlemail.com": "gmail",
+//     "outlook.com": "outlook",
+//     "hotmail.com": "outlook",
+//     "live.com": "outlook", 
+//     "msn.com": "outlook",
+//     "yahoo.com": "yahoo",
+//     "yahoo.co.uk": "yahoo",
+//     "ymail.com": "yahoo",
+// };
+
+// export function LinkEmailModal() {
+//     // Get auth context inside the component body
+//     const { token, user } = useContext(AuthContext);
+//     const { djombi } = useCombinedAuth();
+//     const djombiTokens = djombi.token || "";
+    
+//     const [isOpen, setIsOpen] = useState(false);
+//     const [emailCredentials, setEmailCredentials] = useState({
+//         email: "",
+//         password: "",
+//         provider: "custom", // Default to custom
+//         type: "personal", // Default to personal
+//         imapHost: "",
+//         imapPort: 993,
+//         smtpHost: "",
+//         smtpPort: 587
+//     });
+//     const [isLoading, setIsLoading] = useState(false);
+//     const [errorMessage, setErrorMessage] = useState('');
+//     const [successMessage, setSuccessMessage] = useState('');
+//     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+//     const [linkedEmail, setLinkedEmail] = useState<LinkedEmail | null>(null);
+//     const [fetchingLinkedEmail, setFetchingLinkedEmail] = useState(false);
+    
+//     // Function to get access token from localStorage
+//     const getAccessToken = (): string | null => {
+//         if (typeof window !== 'undefined') {
+//             return localStorage.getItem('access_token');
+//         }
+//         return null;
+//     };
+
+//     // Function to set access token in localStorage
+//     const setAccessTokenInStorage = (tokenValue: string): void => {
+//         if (typeof window !== 'undefined') {
+//             localStorage.setItem('access_token', tokenValue);
+//         }
+//     };
+
+//     // Function to set linked email ID in localStorage
+//     const setLinkedEmailId = (emailId: string): void => {
+//         if (typeof window !== 'undefined') {
+//             localStorage.setItem('linkedEmailId', emailId);
+//             console.log('Stored linked email ID in localStorage:', emailId);
+//         }
+//     };
+
+//     // Function to fetch linked email - memoized to prevent unnecessary re-renders
+//     const fetchLinkedEmail = useCallback(async () => {
+//         try {
+//             setFetchingLinkedEmail(true);
+            
+//             // Get access token from localStorage or context
+//             const accessToken = getAccessToken() || token?.access_token;
+            
+//             if (!accessToken) {
+//                 console.log('User not logged in, cannot fetch linked email');
+//                 return;
+//             }
+
+//             const response = await fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails?offset=1&limit=20', {
+//                 method: 'GET',
+//                 headers: {
+//                     'Authorization': `Bearer ${djombiTokens}`,
+//                     'Content-Type': 'application/json'
+//                 }
+//             });
+
+//             if (!response.ok) {
+//                 throw new Error('Failed to fetch linked email');
+//             }
+
+//             const data = await response.json();
+//             console.log('Fetched linked email:', data);
+
+//             // Check if there's a linked email account
+//             if (data && data.data && data.data.length > 0) {
+//                 const emailAccount = data.data[0]; // Get first linked email
+//                 setLinkedEmail(emailAccount);
+                
+//                 // Store linked email ID in localStorage
+//                 if (emailAccount.id) {
+//                     setLinkedEmailId(emailAccount.id);
+//                 }
+//             }
+//         } catch (error) {
+//             console.error('Error fetching linked email:', error);
+//         } finally {
+//             setFetchingLinkedEmail(false);
+//         }
+//     }, [djombiTokens, token?.access_token]);
+
+//     // Fetch linked email on component mount
+//     useEffect(() => {
+//         fetchLinkedEmail();
+//     }, [fetchLinkedEmail]);
+
+//     // Detect provider from email address
+//     const detectProviderFromEmail = (email: string): string | null => {
+//         if (!email || !email.includes('@')) return null;
+        
+//         const domain = email.split('@')[1].toLowerCase().trim();
+      
+//         // Return provider if in predefined list, otherwise return null
+//         return EMAIL_PROVIDERS[domain] || null;
+//     };
+
+//     // Update email and check provider
+//     const handleEmailChange = (email: string) => {
+//         const detectedProvider = detectProviderFromEmail(email);
+        
+//         const newCredentials = { 
+//             ...emailCredentials, 
+//             email,
+//             provider: detectedProvider || "custom" // Default to custom if no provider detected
+//         };
+        
+//         // Show advanced settings for unknown providers
+//         setShowAdvancedSettings(detectedProvider === null);
+        
+//         setEmailCredentials(newCredentials);
+//         console.log("Updated credentials:", newCredentials);
+//     };
+
+//     const handleLinkEmail = async () => {
+//         // Reset messages
+//         setErrorMessage('');
+//         setSuccessMessage('');
+    
+//         // Basic validation
+//         if (!emailCredentials.email || !emailCredentials.password) {
+//             setErrorMessage('Please enter both email and password');
+//             return;
+//         }
+    
+//         // Validation for custom providers
+//         if (showAdvancedSettings) {
+//             if (!emailCredentials.imapHost || !emailCredentials.smtpHost) {
+//                 setErrorMessage('Please enter IMAP and SMTP server details');
+//                 return;
+//             }
+//         }
+    
+//         try {
+//             setIsLoading(true);
+    
+//             // Get access token from localStorage or context
+//             const accessToken = getAccessToken() || token?.access_token;
+//             console.log('Access token from storage/context:', accessToken ? 'Token exists' : 'No token');
+            
+//             if (!accessToken) {
+//                 throw new Error('You must be logged in to link an email');
+//             }
+    
+//             // Ensure provider is valid
+//             const provider = emailCredentials.provider || "custom";
+            
+//             // Validate provider
+//             if (!ALLOWED_PROVIDERS.includes(provider)) {
+//                 throw new Error(`Invalid provider. Must be one of: ${ALLOWED_PROVIDERS.join(', ')}`);
+//             }
+    
+//             // Prepare request payload
+//             const requestPayload = {
+//                 provider,
+//                 email: emailCredentials.email,
+//                 password: emailCredentials.password,
+//                 type: emailCredentials.type, // Add the type field
+//                 ...(showAdvancedSettings && {
+//                     imapHost: emailCredentials.imapHost,
+//                     imapPort: Number(emailCredentials.imapPort),
+//                     smtpHost: emailCredentials.smtpHost,
+//                     smtpPort: Number(emailCredentials.smtpPort)
+//                 })
+//             };
+    
+//             console.log('Sending request payload:', JSON.stringify(requestPayload));
+    
+//             const response = await fetch('https://email-service-latest-agqz.onrender.com/api/v1/emails/link', {
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Authorization': `Bearer ${djombiTokens}`,
+//                 },
+//                 body: JSON.stringify(requestPayload),
+//             });
+    
+//             // Check response
+//             if (!response.ok) {
+//                 const errorData = await response.json();
+//                 throw new Error(errorData.message || 'Failed to link email');
+//             }
+    
+//             const data = await response.json();
+//             console.log('Email linked successfully:', data);
+    
+//             // Store linked email ID in localStorage
+//             if (data.id) {
+//                 setLinkedEmailId(data.id);
+//             } else if (data.data && data.data.id) {
+//                 setLinkedEmailId(data.data.id);
+//             }
+            
+//             // Fetch the linked email to update our state
+//             await fetchLinkedEmail();
+    
+//             // Show success and reset
+//             setSuccessMessage('Email linked successfully!');
+//             setEmailCredentials({
+//                 email: "",
+//                 password: "",
+//                 provider: "custom",
+//                 type: "personal",
+//                 imapHost: "",
+//                 imapPort: 993,
+//                 smtpHost: "",
+//                 smtpPort: 587
+//             });
+//             setShowAdvancedSettings(false);
+    
+//             // Close modal after delay
+//             setTimeout(() => {
+//                 setIsOpen(false);
+//                 setSuccessMessage('');
+//             }, 2000);
+    
+//         } catch (error) {
+//             console.error('Error linking email:', error);
+//             setErrorMessage(
+//                 error instanceof Error 
+//                     ? error.message 
+//                     : 'Failed to link email. Please try again.'
+//             );
+//         } finally {
+//             setIsLoading(false);
+//         }
+//     };
+
+//     // Display different button text based on linked email status
+//     const getButtonText = () => {
+//         if (fetchingLinkedEmail) {
+//             return "Checking...";
+//         }
+//         if (linkedEmail) {
+//             return "Update Email";
+//         }
+//         return "Link Email";
+//     };
+
+//     return (
+//         <>
+//             <Button
+//                 variant="outline"
+//                 onClick={() => setIsOpen(true)}
+//             >
+//                 <Mail className="w-4 h-4 mr-2" />
+//                 {getButtonText()}
+//             </Button>
+
+//             <Dialog open={isOpen} onOpenChange={setIsOpen}>
+//                 <DialogContent className="sm:max-w-md">
+//                     <DialogHeader>
+//                         <DialogTitle>
+//                             {linkedEmail ? "Update Email Account" : "Link Email Account"}
+//                         </DialogTitle>
+//                         <DialogDescription>
+//                             {linkedEmail 
+//                                 ? `Currently linked to ${linkedEmail.email}${linkedEmail.type ? ` (${linkedEmail.type})` : ''}. You can update your settings or link a different account.` 
+//                                 : "Connect your email account to enable automated email processing."}
+//                         </DialogDescription>
+//                     </DialogHeader>
+
+//                     {errorMessage && (
+//                         <Alert variant="destructive" className="mb-4">
+//                             <AlertDescription>{errorMessage}</AlertDescription>
+//                         </Alert>
+//                     )}
+
+//                     {successMessage && (
+//                         <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
+//                             <AlertDescription>{successMessage}</AlertDescription>
+//                         </Alert>
+//                     )}
+
+//                     <div className="grid gap-4 py-4">
+//                         <div className="grid grid-cols-4 items-center gap-4">
+//                             <Label htmlFor="email" className="text-right">
+//                                 Email
+//                             </Label>
+//                             <Input
+//                                 id="email"
+//                                 type="email"
+//                                 value={emailCredentials.email}
+//                                 onChange={(e) => handleEmailChange(e.target.value)}
+//                                 placeholder={linkedEmail ? linkedEmail.email : "youremail@example.com"}
+//                                 className="col-span-3"
+//                                 disabled={isLoading}
+//                             />
+//                         </div>
+//                         <div className="grid grid-cols-4 items-center gap-4">
+//                             <Label htmlFor="password" className="text-right">
+//                                 Password
+//                             </Label>
+//                             <Input
+//                                 id="password"
+//                                 type="password"
+//                                 value={emailCredentials.password}
+//                                 onChange={(e) =>
+//                                     setEmailCredentials({
+//                                         ...emailCredentials,
+//                                         password: e.target.value,
+//                                     })
+//                                 }
+//                                 className="col-span-3"
+//                                 disabled={isLoading}
+//                             />
+//                         </div>
+
+//                         {/* Email Type Selection */}
+//                         <div className="grid grid-cols-4 items-center gap-4">
+//                             <Label className="text-right">
+//                                 Type
+//                             </Label>
+//                             <div className="col-span-3">
+//                                 <RadioGroup
+//                                     value={emailCredentials.type}
+//                                     onValueChange={(value) =>
+//                                         setEmailCredentials({
+//                                             ...emailCredentials,
+//                                             type: value,
+//                                         })
+//                                     }
+//                                     className="flex flex-row space-x-6"
+//                                     disabled={isLoading}
+//                                 >
+//                                     <div className="flex items-center space-x-2">
+//                                         <RadioGroupItem value="personal" id="personal" />
+//                                         <Label htmlFor="personal" className="text-sm font-normal">
+//                                             Personal
+//                                         </Label>
+//                                     </div>
+//                                     <div className="flex items-center space-x-2">
+//                                         <RadioGroupItem value="professional" id="professional" />
+//                                         <Label htmlFor="professional" className="text-sm font-normal">
+//                                             Professional
+//                                         </Label>
+//                                     </div>
+//                                 </RadioGroup>
+//                             </div>
+//                         </div>
+
+//                         {/* Display detected provider */}
+//                         {emailCredentials.provider && !showAdvancedSettings && (
+//                             <div className="grid grid-cols-4 items-center gap-4">
+//                                 <div className="text-right text-sm text-gray-500">
+//                                     Provider:
+//                                 </div>
+//                                 <div className="col-span-3 text-sm">
+//                                     <span className="font-medium capitalize">
+//                                         {emailCredentials.provider}
+//                                     </span>
+//                                     <span className="text-gray-500 ml-1">
+//                                         {emailCredentials.provider === 'custom' 
+//                                             ? 'custom/unknown provider' 
+//                                             : 'detected'}
+//                                     </span>
+//                                 </div>
+//                             </div>
+//                         )}
+
+//                         {/* Advanced settings for custom email providers */}
+//                         {showAdvancedSettings && (
+//                             <>
+//                                 <div className="grid grid-cols-1 gap-2 mt-2">
+//                                     <div className="text-sm font-medium text-gray-500 mb-2">
+//                                         Custom Server Settings
+//                                     </div>
+//                                     <div className="grid grid-cols-4 items-center gap-4">
+//                                         <Label htmlFor="imapHost" className="text-right">
+//                                             IMAP Host
+//                                         </Label>
+//                                         <Input
+//                                             id="imapHost"
+//                                             type="text"
+//                                             value={emailCredentials.imapHost}
+//                                             onChange={(e) =>
+//                                                 setEmailCredentials({
+//                                                     ...emailCredentials,
+//                                                     imapHost: e.target.value,
+//                                                 })
+//                                             }
+//                                             placeholder="imap.example.com"
+//                                             className="col-span-3"
+//                                             disabled={isLoading}
+//                                         />
+//                                     </div>
+//                                     <div className="grid grid-cols-4 items-center gap-4">
+//                                         <Label htmlFor="imapPort" className="text-right">
+//                                             IMAP Port
+//                                         </Label>
+//                                         <Input
+//                                             id="imapPort"
+//                                             type="number"
+//                                             value={emailCredentials.imapPort}
+//                                             onChange={(e) =>
+//                                                 setEmailCredentials({
+//                                                     ...emailCredentials,
+//                                                     imapPort: parseInt(e.target.value) || 993,
+//                                                 })
+//                                             }
+//                                             className="col-span-3"
+//                                             disabled={isLoading}
+//                                         />
+//                                     </div>
+//                                     <div className="grid grid-cols-4 items-center gap-4">
+//                                         <Label htmlFor="smtpHost" className="text-right">
+//                                             SMTP Host
+//                                         </Label>
+//                                         <Input
+//                                             id="smtpHost"
+//                                             type="text"
+//                                             value={emailCredentials.smtpHost}
+//                                             onChange={(e) =>
+//                                                 setEmailCredentials({
+//                                                     ...emailCredentials,
+//                                                     smtpHost: e.target.value,
+//                                                 })
+//                                             }
+//                                             placeholder="smtp.example.com"
+//                                             className="col-span-3"
+//                                             disabled={isLoading}
+//                                         />
+//                                     </div>
+//                                     <div className="grid grid-cols-4 items-center gap-4">
+//                                         <Label htmlFor="smtpPort" className="text-right">
+//                                             SMTP Port
+//                                         </Label>
+//                                         <Input
+//                                             id="smtpPort"
+//                                             type="number"
+//                                             value={emailCredentials.smtpPort}
+//                                             onChange={(e) =>
+//                                                 setEmailCredentials({
+//                                                     ...emailCredentials,
+//                                                     smtpPort: parseInt(e.target.value) || 587,
+//                                                 })
+//                                             }
+//                                             className="col-span-3"
+//                                             disabled={isLoading}
+//                                         />
+//                                     </div>
+//                                 </div>
+//                             </>
+//                         )}
+//                     </div>
+//                     <DialogFooter>
+//                         <Button
+//                             type="button"
+//                             variant="outline"
+//                             onClick={() => setIsOpen(false)}
+//                             disabled={isLoading}
+//                         >
+//                             Cancel
+//                         </Button>
+//                         <Button
+//                             type="button"
+//                             onClick={handleLinkEmail}
+//                             disabled={isLoading}
+//                         >
+//                             {isLoading ? 'Linking...' : linkedEmail ? 'Update Account' : 'Link Account'}
+//                         </Button>
+//                     </DialogFooter>
+//                 </DialogContent>
+//             </Dialog>
+//         </>
+//     );
+// }
 
 
 

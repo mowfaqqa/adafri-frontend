@@ -155,8 +155,6 @@ export function SignatureRequestForm({ documentId }: { documentId: string }) {
                 documentType={document.fileType}
               />
             </div>
-
-            {/* Signature Capture */}
             <SignaturePad onSignatureCapture={handleSignatureCapture} />
 
             <div className="flex justify-end">

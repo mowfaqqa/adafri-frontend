@@ -169,12 +169,14 @@ const Dashboard: React.FC = () => {
       "dashboard-overview": activeTab === "dashboard",
       "website-builder": false,
       "mass-mailing": ["dashboard", "advertising"].includes(activeTab),
+      "post-publisher": activeTab === "marketing",
       "intern-messages": false,
       "analytics": false,
       "facebook-ads": false,
       "linkedin-ads": false,
       "crm": true,
       "invoice": true,
+      "note": true,
       "whatsapp-messaging": activeTab === "whatsapp",
       "chatgpt-assistant": activeTab === "chatgpt",
       "telegram-messaging": activeTab === "telegram"
@@ -308,7 +310,7 @@ const exampleData: Tab[] = [
         subtitle: "Boost Connections, Drive Sales!",
         imageUrl: "/icons/post-publisher.png",
         link: "/dashboard/post-publisher",
-        isActive: false
+        isActive: true
       },
       {
         id: "ai-calling",
@@ -386,6 +388,14 @@ const exampleData: Tab[] = [
         subtitle: "Boost Connections, Drive Sales!",
         imageUrl: "/icons/invoice.png",
         link: "/dashboard/invoices",
+        isActive: true
+      },
+      {
+        id: "note",
+        title: "Note",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/note.png",
+        link: "/dashboard/notes",
         isActive: true
       },
     ],

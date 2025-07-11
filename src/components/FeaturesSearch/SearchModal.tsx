@@ -28,6 +28,9 @@ const SearchModal: React.FC<SearchModalProps> = ({ tabs }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const router = useRouter();
 
+  // Detect if user is on Mac
+  const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
+
   // Flatten all features from all tabs for searching
   const allFeatures = tabs.flatMap(tab => 
     tab.features.map(feature => ({
@@ -48,22 +51,36 @@ const SearchModal: React.FC<SearchModalProps> = ({ tabs }) => {
     setIsOpen(false);
   }, [router]);
 
+  // Open modal function
+  const openModal = useCallback(() => {
+    setIsOpen(true);
+    setSearchQuery('');
+    setSelectedIndex(0);
+  }, []);
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    // Open modal with Shift+K
-    if (event.shiftKey && event.key === 'K') {
+    // Open modal with Cmd+K (Mac) or Ctrl+K (Windows/Linux)
+    if (((isMac && event.metaKey) || (!isMac && event.ctrlKey)) && event.key.toLowerCase() === 'k') {
+      event.preventDefault(); // Prevent browser search
+      openModal();
+      return;
+    }
+
+    // Fallback shortcuts: Ctrl+P and Ctrl+/
+    if (event.ctrlKey && (event.key === 'p' || event.key === '/')) {
       event.preventDefault();
-      setIsOpen(true);
-      setSearchQuery('');
-      setSelectedIndex(0);
+      openModal();
+      return;
     }
 
     // Close modal with Escape
     if (event.key === 'Escape' && isOpen) {
       setIsOpen(false);
+      return;
     }
 
-    // Navigate through results with arrow keys
+    // Navigate through results with arrow keys (only when modal is open)
     if (isOpen) {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -85,12 +102,12 @@ const SearchModal: React.FC<SearchModalProps> = ({ tabs }) => {
         handleNavigation(filteredFeatures[selectedIndex].link);
       }
     }
-  }, [isOpen, filteredFeatures, selectedIndex, handleNavigation]); // Include handleNavigation in dependency array
+  }, [isOpen, filteredFeatures, selectedIndex, handleNavigation, openModal, isMac]);
 
   // Add event listeners
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
   // Reset selected index when search query changes
@@ -102,7 +119,16 @@ const SearchModal: React.FC<SearchModalProps> = ({ tabs }) => {
     handleNavigation(feature.link);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    // Show helper text when modal is closed
+    return (
+      <div className="fixed bottom-4 right-4 z-40 text-sm text-slate-500 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-2 shadow-lg">
+        Press <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-700 font-mono text-xs">
+          {isMac ? '⌘' : 'Ctrl'} + K
+        </kbd> to search
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] bg-slate-900/60 backdrop-blur-md">
@@ -217,6 +243,12 @@ const SearchModal: React.FC<SearchModalProps> = ({ tabs }) => {
             <div className="flex items-center gap-2">
               <kbd className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 font-medium shadow-sm">↵</kbd>
               <span className="font-medium">select</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <kbd className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 font-medium shadow-sm">
+                {isMac ? '⌘' : 'Ctrl'} + K
+              </kbd>
+              <span className="font-medium">search</span>
             </div>
             <div className="flex items-center gap-2">
               <kbd className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 font-medium shadow-sm">esc</kbd>

@@ -1,10 +1,139 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, X, Folder } from 'lucide-react';
+import { Search, Plus, X, Folder, AlertTriangle, Trash2 } from 'lucide-react';
 import { Note, NoteFolder, Collection, NotesSidebarProps } from '@/lib/types/notes/types';
 import NavigationTabs from './NavigationTabs';
 import CollectionItem from './CollectionItem';
 import ContextMenu from '../notesapp/ContextMenu';
 import CreateCollectionModal from '../notesapp/CreateCollectionModal';
+import { InlineEditor } from '../notesapp/InlineEditorModal';
+
+// Folder Name Input Modal
+interface FolderNameModalProps {
+  show: boolean;
+  collectionName: string;
+  onConfirm: (name: string) => void;
+  onCancel: () => void;
+}
+
+function FolderNameModal({ show, collectionName, onConfirm, onCancel }: FolderNameModalProps) {
+  const [folderName, setFolderName] = useState('');
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (show && inputRef.current) {
+      inputRef.current.focus();
+      setFolderName('');
+    }
+  }, [show]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (folderName.trim()) {
+      onConfirm(folderName.trim());
+      setFolderName('');
+    }
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Create New Folder</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Create a new folder in "{collectionName}"
+        </p>
+        
+        <form onSubmit={handleSubmit}>
+          <input
+            ref={inputRef}
+            type="text"
+            value={folderName}
+            onChange={(e) => setFolderName(e.target.value)}
+            placeholder="Folder name..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+          />
+          
+          <div className="flex gap-3 justify-end">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!folderName.trim()}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Create Folder
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Delete Confirmation Modal
+interface DeleteModalProps {
+  show: boolean;
+  title: string;
+  message: string;
+  itemName?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function DeleteModal({ show, title, message, itemName, onConfirm, onCancel }: DeleteModalProps) {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+            <AlertTriangle size={20} className="text-red-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            {itemName && (
+              <p className="text-sm text-gray-600">"{itemName}"</p>
+            )}
+          </div>
+        </div>
+        
+        <p className="text-gray-700 mb-6">{message}</p>
+        
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
+          >
+            <Trash2 size={16} />
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ExtendedNotesSidebarProps extends NotesSidebarProps {
+  editingItem?: {
+    type: 'collection' | 'folder' | 'note';
+    itemId: string;
+  } | null;
+  onInlineEditSave?: (value: string) => void;
+  onCancelEdit?: () => void;
+}
 
 export default function NotesSidebar({ 
   notes, 
@@ -33,8 +162,11 @@ export default function NotesSidebar({
   renameCollection,
   showModal,
   openInView,
-  onShowCreateCollectionModal
-}: NotesSidebarProps) {
+  onShowCreateCollectionModal,
+  editingItem,
+  onInlineEditSave,
+  onCancelEdit
+}: ExtendedNotesSidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [editingType, setEditingType] = useState<'note' | 'folder' | 'collection'>('note');
@@ -48,6 +180,17 @@ export default function NotesSidebar({
     itemId: string;
   } | null>(null);
   const [showCreateCollectionModal, setShowCreateCollectionModal] = useState(false);
+  const [showFolderModal, setShowFolderModal] = useState<{
+    show: boolean;
+    collectionId: string;
+    collectionName: string;
+  }>({ show: false, collectionId: '', collectionName: '' });
+  const [deleteModal, setDeleteModal] = useState<{
+    show: boolean;
+    type: 'collection' | 'folder' | 'note';
+    itemId: string;
+    itemName: string;
+  } | null>(null);
 
   // Filter notes based on active view
   const getFilteredNotes = () => {
@@ -119,7 +262,6 @@ export default function NotesSidebar({
     e.preventDefault();
     e.stopPropagation();
     
-    // Calculate position, ensuring modal stays within viewport
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = Math.max(10, Math.min(rect.left - 200, window.innerWidth - 250));
     const y = Math.max(10, Math.min(rect.top, window.innerHeight - 300));
@@ -143,7 +285,6 @@ export default function NotesSidebar({
       } else if (moveModal.type === 'folder') {
         const folder = folders.find(f => f.id === moveModal.itemId);
         if (folder) {
-          // Move folder to different collection (this would need a moveFolderToCollection function)
           renameFolder(moveModal.itemId, folder.name);
         }
       }
@@ -152,19 +293,43 @@ export default function NotesSidebar({
   };
 
   const handleDelete = (type: 'collection' | 'folder' | 'note', itemId: string) => {
-    if (confirm(`Are you sure you want to delete this ${type}?`)) {
-      switch (type) {
-        case 'collection':
-          deleteCollection(itemId);
-          break;
-        case 'folder':
-          deleteFolder(itemId);
-          break;
-        case 'note':
-          deleteNote(itemId);
-          break;
-      }
+    let itemName = '';
+    
+    if (type === 'collection') {
+      const collection = collections.find(c => c.id === itemId);
+      itemName = collection?.name || '';
+    } else if (type === 'folder') {
+      const folder = folders.find(f => f.id === itemId);
+      itemName = folder?.name || '';
+    } else {
+      const note = notes.find(n => n.id === itemId);
+      itemName = note?.title || '';
     }
+    
+    setDeleteModal({
+      show: true,
+      type,
+      itemId,
+      itemName
+    });
+    setContextMenu(null);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteModal) return;
+    
+    switch (deleteModal.type) {
+      case 'collection':
+        deleteCollection(deleteModal.itemId);
+        break;
+      case 'folder':
+        deleteFolder(deleteModal.itemId);
+        break;
+      case 'note':
+        deleteNote(deleteModal.itemId);
+        break;
+    }
+    setDeleteModal(null);
   };
 
   const handleOpenInView = (type: 'collection' | 'folder', itemId: string) => {
@@ -186,11 +351,34 @@ export default function NotesSidebar({
   };
 
   const handleCreateFolder = (collectionId: string) => {
-    const folderName = prompt('Enter folder name:');
-    if (folderName && folderName.trim()) {
-      createFolder(collectionId, folderName.trim());
-    }
+    const collection = collections.find(c => c.id === collectionId);
+    setShowFolderModal({
+      show: true,
+      collectionId,
+      collectionName: collection?.name || 'Collection'
+    });
     setContextMenu(null);
+  };
+
+  const executeFolderCreation = (folderName: string) => {
+    createFolder(showFolderModal.collectionId, folderName);
+    setShowFolderModal({ show: false, collectionId: '', collectionName: '' });
+  };
+
+  // Get current value for editing
+  const getCurrentEditValue = () => {
+    if (!editingItem) return '';
+    
+    if (editingItem.type === 'collection') {
+      const collection = collections.find(c => c.id === editingItem.itemId);
+      return collection?.name || '';
+    } else if (editingItem.type === 'folder') {
+      const folder = folders.find(f => f.id === editingItem.itemId);
+      return folder?.name || '';
+    } else {
+      const note = notes.find(n => n.id === editingItem.itemId);
+      return note?.title || '';
+    }
   };
 
   // Close modals when clicking outside
@@ -361,9 +549,459 @@ export default function NotesSidebar({
           onCreateCollection={createCollection}
         />
       )}
+
+      {/* Folder Creation Modal */}
+      <FolderNameModal
+        show={showFolderModal.show}
+        collectionName={showFolderModal.collectionName}
+        onConfirm={executeFolderCreation}
+        onCancel={() => setShowFolderModal({ show: false, collectionId: '', collectionName: '' })}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        show={deleteModal?.show || false}
+        title={`Delete ${deleteModal?.type || ''}`}
+        message={`Are you sure you want to delete this ${deleteModal?.type}? This action cannot be undone.`}
+        itemName={deleteModal?.itemName}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteModal(null)}
+      />
+
+      {/* Global Inline Editor (when editing from context menu) */}
+      {editingItem && onInlineEditSave && onCancelEdit && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              Rename {editingItem.type}
+            </h3>
+            <InlineEditor
+              value={getCurrentEditValue()}
+              onSave={onInlineEditSave}
+              onCancel={onCancelEdit}
+              placeholder={`Enter ${editingItem.type} name...`}
+              className="w-full"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 7/10/2025  7:13
+// import React, { useState, useEffect } from 'react';
+// import { Search, Plus, X, Folder } from 'lucide-react';
+// import { Note, NoteFolder, Collection, NotesSidebarProps } from '@/lib/types/notes/types';
+// import NavigationTabs from './NavigationTabs';
+// import CollectionItem from './CollectionItem';
+// import ContextMenu from '../notesapp/ContextMenu';
+// import CreateCollectionModal from '../notesapp/CreateCollectionModal';
+
+// export default function NotesSidebar({ 
+//   notes, 
+//   folders, 
+//   collections,
+//   activeNote, 
+//   activeView, 
+//   searchQuery,
+//   setActiveNote,
+//   setActiveView,
+//   setSearchQuery,
+//   toggleFavorite,
+//   toggleShare,
+//   deleteNote,
+//   toggleFolder,
+//   deleteFolder,
+//   toggleCollection,
+//   deleteCollection,
+//   createNote,
+//   createFolder,
+//   createCollection,
+//   moveNoteToFolder,
+//   moveNoteToCollection,
+//   renameNote,
+//   renameFolder,
+//   renameCollection,
+//   showModal,
+//   openInView,
+//   onShowCreateCollectionModal
+// }: NotesSidebarProps) {
+//   const [editingId, setEditingId] = useState<string | null>(null);
+//   const [editingValue, setEditingValue] = useState('');
+//   const [editingType, setEditingType] = useState<'note' | 'folder' | 'collection'>('note');
+//   const [contextMenu, setContextMenu] = useState<{
+//     type: 'collection' | 'folder' | 'note';
+//     itemId: string;
+//     position: { x: number; y: number };
+//   } | null>(null);
+//   const [moveModal, setMoveModal] = useState<{
+//     type: 'note' | 'folder';
+//     itemId: string;
+//   } | null>(null);
+//   const [showCreateCollectionModal, setShowCreateCollectionModal] = useState(false);
+
+//   // Filter notes based on active view
+//   const getFilteredNotes = () => {
+//     let filtered = notes;
+    
+//     switch (activeView) {
+//       case 'favorites':
+//         filtered = notes.filter(note => note.isFavorite);
+//         break;
+//       case 'shared':
+//         filtered = notes.filter(note => note.isShared);
+//         break;
+//       default:
+//         filtered = notes;
+//     }
+
+//     if (searchQuery) {
+//       filtered = filtered.filter(note => 
+//         note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+//         note.content.toLowerCase().includes(searchQuery.toLowerCase())
+//       );
+//     }
+
+//     return filtered;
+//   };
+
+//   const filteredNotes = getFilteredNotes();
+
+//   // Editing functions
+//   const startEditing = (id: string, currentValue: string, type: 'note' | 'folder' | 'collection') => {
+//     setEditingId(id);
+//     setEditingValue(currentValue);
+//     setEditingType(type);
+//   };
+
+//   const saveEdit = () => {
+//     if (editingId && editingValue.trim()) {
+//       switch (editingType) {
+//         case 'note':
+//           renameNote(editingId, editingValue);
+//           break;
+//         case 'folder':
+//           renameFolder(editingId, editingValue);
+//           break;
+//         case 'collection':
+//           renameCollection(editingId, editingValue);
+//           break;
+//       }
+//     }
+//     setEditingId(null);
+//     setEditingValue('');
+//   };
+
+//   const cancelEdit = () => {
+//     setEditingId(null);
+//     setEditingValue('');
+//   };
+
+//   const handleKeyPress = (e: React.KeyboardEvent) => {
+//     if (e.key === 'Enter') {
+//       saveEdit();
+//     } else if (e.key === 'Escape') {
+//       cancelEdit();
+//     }
+//   };
+
+//   // Context menu functions
+//   const handleContextMenu = (e: React.MouseEvent, type: 'collection' | 'folder' | 'note', itemId: string) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+    
+//     // Calculate position, ensuring modal stays within viewport
+//     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+//     const x = Math.max(10, Math.min(rect.left - 200, window.innerWidth - 250));
+//     const y = Math.max(10, Math.min(rect.top, window.innerHeight - 300));
+    
+//     setContextMenu({
+//       type,
+//       itemId,
+//       position: { x, y }
+//     });
+//   };
+
+//   const handleMove = (type: 'note' | 'folder', itemId: string) => {
+//     setMoveModal({ type, itemId });
+//     setContextMenu(null);
+//   };
+
+//   const executeMove = (targetCollectionId: string) => {
+//     if (moveModal) {
+//       if (moveModal.type === 'note') {
+//         moveNoteToCollection(moveModal.itemId, targetCollectionId);
+//       } else if (moveModal.type === 'folder') {
+//         const folder = folders.find(f => f.id === moveModal.itemId);
+//         if (folder) {
+//           // Move folder to different collection (this would need a moveFolderToCollection function)
+//           renameFolder(moveModal.itemId, folder.name);
+//         }
+//       }
+//     }
+//     setMoveModal(null);
+//   };
+
+//   const handleDelete = (type: 'collection' | 'folder' | 'note', itemId: string) => {
+//     if (confirm(`Are you sure you want to delete this ${type}?`)) {
+//       switch (type) {
+//         case 'collection':
+//           deleteCollection(itemId);
+//           break;
+//         case 'folder':
+//           deleteFolder(itemId);
+//           break;
+//         case 'note':
+//           deleteNote(itemId);
+//           break;
+//       }
+//     }
+//   };
+
+//   const handleOpenInView = (type: 'collection' | 'folder', itemId: string) => {
+//     openInView(type, itemId);
+//     setContextMenu(null);
+//   };
+
+//   const handleRename = (type: 'collection' | 'folder' | 'note', itemId: string) => {
+//     let currentValue = '';
+//     if (type === 'collection') {
+//       currentValue = collections.find(c => c.id === itemId)?.name || '';
+//     } else if (type === 'folder') {
+//       currentValue = folders.find(f => f.id === itemId)?.name || '';
+//     } else {
+//       currentValue = notes.find(n => n.id === itemId)?.title || '';
+//     }
+//     startEditing(itemId, currentValue, type);
+//     setContextMenu(null);
+//   };
+
+//   const handleCreateFolder = (collectionId: string) => {
+//     const folderName = prompt('Enter folder name:');
+//     if (folderName && folderName.trim()) {
+//       createFolder(collectionId, folderName.trim());
+//     }
+//     setContextMenu(null);
+//   };
+
+//   // Close modals when clicking outside
+//   useEffect(() => {
+//     const handleClickOutside = (event: MouseEvent) => {
+//       if (contextMenu) {
+//         const target = event.target as HTMLElement;
+//         if (!target.closest('.context-menu')) {
+//           setContextMenu(null);
+//         }
+//       }
+//     };
+    
+//     if (contextMenu) {
+//       document.addEventListener('click', handleClickOutside);
+//       return () => document.removeEventListener('click', handleClickOutside);
+//     }
+//   }, [contextMenu]);
+
+//   return (
+//     <div className="w-80 bg-white/70 backdrop-blur-sm border-l border-white/50 flex flex-col shadow-xl">
+//       {/* Search and Navigation */}
+//       <div className="p-4 border-b border-gray-200/50">
+//         <div className="relative mb-4">
+//           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+//           <input
+//             type="text"
+//             placeholder="🔍 Search notes..."
+//             value={searchQuery}
+//             onChange={(e) => setSearchQuery(e.target.value)}
+//             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200 text-sm"
+//           />
+//         </div>
+        
+//         <NavigationTabs
+//           notes={notes}
+//           activeView={activeView}
+//           setActiveView={setActiveView}
+//           setActiveNote={setActiveNote}
+//         />
+//       </div>
+
+//       {/* Collections Section */}
+//       <div className="flex-1 overflow-y-auto">
+//         <div className="p-4">
+//           <div className="flex items-center justify-between mb-3">
+//             <h3 className="text-sm font-semibold text-gray-700">Collections</h3>
+//             <button
+//               onClick={() => {
+//                 if (onShowCreateCollectionModal) {
+//                   onShowCreateCollectionModal();
+//                 } else {
+//                   setShowCreateCollectionModal(true);
+//                 }
+//               }}
+//               className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+//               title="Create new collection"
+//             >
+//               <Plus size={14} />
+//             </button>
+//           </div>
+
+//           {/* Collections List */}
+//           <div className="space-y-2">
+//             {collections.map(collection => (
+//               <CollectionItem
+//                 key={collection.id}
+//                 collection={collection}
+//                 notes={filteredNotes}
+//                 folders={folders}
+//                 activeNote={activeNote}
+//                 editingId={editingId}
+//                 editingValue={editingValue}
+//                 onToggleExpansion={() => toggleCollection(collection.id)}
+//                 onStartEditing={(id, value, type) => {
+//                   setEditingId(id);
+//                   setEditingValue(value);
+//                   setEditingType(type as 'note' | 'folder' | 'collection');
+//                 }}
+//                 onSaveEdit={saveEdit}
+//                 onKeyPress={handleKeyPress}
+//                 onCreateNote={() => createNote(collection.id)}
+//                 onContextMenu={handleContextMenu}
+//                 onNoteClick={setActiveNote}
+//                 onNoteContextMenu={(e, noteId) => handleContextMenu(e, 'note', noteId)}
+//                 onSetEditingValue={setEditingValue}
+//                 onFolderProps={{
+//                   onToggleFolder: toggleFolder,
+//                   onCreateNoteInFolder: createNote,
+//                   onFolderContextMenu: (e, folderId) => handleContextMenu(e, 'folder', folderId),
+//                   onCreateFolder: handleCreateFolder
+//                 }}
+//               />
+//             ))}
+//           </div>
+
+//           {/* Empty State */}
+//           {filteredNotes.length === 0 && (
+//             <div className="text-center py-8 text-gray-500">
+//               <div className="text-4xl mb-2">📝</div>
+//               <p className="text-sm font-medium">No notes found</p>
+//               <p className="text-xs mt-1">Try adjusting your search or create a new note</p>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       {/* Context Menu */}
+//       {contextMenu && (
+//         <div className="context-menu">
+//           <ContextMenu
+//             contextMenu={contextMenu}
+//             onOpenInView={handleOpenInView}
+//             onRename={handleRename}
+//             onDelete={handleDelete}
+//             onToggleFavorite={toggleFavorite}
+//             onToggleShare={toggleShare}
+//             onCreateFolder={handleCreateFolder}
+//             onMove={handleMove}
+//             onClose={() => setContextMenu(null)}
+//           />
+//         </div>
+//       )}
+
+//       {/* Move Modal */}
+//       {moveModal && (
+//         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+//           <div className="move-modal bg-white/90 backdrop-blur-sm rounded-2xl p-6 w-96 shadow-2xl border border-white/50">
+//             <div className="flex items-center justify-between mb-6">
+//               <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+//                 Move {moveModal.type === 'note' ? 'Note' : 'Folder'} to Collection
+//               </h3>
+//               <button
+//                 onClick={() => setMoveModal(null)}
+//                 className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-lg transition-colors"
+//               >
+//                 <X size={20} />
+//               </button>
+//             </div>
+//             <div className="space-y-2 max-h-60 overflow-y-auto">
+//               {collections.map(collection => (
+//                 <button
+//                   key={collection.id}
+//                   onClick={() => executeMove(collection.id)}
+//                   className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+//                 >
+//                   <div className="flex items-center gap-2">
+//                     <Folder size={16} className="text-blue-500" />
+//                     <div>
+//                       <div className="font-medium text-gray-800">{collection.name}</div>
+//                       <div className="text-sm text-gray-500">
+//                         {notes.filter(n => n.collectionId === collection.id).length} notes
+//                       </div>
+//                     </div>
+//                   </div>
+//                 </button>
+//               ))}
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Create Collection Modal */}
+//       {!onShowCreateCollectionModal && (
+//         <CreateCollectionModal
+//           show={showCreateCollectionModal}
+//           onClose={() => setShowCreateCollectionModal(false)}
+//           onCreateCollection={createCollection}
+//         />
+//       )}
+//     </div>
+//   );
+// }
 
 
 

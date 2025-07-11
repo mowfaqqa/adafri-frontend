@@ -36,6 +36,7 @@
     "@react-pdf/renderer": "^4.3.0",
     "@reduxjs/toolkit": "^2.8.0",
     "@tanstack/react-query": "^5.67.3",
+    "@tinymce/tinymce-react": "^6.2.1",
     "@types/js-cookie": "^3.0.6",
     "@types/uuid": "^10.0.0",
     "axios": "^1.8.1",

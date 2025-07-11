@@ -45,7 +45,7 @@ const exampleData = [
         subtitle: "Boost Connections, Drive Sales!",
         imageUrl: "/icons/post-publisher.png",
         link: "/dashboard/post-publisher",
-        isActive: false
+        isActive: true
       },
       {
         id: "ai-calling",
@@ -116,6 +116,14 @@ const exampleData = [
         imageUrl: "/icons/image-editor.png",
         link: "/dashboard/image-editor",
         isActive: false
+      },
+      {
+        id: "note",
+        title: "Note",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/note.png",
+        link: "/dashboard/notes",
+        isActive: true
       },
     ],
   },

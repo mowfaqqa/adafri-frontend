@@ -1,0 +1,18 @@
+import PostDashboard from '@/components/PostPublisher/PostDashboard';
+import React from 'react';
+
+
+export const metadata = {
+  title: 'Post Publisher',
+  description: 'Manage content across all channels with advanced publishing tools',
+};
+
+export default function PostPage() {
+  return (
+    <div className="space-y-6 p-6">
+      {/* <div className="max-w-7xl mx-auto"> */}
+        <PostDashboard />
+      {/* </div> */}
+    </div>
+  );
+}

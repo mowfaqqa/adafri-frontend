@@ -319,15 +319,15 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
               </div>
             ) : shouldShowEmpty ? (
               <div className="flex flex-col justify-center items-center h-full bg-gradient-to-br from-slate-50 to-gray-50">
-                <div className="flex items-center justify-center mb-6 mx-auto">
-                    <Image
-                                    src="/icons/no-data.svg"
-                                    alt="No data"
-                                    width={70}
-                                    height={70}
-                                    className="w-56 h-56"
-                                  />
-                                </div>
+                  <div className="flex items-center justify-center mb-6 mx-auto">
+                      <Image
+                        src="/icons/no-data.svg"
+                        alt="No data"
+                        width={70}
+                        height={70}
+                        className="w-56 h-56"
+                      />
+                  </div>
                 <h3 className="text-xl font-semibold text-slate-800 mb-2">No Sent Emails Found</h3>
                 <p className="text-slate-600 text-center max-w-md">
                   {searchTerm 
@@ -486,6 +486,7 @@ export const EmailSent = ({ onBack }: EmailSentProps) => {
               <div className="border-t border-slate-200 pt-6">
                 <div className="prose prose-slate max-w-none">
                   {mounted && <EmailContentRenderer content={selectedEmail.content} />}
+                  
                 </div>
               </div>
             </div>

@@ -24,21 +24,21 @@ interface EmailSpamProps {
 
 export const EmailSpam = ({ onBack }: EmailSpamProps) => {
   // Use email store following EmailSent pattern
-  const { 
-    emails, 
-    isLoading, 
-    loadingError, 
+  const {
+    emails,
+    isLoading,
+    loadingError,
     fetchEmails,
     setActiveCategory,
     activeCategory,
     refreshCurrentCategory,
     moveEmailToCategory
   } = useEmailStore();
-  
+
   const { token, user } = useContext(AuthContext);
   const { djombi } = useCombinedAuth();
   const djombiTokens = djombi.token || "";
-  
+
   // Local UI state only - following EmailSent pattern
   const [filterDate, setFilterDate] = useState<string | null>(null);
   const [sortNewest, setSortNewest] = useState(true);
@@ -47,7 +47,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // Track component state without causing re-renders - following EmailSent pattern
   const isInitialized = useRef(false);
   const currentEmailId = useRef<string | null>(null);
@@ -67,7 +67,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
       setMounted(true);
       setActiveCategory('spam');
       isInitialized.current = true;
-      
+
       // Get initial email ID
       const emailId = getSelectedLinkedEmailId();
       currentEmailId.current = emailId;
@@ -77,10 +77,10 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
 
   // Listen for changes in emails array to refresh display - following EmailSent pattern
   useEffect(() => {
-    const spamEmails = emails.filter(email => 
+    const spamEmails = emails.filter(email =>
       email.status === "spam" || email.category === "spam"
     );
-    
+
     // If we have spam emails but haven't loaded them before, mark as loaded
     if (spamEmails.length > 0 && !hasLoadedSpamEmails.current) {
       console.log('Found spam emails in store, marking as loaded');
@@ -92,7 +92,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
   useEffect(() => {
     const emailId = getSelectedLinkedEmailId();
     const emailType = getSelectedLinkedEmailType();
-    
+
     // Check if email account changed
     const emailChanged = currentEmailId.current !== emailId;
     if (emailChanged) {
@@ -100,13 +100,13 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
       currentEmailId.current = emailId;
       hasLoadedSpamEmails.current = false; // Reset cache on email change
     }
-    
+
     // Only fetch if all conditions are met and we haven't loaded yet
     const shouldFetch = (
       isInitialized.current &&
       activeCategory === 'spam' &&
-      emailId && 
-      djombiTokens && 
+      emailId &&
+      djombiTokens &&
       !isLoading &&
       !hasLoadedSpamEmails.current // Only fetch once per email account
     );
@@ -118,7 +118,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
         activeCategory,
         hasLoadedBefore: hasLoadedSpamEmails.current
       });
-      
+
       hasLoadedSpamEmails.current = true; // Mark as loaded
       fetchEmails('spam', false); // Don't force refresh on initial load
     } else {
@@ -132,10 +132,10 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
       });
     }
   }, [activeCategory, djombiTokens, isLoading, fetchEmails]);
-  
+
   // Memoize spam emails filtering - following EmailSent pattern
   const spamEmails = useCallback(() => {
-    return emails.filter(email => 
+    return emails.filter(email =>
       email.status === "spam" || email.category === "spam"
     );
   }, [emails]);
@@ -144,7 +144,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
   const filteredEmails = useCallback(() => {
     const spam = spamEmails();
     if (!searchTerm) return spam;
-    
+
     const searchLower = searchTerm.toLowerCase();
     return spam.filter(email =>
       email.subject?.toLowerCase().includes(searchLower) ||
@@ -161,11 +161,11 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
       return sortNewest ? dateB - dateA : dateA - dateB;
     });
   }, [filteredEmails, sortNewest]);
-  
+
   // Memoize date filtering - following EmailSent pattern
   const displayedEmails = useCallback(() => {
     if (!filterDate) return sortedEmails();
-    
+
     return sortedEmails().filter(email => {
       const emailDate = new Date(email.timestamp || 0).toLocaleDateString();
       return emailDate === filterDate;
@@ -183,13 +183,13 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
 
   const toggleSelect = useCallback((emailId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    setSelectedEmails(prev => 
-      prev.includes(emailId) 
+    setSelectedEmails(prev =>
+      prev.includes(emailId)
         ? prev.filter(id => id !== emailId)
         : [...prev, emailId]
     );
   }, []);
-  
+
   const handleRowClick = useCallback((email: Email) => {
     setSelectedEmail(email);
     setShowDialog(true);
@@ -203,12 +203,12 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
   const handleMoveToInbox = useCallback(async (emailId: string) => {
     try {
       console.log(`Moving email ${emailId} from spam to inbox...`);
-      
+
       // Use the store's moveEmailToCategory method which uses EmailApiService internally
       moveEmailToCategory(emailId, 'inbox');
-      
+
       console.log(`Email ${emailId} moved to inbox successfully`);
-      
+
     } catch (error) {
       console.error('Error moving email to inbox:', error);
       throw error; // Re-throw to handle in UI
@@ -263,7 +263,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Search Bar */}
             <div className="relative">
@@ -285,20 +285,20 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
                 </Button>
               )}
             </div>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={toggleSort}
               className="bg-white hover:bg-slate-50"
             >
               <Clock className="w-4 h-4 mr-2" />
               {sortNewest ? "Newest First" : "Oldest First"}
             </Button>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleRefresh}
               disabled={isLoading}
               className="bg-white hover:bg-slate-50"
@@ -306,7 +306,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            
+
             <Button variant="outline" size="sm" className="bg-white hover:bg-slate-50">
               <Filter className="w-4 h-4 mr-2" />
               Filter
@@ -318,7 +318,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
       {/* Main Content Area - following EmailSent pattern */}
       <div className="h-[calc(100vh-100px)] overflow-hidden">
         <div className="h-full bg-white mx-6 my-4 rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-          
+
           {/* Content Area */}
           <div className="h-full overflow-y-auto">
             {shouldShowLoading ? (
@@ -337,7 +337,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
                 </div>
                 <h3 className="text-lg font-semibold text-slate-800 mb-2">Failed to Load Spam Emails</h3>
                 <p className="text-red-600 text-center mb-4 max-w-md">{loadingError}</p>
-                <Button 
+                <Button
                   onClick={handleRefresh}
                   className="bg-red-600 hover:bg-red-700"
                 >
@@ -348,26 +348,26 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
             ) : shouldShowEmpty ? (
               <div className="flex flex-col justify-center items-center h-full bg-gradient-to-br from-slate-50 to-gray-50">
                 <div className="flex items-center justify-center mb-6 mx-auto">
-                                  <Image
-                                    src="/icons/no-data.svg"
-                                    alt="No data"
-                                    width={70}
-                                    height={70}
-                                    className="w-56 h-56"
-                                  />
-                                </div>
+                  <Image
+                    src="/icons/no-data.svg"
+                    alt="No data"
+                    width={70}
+                    height={70}
+                    className="w-56 h-56"
+                  />
+                </div>
                 <h3 className="text-xl font-semibold text-slate-800 mb-2">No Spam Emails Found</h3>
                 <p className="text-slate-600 text-center max-w-md">
-                  {searchTerm 
-                    ? `No emails match your search "${searchTerm}"` 
-                    : currentSelectedEmailType 
+                  {searchTerm
+                    ? `No emails match your search "${searchTerm}"`
+                    : currentSelectedEmailType
                       ? `No spam emails found in your ${currentSelectedEmailType} account`
                       : "No spam emails found or no account is selected"
                   }
                 </p>
                 {searchTerm && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={clearSearch}
                     className="mt-4"
                   >
@@ -383,22 +383,21 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
             ) : shouldShowEmails ? (
               <div className="divide-y divide-slate-100">
                 {currentDisplayedEmails.map((email, index) => (
-                  <div 
-                    key={email.id} 
-                    className={`flex items-center px-6 py-4 hover:bg-red-50 transition-all duration-200 cursor-pointer group border-l-4 border-transparent hover:border-l-red-400 ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-slate-25'
-                    }`}
+                  <div
+                    key={email.id}
+                    className={`flex items-center px-6 py-4 hover:bg-red-50 transition-all duration-200 cursor-pointer group border-l-4 border-transparent hover:border-l-red-400 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-25'
+                      }`}
                     onClick={() => handleRowClick(email)}
                   >
                     <div className="mr-4" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedEmails.includes(email.id || "")}
-                        onCheckedChange={() => {}}
+                        onCheckedChange={() => { }}
                         onClick={(e) => toggleSelect(email.id || "", e as React.MouseEvent)}
                         className="border-slate-300 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
                       />
                     </div>
-                    
+
                     <div className="flex-1 grid grid-cols-12 gap-4 items-center">
                       {/* Sender */}
                       <div className="col-span-3 flex items-center gap-2">
@@ -409,7 +408,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
                           {email.from}
                         </div>
                       </div>
-                      
+
                       {/* Subject and Preview */}
                       <div className="col-span-6 flex items-center">
                         <div className="text-sm truncate">
@@ -423,7 +422,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Timestamp */}
                       <div className="col-span-3 text-right">
                         <div className="text-sm text-slate-500 group-hover:text-slate-600">
@@ -433,7 +432,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
                                 {new Date(email.timestamp).toLocaleDateString()}
                               </span>
                               <span className="text-xs">
-                                {new Date(email.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                {new Date(email.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
                           ) : (
@@ -456,7 +455,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
           </div>
         </div>
       </div>
-      
+
       {/* Email Details Dialog - enhanced for spam */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
@@ -474,8 +473,8 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    {selectedEmail?.timestamp ? 
-                      new Date(selectedEmail.timestamp).toLocaleString() : 
+                    {selectedEmail?.timestamp ?
+                      new Date(selectedEmail.timestamp).toLocaleString() :
                       "Unknown time"}
                   </span>
                 </div>
@@ -487,7 +486,7 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
               </DialogClose>
             </div>
           </DialogHeader>
-          
+
           {selectedEmail && (
             <div className="space-y-6 pt-4">
               {/* Warning Banner */}
@@ -506,22 +505,22 @@ export const EmailSpam = ({ onBack }: EmailSpamProps) => {
                 <div className="grid grid-cols-12 gap-3 text-sm">
                   <div className="col-span-2 font-semibold text-slate-700">From:</div>
                   <div className="col-span-10 text-slate-800">{selectedEmail.from}</div>
-                  
+
                   <div className="col-span-2 font-semibold text-slate-700">To:</div>
                   <div className="col-span-10 text-slate-800">{selectedEmail.to}</div>
-                  
+
                   <div className="col-span-2 font-semibold text-slate-700">Subject:</div>
                   <div className="col-span-10 text-slate-800 font-medium">{selectedEmail.subject}</div>
-                  
+
                   <div className="col-span-2 font-semibold text-slate-700">Date:</div>
                   <div className="col-span-10 text-slate-800">
-                    {selectedEmail.timestamp ? 
-                      new Date(selectedEmail.timestamp).toLocaleString() : 
+                    {selectedEmail.timestamp ?
+                      new Date(selectedEmail.timestamp).toLocaleString() :
                       "Unknown time"}
                   </div>
                 </div>
               </div>
-              
+
               {/* Email Content */}
               <div className="border-t border-slate-200 pt-6">
                 <div className="prose prose-slate max-w-none">
@@ -621,7 +620,7 @@ export default EmailSpam;
 // import { useState, useEffect } from "react";
 // import { Email, EmailCategory } from "@/lib/types/email";
 // import { Checkbox } from "@/components/ui/checkbox";
-// import Link from "next/link";           
+// import Link from "next/link";
 // import { getAuthToken, getCookie, isAuthenticated } from "@/lib/utils/cookies"; // Import cookie utilities
 
 // interface EmailSpamProps {

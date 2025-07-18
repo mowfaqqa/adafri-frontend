@@ -362,7 +362,7 @@ const exampleData: Tab[] = [
         id: "online-meeting",
         title: "Online Meeting",
         subtitle: "Boost Connections, Drive Sales!",
-        imageUrl: "/icons/online-meeting.png",
+        imageUrl: "/icons/online-meeting2.png",
         link: "/dashboard/online-message",
         isActive: false
       },

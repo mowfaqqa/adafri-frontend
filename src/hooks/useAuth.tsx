@@ -9,7 +9,6 @@ interface AuthGuardProps {
 
 /**
  * AuthGuard component that ensures user is authenticated before rendering children
- * This is useful for wrapping the entire task manager section
  */
 export const AuthGuard: React.FC<AuthGuardProps> = ({
   children,

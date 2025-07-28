@@ -108,7 +108,7 @@ export class DjombiProfileService {
             originalRequest._retry = true;
 
             try {
-              await this.refreshDjombiToken();
+              // await this.refreshDjombiToken();
               const newToken = this.getStoredDjombiTokens().accessToken;
               if (newToken) {
                 originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -431,96 +431,96 @@ export class DjombiProfileService {
   /**
    * Refresh Djombi token with deduplication
    */
-  static async refreshDjombiToken(
-    refreshToken?: string
-  ): Promise<DjombiServiceResult> {
-    // Prevent multiple simultaneous refresh attempts
-    if (this.refreshPromise) {
-      return await this.refreshPromise;
-    }
+  // static async refreshDjombiToken(
+  //   refreshToken?: string
+  // ): Promise<DjombiServiceResult> {
+  //   // Prevent multiple simultaneous refresh attempts
+  //   if (this.refreshPromise) {
+  //     return await this.refreshPromise;
+  //   }
 
-    this.refreshPromise = this._performTokenRefresh(refreshToken);
+  //   // this.refreshPromise = this._performTokenRefresh(refreshToken);
 
-    try {
-      const result = await this.refreshPromise;
-      return result;
-    } finally {
-      this.refreshPromise = null;
-    }
-  }
+  //   try {
+  //     const result = await this.refreshPromise;
+  //     return result!;
+  //   } finally {
+  //     this.refreshPromise = null;
+  //   }
+  // }
 
   /**
    * Internal token refresh implementation
    */
-  private static async _performTokenRefresh(
-    refreshToken?: string
-  ): Promise<DjombiServiceResult> {
-    try {
-      const tokenToUse =
-        refreshToken || this.getStoredDjombiTokens().refreshToken;
+  // private static async _performTokenRefresh(
+  //   refreshToken?: string
+  // ): Promise<DjombiServiceResult> {
+  //   try {
+  //     const tokenToUse =
+  //       refreshToken || this.getStoredDjombiTokens().refreshToken;
 
-      if (!tokenToUse) {
-        return {
-          success: false,
-          error: "Refresh token is required",
-        };
-      }
+  //     if (!tokenToUse) {
+  //       return {
+  //         success: false,
+  //         error: "Refresh token is required",
+  //       };
+  //     }
 
-      const axiosInstance = this.getAxiosInstance();
+  //     const axiosInstance = this.getAxiosInstance();
 
-      const response: AxiosResponse<DjombiProfileResponse> =
-        await axiosInstance.post("/auth/refresh", {
-          refresh_token: tokenToUse,
-        });
+  //     const response: AxiosResponse<DjombiProfileResponse> =
+  //       await axiosInstance.post("/auth/refresh", {
+  //         refresh_token: tokenToUse,
+  //       });
 
-      if (response.data.status !== "success") {
-        this.clearDjombiAuth();
-        return {
-          success: false,
-          error: response.data.message || "Failed to refresh token",
-        };
-      }
+  //     if (response.data.status !== "success") {
+  //       this.clearDjombiAuth();
+  //       return {
+  //         success: false,
+  //         error: response.data.message || "Failed to refresh token",
+  //       };
+  //     }
 
-      const { data: profileData, meta } = response.data;
-      const {
-        access_token: accessTokenDjombi,
-        refresh_token: refreshTokenDjombi,
-      } = meta;
+  //     const { data: profileData, meta } = response.data;
+  //     const {
+  //       access_token: accessTokenDjombi,
+  //       refresh_token: refreshTokenDjombi,
+  //     } = meta;
 
-      const tokens: DjombiTokens = {
-        accessTokenAdafri: "",
-        accessTokenDjombi,
-        refreshTokenDjombi,
-      };
+  //     const tokens: DjombiTokens = {
+  //       accessTokenAdafri: "",
+  //       accessTokenDjombi,
+  //       refreshTokenDjombi,
+  //     };
 
-      // Update storage and cache
-      this.storeDjombiAuth(tokens, profileData);
+  //     // Update storage and cache
+  //     this.storeDjombiAuth(tokens, profileData);
 
-      return {
-        success: true,
-        tokens,
-        profile: profileData,
-      };
-    } catch (error) {
-      console.error("Error refreshing Djombi token:", error);
-      this.clearDjombiAuth();
+  //     return {
+  //       success: true,
+  //       tokens,
+  //       profile: profileData,
+  //     };
+  //   } catch (error) {
+  //     console.error("Error refreshing Djombi token:", error);
+  //     this.clearDjombiAuth();
 
-      if (axios.isAxiosError(error)) {
-        return {
-          success: false,
-          error:
-            error.response?.data?.message ||
-            error.message ||
-            "Failed to refresh token",
-        };
-      }
+  //     if (axios.isAxiosError(error)) {
+  //       return {
+  //         success: false,
+  //         error:
+  //           error.response?.data?.message ||
+  //           error.message ||
+  //           "Failed to refresh token",
+  //       };
+  //     }
 
-      return {
-        success: false,
-        error: "An unexpected error occurred during token refresh",
-      };
-    }
-  }
+  //     return {
+  //       success: false,
+  //       error: "An unexpected error occurred during token refresh",
+  //     };
+  //   }
+  // }
 
   /**
    * Make authenticated API calls with automatic retry and caching
@@ -604,7 +604,7 @@ export class DjombiProfileService {
     if (!this.shouldRefreshToken()) return;
 
     try {
-      await this.refreshDjombiToken();
+      // await this.refreshDjombiToken();
     } catch (error) {
       console.warn("Background token refresh failed:", error);
     }
@@ -641,9 +641,9 @@ export const useDjombiAuth = () => {
     return await DjombiProfileService.initializeDjombiAuth(adafriToken);
   };
 
-  const refreshDjombiAuth = async () => {
-    return await DjombiProfileService.refreshDjombiToken();
-  };
+  // const refreshDjombiAuth = async () => {
+  //   return await DjombiProfileService.refreshDjombiToken();
+  // };
 
   const logout = () => {
     DjombiProfileService.clearDjombiAuth();
@@ -664,7 +664,7 @@ export const useDjombiAuth = () => {
     userProfile,
     djombiToken,
     initializeDjombi,
-    refreshDjombiAuth,
+    // refreshDjombiAuth,
     logout,
     makeApiCall,
   };

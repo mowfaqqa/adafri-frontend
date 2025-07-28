@@ -25,13 +25,13 @@ import {
 
 interface MemberManagementProps {
   organizationId: string;
-  userRole: "ADMIN" | "MEMBER" | "GUEST";
+  userRole: "ADMIN" | "MEMBER" | "GUEST" | "OWNER";
   currentUserId: string;
 }
 
 interface InviteModalData {
   email: string;
-  role: "ADMIN" | "MEMBER" | "GUEST";
+  role: "ADMIN" | "MEMBER" | "GUEST" | "OWNER";
 }
 
 const MemberManagement: React.FC<MemberManagementProps> = ({

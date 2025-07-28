@@ -160,3 +160,40 @@ export const updateTaskAssignees = async (
   );
   return response.data.data;
 };
+
+// Enable public sharing for a task
+export const enableTaskPublicSharing = async (
+  projectId: string, 
+  taskId: string
+) => {
+  const response = await taskApi.post<ApiResponse<{
+    isPublicSharingEnabled: boolean;
+    publicShareToken: string;
+    publicUrl: string;
+  }>>(`/projects/${projectId}/tasks/${taskId}/enable-public-sharing`);
+  return response.data.data;
+};
+
+// Disable public sharing for a task
+export const disableTaskPublicSharing = async (
+  projectId: string, 
+  taskId: string
+) => {
+  const response = await taskApi.post<ApiResponse<{
+    isPublicSharingEnabled: boolean;
+  }>>(`/projects/${projectId}/tasks/${taskId}/disable-public-sharing`);
+  return response.data.data;
+};
+
+// Get public sharing status for a task
+export const getTaskPublicSharingStatus = async (
+  projectId: string, 
+  taskId: string
+) => {
+  const response = await taskApi.get<ApiResponse<{
+    isPublicSharingEnabled: boolean;
+    publicShareToken?: string;
+    publicUrl?: string;
+  }>>(`/projects/${projectId}/tasks/${taskId}/public-sharing-status`);
+  return response.data.data;
+};

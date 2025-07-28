@@ -28,24 +28,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronDown, MoreHorizontal, Plus, UserPlus } from "lucide-react";
+import { ChevronDown, MoreHorizontal, Plus, UserPlus, Mail } from "lucide-react";
 import { ProjectRole } from "@/lib/types/taskManager/types";
 import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 
 const ProjectMembersPanel: React.FC = () => {
   const { currentProject, projectId, isProjectAdmin } = useProjectContext();
-  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
-  const [newMemberEmail, setNewMemberEmail] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState<ProjectRole>("member");
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<ProjectRole>("member");
 
   const {
-    useAddProjectMemberMutation,
+    useInviteProjectMemberMutation, // ✅ Use invitation instead of direct addition
     useRemoveProjectMemberMutation,
     useUpdateMemberRoleMutation,
   } = useAuthAwareTaskManagerApi();
 
-  const addMemberMutation = useAddProjectMemberMutation();
+  const inviteMemberMutation = useInviteProjectMemberMutation();
   const removeMemberMutation = useRemoveProjectMemberMutation();
   const updateRoleMutation = useUpdateMemberRoleMutation();
 
@@ -53,27 +53,25 @@ const ProjectMembersPanel: React.FC = () => {
     return null;
   }
 
-  const handleAddMember = (e: React.FormEvent) => {
+  const handleInviteMember = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!projectId || !newMemberEmail.trim()) {
+    if (!projectId || !inviteEmail.trim()) {
       return;
     }
 
-    // In a real app, you would search for the user by email first
-    // For this example, we'll assume the email directly maps to a user ID
-    const mockUserId = `user-${newMemberEmail.replace(/@.*/, "")}`;
-
-    addMemberMutation.mutate(
+    // ✅ Send invitation with email and role
+    inviteMemberMutation.mutate(
       {
         projectId,
-        memberId: mockUserId,
-        role: newMemberRole,
+        email: inviteEmail.trim(),
+        role: inviteRole,
       },
       {
         onSuccess: () => {
-          setNewMemberEmail("");
-          setShowAddMemberDialog(false);
+          setInviteEmail("");
+          setInviteRole("member");
+          setShowInviteDialog(false);
         },
       }
     );
@@ -102,26 +100,54 @@ const ProjectMembersPanel: React.FC = () => {
     });
   };
 
+  // ✅ Helper function to get member display name
+  const getMemberDisplayName = (member: any) => {
+    if (member.displayName) return member.displayName;
+    if (member.firstName && member.lastName) {
+      return `${member.firstName} ${member.lastName}`;
+    }
+    if (member.firstName) return member.firstName;
+    return member.email || member.userId;
+  };
+
+  // ✅ Helper function to get member initials
+  const getMemberInitials = (member: any) => {
+    if (member.firstName && member.lastName) {
+      return `${member.firstName[0]}${member.lastName[0]}`.toUpperCase();
+    }
+    if (member.displayName) {
+      const names = member.displayName.split(' ');
+      if (names.length >= 2) {
+        return `${names[0][0]}${names[1][0]}`.toUpperCase();
+      }
+      return names[0].substring(0, 2).toUpperCase();
+    }
+    if (member.email) {
+      return member.email.substring(0, 2).toUpperCase();
+    }
+    return member.userId?.substring(0, 2).toUpperCase() || "??";
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Project Members</CardTitle>
         {isProjectAdmin && (
           <Dialog
-            open={showAddMemberDialog}
-            onOpenChange={setShowAddMemberDialog}
+            open={showInviteDialog}
+            onOpenChange={setShowInviteDialog}
           >
             <DialogTrigger asChild>
               <Button size="sm" className="bg-teal-600">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Member
+                <Mail className="w-4 h-4 mr-2" />
+                Invite Member
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Project Member</DialogTitle>
+                <DialogTitle>Invite Project Member</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleAddMember}>
+              <form onSubmit={handleInviteMember}>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
@@ -129,10 +155,13 @@ const ProjectMembersPanel: React.FC = () => {
                       id="email"
                       type="email"
                       placeholder="member@example.com"
-                      value={newMemberEmail}
-                      onChange={(e) => setNewMemberEmail(e.target.value)}
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
                       required
                     />
+                    <p className="text-xs text-gray-500">
+                      An invitation will be sent to this email address
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
@@ -142,18 +171,18 @@ const ProjectMembersPanel: React.FC = () => {
                           variant="outline"
                           className="w-full justify-between"
                         >
-                          {newMemberRole === "admin" ? "Admin" : "Member"}
+                          {inviteRole === "admin" ? "Admin" : "Member"}
                           <ChevronDown className="w-4 h-4 ml-2" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         <DropdownMenuItem
-                          onClick={() => setNewMemberRole("admin")}
+                          onClick={() => setInviteRole("admin")}
                         >
                           Admin
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => setNewMemberRole("member")}
+                          onClick={() => setInviteRole("member")}
                         >
                           Member
                         </DropdownMenuItem>
@@ -169,9 +198,9 @@ const ProjectMembersPanel: React.FC = () => {
                   <Button
                     type="submit"
                     className="bg-teal-600"
-                    disabled={addMemberMutation.isPending}
+                    disabled={inviteMemberMutation.isPending}
                   >
-                    {addMemberMutation.isPending ? "Adding..." : "Add Member"}
+                    {inviteMemberMutation.isPending ? "Sending..." : "Send Invitation"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -196,13 +225,15 @@ const ProjectMembersPanel: React.FC = () => {
               <TableRow key={member?.userId}>
                 <TableCell className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={`/api/placeholder/32/32`} />
+                    <AvatarImage src={member?.photoURL || `/api/placeholder/32/32`} />
                     <AvatarFallback>
-                      {member?.userId?.substring(0, 2).toUpperCase()}
+                      {getMemberInitials(member)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
-                    <span className="font-medium">{member?.email || member?.userId}</span>
+                    <span className="font-medium">
+                      {getMemberDisplayName(member)}
+                    </span>
                     <span className="text-xs text-gray-500">
                       {member?.email}
                     </span>

@@ -198,3 +198,31 @@ export const reorderProjectStatuses = async (
   );
   return response.data.data;
 };
+
+// Enable public sharing for a project
+export const enableProjectPublicSharing = async (projectId: string) => {
+  const response = await taskApiClient.post<ApiResponse<{
+    isPublicSharingEnabled: boolean;
+    publicShareToken: string;
+    publicUrl: string;
+  }>>(`/projects/${projectId}/enable-public-sharing`);
+  return response.data.data;
+};
+
+// Disable public sharing for a project
+export const disableProjectPublicSharing = async (projectId: string) => {
+  const response = await taskApiClient.post<ApiResponse<{
+    isPublicSharingEnabled: boolean;
+  }>>(`/projects/${projectId}/disable-public-sharing`);
+  return response.data.data;
+};
+
+// Get public sharing status for a project
+export const getProjectPublicSharingStatus = async (projectId: string) => {
+  const response = await taskApiClient.get<ApiResponse<{
+    isPublicSharingEnabled: boolean;
+    publicShareToken?: string;
+    publicUrl?: string;
+  }>>(`/projects/${projectId}/public-sharing-status`);
+  return response.data.data;
+};

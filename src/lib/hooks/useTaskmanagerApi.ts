@@ -21,6 +21,9 @@ import {
   updateTaskStatus,
   updateTaskProgress,
   updateTaskAssignees,
+  disableTaskPublicSharing,
+  enableTaskPublicSharing,
+  getTaskPublicSharingStatus,
 } from "../api/task-manager/taskApi";
 import {
   getProjects,
@@ -40,6 +43,9 @@ import {
   updateProjectStatus,
   deleteProjectStatus,
   reorderProjectStatuses,
+  disableProjectPublicSharing,
+  getProjectPublicSharingStatus,
+  enableProjectPublicSharing,
 } from "../api/task-manager/projectApi";
 import {
   getEpics,
@@ -62,6 +68,7 @@ import {
   deleteFile,
 } from "../api/task-manager/fileApi";
 import { toast } from "sonner";
+import taskApiClient from "../api/task-manager/client";
 
 export const useTaskManagerApi = () => {
   const queryClient = useQueryClient();
@@ -877,6 +884,107 @@ export const useTaskManagerApi = () => {
       },
     });
   };
+  const useInviteProjectMemberMutation = () => {
+  return useMutation({
+    mutationFn: async ({ 
+      projectId, 
+      email, 
+      role 
+    }: { 
+      projectId: string; 
+      email: string; 
+      role: ProjectRole;
+    }) => {
+      const response = await taskApiClient.post(
+        `/projects/${projectId}/invite`,
+        { email, role }
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({queryKey: ['projects', data.projectId]});
+    },
+  });
+};
+// Project Public Sharing Queries
+const useProjectPublicSharingStatusQuery = (projectId: string) => {
+  return useQuery({
+    queryKey: ["projectPublicSharing", projectId],
+    queryFn: () => getProjectPublicSharingStatus(projectId),
+    enabled: !!projectId,
+  });
+};
+
+// Project Public Sharing Mutations
+const useEnableProjectPublicSharingMutation = () => {
+  return useMutation({
+    mutationFn: (projectId: string) => enableProjectPublicSharing(projectId),
+    onSuccess: (data, projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["projectPublicSharing", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("Public sharing enabled successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to enable public sharing");
+    },
+  });
+};
+
+const useDisableProjectPublicSharingMutation = () => {
+  return useMutation({
+    mutationFn: (projectId: string) => disableProjectPublicSharing(projectId),
+    onSuccess: (data, projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["projectPublicSharing", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("Public sharing disabled successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to disable public sharing");
+    },
+  });
+};
+
+// Task Public Sharing Queries
+const useTaskPublicSharingStatusQuery = (projectId: string, taskId: string) => {
+  return useQuery({
+    queryKey: ["taskPublicSharing", projectId, taskId],
+    queryFn: () => getTaskPublicSharingStatus(projectId, taskId),
+    enabled: !!projectId && !!taskId,
+  });
+};
+
+// Task Public Sharing Mutations
+const useEnableTaskPublicSharingMutation = () => {
+  return useMutation({
+    mutationFn: ({ projectId, taskId }: { projectId: string; taskId: string }) => 
+      enableTaskPublicSharing(projectId, taskId),
+    onSuccess: (data, { projectId, taskId }) => {
+      queryClient.invalidateQueries({ queryKey: ["taskPublicSharing", projectId, taskId] });
+      queryClient.invalidateQueries({ queryKey: ["task", projectId, taskId] });
+      queryClient.invalidateQueries({ queryKey: ["projectTasks", projectId] });
+      toast.success("Task public sharing enabled successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to enable task public sharing");
+    },
+  });
+};
+
+const useDisableTaskPublicSharingMutation = () => {
+  return useMutation({
+    mutationFn: ({ projectId, taskId }: { projectId: string; taskId: string }) => 
+      disableTaskPublicSharing(projectId, taskId),
+    onSuccess: (data, { projectId, taskId }) => {
+      queryClient.invalidateQueries({ queryKey: ["taskPublicSharing", projectId, taskId] });
+      queryClient.invalidateQueries({ queryKey: ["task", projectId, taskId] });
+      queryClient.invalidateQueries({ queryKey: ["projectTasks", projectId] });
+      toast.success("Task public sharing disabled successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to disable task public sharing");
+    },
+  });
+};
 
   return {
     // Project queries
@@ -935,10 +1043,22 @@ export const useTaskManagerApi = () => {
     useUpdateProjectStatusMutation,
     useDeleteProjectStatusMutation,
     useReorderProjectStatusesMutation,
+    useInviteProjectMemberMutation,
 
     // File queries and mutations
     useTaskFilesQuery,
     useUploadFileMutation,
     useDeleteFileMutation,
+
+    // Project public sharing
+  useProjectPublicSharingStatusQuery,
+  useEnableProjectPublicSharingMutation,
+  useDisableProjectPublicSharingMutation,
+
+  // Task public sharing
+  useTaskPublicSharingStatusQuery,
+  useEnableTaskPublicSharingMutation,
+  useDisableTaskPublicSharingMutation,
+
   };
 };

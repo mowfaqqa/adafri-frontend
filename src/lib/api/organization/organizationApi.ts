@@ -1,10 +1,15 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
-
+// lib/api/organization/enhancedOrganizationApi.ts
 import { ApiError } from "../errors/apiErrors";
+import { 
+  getPrimaryAccessToken, 
+  setAuthTokens, 
+  setCurrentOrganization 
+} from "@/lib/utils/enhancedCookies";
 
-// lib/api/organizationApi.ts
+// API Base URL
 const API_BASE_URL = "https://be-auth-server.onrender.com/api/v1";
 
+// Interfaces (keeping your existing ones)
 export interface CreateOrganizationData {
   business_name: string;
   business_address: string;
@@ -12,6 +17,7 @@ export interface CreateOrganizationData {
   business_taxId: string;
   business_industry: string;
 }
+
 export interface UpdateOrganizationData {
   organizationId: string;
   business_name?: string;
@@ -20,6 +26,7 @@ export interface UpdateOrganizationData {
   business_taxId?: string;
   business_industry?: string;
 }
+
 export interface Organization {
   id: string;
   business_name: string;
@@ -33,7 +40,7 @@ export interface Organization {
 
 export interface OrganizationMember {
   id: string;
-  role: "ADMIN" | "MEMBER" | "GUEST";
+  role: "ADMIN" | "MEMBER" | "GUEST" | "OWNER";
   permissions: string[];
   twoFactorEnabled: boolean;
   status: "active" | "pending" | "suspended";
@@ -50,6 +57,7 @@ export interface OrganizationMember {
 export interface SwitchOrganizationData {
   organizationId: string;
 }
+
 export interface InviteMemberData {
   organizationId: string;
   email: string;
@@ -60,21 +68,15 @@ export interface UpdateMemberRoleData {
   organizationId: string;
   memberId: string;
   role: string;
-  twoFactorCode?: string; // Optional for 2FA
+  twoFactorCode?: string;
 }
+
 export interface TwoFactorOperation {
   operation: string;
   data: any;
   twoFactorCode: string;
 }
-export interface Member {
-  id: string;
-  email: string;
-  role: string;
-  status: "active" | "pending" | "suspended";
-  joinedAt: string;
-}
-// Response interfaces
+
 export interface ApiResponse<T> {
   status: string;
   message: string;
@@ -84,13 +86,14 @@ export interface ApiResponse<T> {
     refresh_token?: string;
   };
 }
-export interface OrganizationsResponse
-  extends ApiResponse<OrganizationMember[]> {}
-export interface CreateOrganizationResponse extends ApiResponse<Organization> {}
-export interface UpdateOrganizationResponse extends ApiResponse<Organization> {}
-export interface SwitchOrganizationResponse extends ApiResponse<Organization> {}
-export interface InviteMemberResponse extends ApiResponse<any> {}
-export interface MemberResponse extends ApiResponse<OrganizationMember> {}
+
+export type OrganizationsResponse = ApiResponse<OrganizationMember[]>
+export type CreateOrganizationResponse = ApiResponse<Organization>
+export type UpdateOrganizationResponse = ApiResponse<Organization>
+export type SwitchOrganizationResponse = ApiResponse<Organization>
+export type InviteMemberResponse = ApiResponse<any>
+export type MemberResponse = ApiResponse<OrganizationMember>
+
 class OrganizationApiService {
   private pendingTwoFactorOperation: TwoFactorOperation | null = null;
 
@@ -106,14 +109,14 @@ class OrganizationApiService {
       };
 
       if (requiresAuth) {
-        const token = localStorage.getItem("djombi_access_token")!;
-
-        console.log(token, "TOKEN")
+        const token = getPrimaryAccessToken();
+        
         if (!token) {
-          throw new Error("No access token found");
+          throw new ApiError(401, "No access token found");
         }
         headers["Authorization"] = `Bearer ${token}`;
       }
+
       const response = await fetch(`${API_BASE_URL}${url}`, {
         headers,
         credentials: "include",
@@ -121,32 +124,38 @@ class OrganizationApiService {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          // If can't parse error response, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        throw new ApiError(response.status, errorMessage);
       }
+
       const data = await response.json();
 
+      // Handle token updates from the response
       if (data.meta?.access_token && data.meta?.refresh_token) {
-        localStorage.setItem(
-          "access_token",
-          JSON.stringify({
-            access_token: data.meta.access_token,
-            refresh_token: data.meta.refresh_token,
-          })
-        );
+        setAuthTokens({
+          djombiAccessToken: data.meta.access_token,
+          djombiRefreshToken: data.meta.refresh_token
+        });
       }
+
       return data;
     } catch (error) {
       console.error("API request failed:", error);
-      throw error;
-    }
-  }
-
-  private async getErrorMessage(response: Response): Promise<string> {
-    try {
-      const errorData = await response.json();
-      return errorData.message || `HTTP error! status: ${response.status}`;
-    } catch {
-      return `HTTP error! status: ${response.status}`;
+      
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      
+      throw new ApiError(500, error instanceof Error ? error.message : "Unknown error occurred");
     }
   }
 
@@ -211,10 +220,17 @@ class OrganizationApiService {
   async createOrganization(
     data: CreateOrganizationData
   ): Promise<CreateOrganizationResponse> {
-    return this.makeRequest<CreateOrganizationResponse>("/organizations", {
+    const response = await this.makeRequest<CreateOrganizationResponse>("/organizations", {
       method: "POST",
       body: JSON.stringify(data),
     });
+
+    // Set the created organization as current
+    if (response.status === 'success' && response.data.id) {
+      setCurrentOrganization(response.data.id);
+    }
+
+    return response;
   }
 
   async updateOrganization(
@@ -234,13 +250,20 @@ class OrganizationApiService {
   async switchOrganization(
     data: SwitchOrganizationData
   ): Promise<SwitchOrganizationResponse> {
-    return this.makeRequest<SwitchOrganizationResponse>(
+    const response = await this.makeRequest<SwitchOrganizationResponse>(
       "/organizations/switch",
       {
         method: "POST",
         body: JSON.stringify(data),
       }
     );
+
+    // Update current organization cookie on successful switch
+    if (response.status === 'success') {
+      setCurrentOrganization(data.organizationId);
+    }
+
+    return response;
   }
 
   // Member management operations
@@ -313,6 +336,16 @@ class OrganizationApiService {
 
   clearPendingOperation(): void {
     this.pendingTwoFactorOperation = null;
+  }
+
+  // Health check method
+  async healthCheck(): Promise<boolean> {
+    try {
+      await this.makeRequest('/health', { method: 'GET' }, false);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

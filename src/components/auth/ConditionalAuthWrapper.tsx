@@ -10,6 +10,9 @@ import {
   DjombiAuthLoader,
 } from "@/components/providers/DjombiAuthProvider";
 import BackgroundTokenRefresh from "@/components/auth/BackgroundTokenRefresh";
+import { AuthGuard } from "@/hooks/useAuth";
+import { OrganizationProvider } from "@/lib/context/organization";
+import { OrganizationGuard } from "../guards/OrganizationGuard";
 
 interface ConditionalAuthWrapperProps {
   children: ReactNode;
@@ -49,14 +52,20 @@ const requiresFullAuth = (pathname: string): boolean => {
 function FullAuthWrapper({ children }: { children: ReactNode }) {
   return (
     <OAuth2>
-      <DjombiAuthProvider requireAuth={true}>
-        <DjombiAuthLoader requireAuth={true}>
-          <SearchProvider>
-            <BackgroundTokenRefresh />
-            {children}
-          </SearchProvider>
-        </DjombiAuthLoader>
-      </DjombiAuthProvider>
+      <AuthGuard>
+        <DjombiAuthProvider requireAuth={true}>
+          <DjombiAuthLoader requireAuth={true}>
+            <OrganizationProvider>
+              <OrganizationGuard>
+                <SearchProvider>
+                  <BackgroundTokenRefresh />
+                  {children}
+                </SearchProvider>
+              </OrganizationGuard>
+            </OrganizationProvider>
+          </DjombiAuthLoader>
+        </DjombiAuthProvider>
+      </AuthGuard>
     </OAuth2>
   );
 }

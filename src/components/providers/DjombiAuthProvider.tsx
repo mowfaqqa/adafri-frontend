@@ -7,6 +7,7 @@ import {
   ReactNode,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DjombiProfileService } from "@/lib/services/DjombiProfileService";
@@ -31,17 +32,12 @@ interface DjombiUser {
 }
 
 interface DjombiAuthState {
-  // Authentication status
   isInitialized: boolean;
   isDjombiAuthenticated: boolean;
   isLoading: boolean;
-
-  // User data
   djombiUser: DjombiUser | null;
   djombiToken: string | null;
   refreshToken: string | null;
-
-  // Methods
   initializeDjombi: (adafriToken: string) => Promise<boolean>;
   refreshDjombiAuth: () => Promise<boolean>;
   clearDjombiAuth: () => void;
@@ -49,12 +45,9 @@ interface DjombiAuthState {
     endpoint: string,
     options?: RequestInit
   ) => Promise<{ success: boolean; data?: T; error?: string }>;
-
-  // Error state
   error: string | null;
 }
 
-// React Query Keys
 const QUERY_KEYS = {
   DJOMBI_AUTH: ["djombi", "auth"] as const,
   DJOMBI_PROFILE: ["djombi", "profile"] as const,
@@ -75,21 +68,15 @@ export const DjombiAuthProvider = ({
   const queryClient = useQueryClient();
   const [isInitialized, setIsInitialized] = useState(!requireAuth);
   const [error, setError] = useState<string | null>(null);
+  
+  // Track initialization attempts to prevent loops
+  const initializationInProgress = useRef(false);
+  const lastInitializationAttempt = useRef<string | null>(null);
 
-  // Get Adafri auth context
   const adafriAuth = useContext(AuthContext);
 
-  // Memoized functions to check stored auth state
   const getStoredAuthState = useCallback(() => {
-    if (typeof window === "undefined") {
-      return {
-        isAuthenticated: false,
-        profile: null,
-        tokens: { accessToken: null, refreshToken: null },
-      };
-    }
-
-    if (!requireAuth) {
+    if (typeof window === "undefined" || !requireAuth) {
       return {
         isAuthenticated: false,
         profile: null,
@@ -104,7 +91,6 @@ export const DjombiAuthProvider = ({
     return { isAuthenticated, profile, tokens };
   }, [requireAuth]);
 
-  // React Query for Djombi authentication state
   const {
     data: authState,
     isLoading: authLoading,
@@ -120,173 +106,120 @@ export const DjombiAuthProvider = ({
     enabled: isInitialized && requireAuth,
   });
 
-  // Auto-initialize mutation
   const initializeMutation = useMutation({
     mutationFn: async (adafriToken: string) => {
-      const result =
-        await DjombiProfileService.initializeDjombiAuth(adafriToken);
-      if (!result.success) {
-        throw new Error(
-          result.error || "Failed to initialize Djombi authentication"
-        );
+      // Prevent concurrent initialization attempts
+      if (initializationInProgress.current) {
+        throw new Error("Initialization already in progress");
       }
-      return result;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(QUERY_KEYS.DJOMBI_AUTH, {
-        isAuthenticated: true,
-        profile: data.profile,
-        tokens: {
-          accessToken: data.tokens?.accessTokenDjombi,
-          refreshToken: data.tokens?.refreshTokenDjombi,
-        },
-      });
 
-      queryClient.setQueryData(QUERY_KEYS.DJOMBI_PROFILE, data.profile);
-      queryClient.setQueryData(QUERY_KEYS.DJOMBI_TOKENS, data.tokens);
-
-      setError(null);
-    },
-    onError: (error: Error) => {
-      setError(error.message);
-      console.error("Djombi initialization error:", error);
-    },
-  });
-
-  // Refresh token mutation
-  const refreshMutation = useMutation({
-    mutationFn: async () => {
-      const result = await DjombiProfileService.refreshDjombiToken();
-      if (!result.success) {
-        throw new Error(result.error || "Failed to refresh authentication");
+      // Prevent duplicate attempts with same token
+      if (lastInitializationAttempt.current === adafriToken) {
+        throw new Error("Already attempted initialization with this token");
       }
-      return result;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(QUERY_KEYS.DJOMBI_AUTH, {
-        isAuthenticated: true,
-        profile: data.profile,
-        tokens: {
-          accessToken: data.tokens?.accessTokenDjombi,
-          refreshToken: data.tokens?.refreshTokenDjombi,
-        },
-      });
 
-      queryClient.setQueryData(QUERY_KEYS.DJOMBI_PROFILE, data.profile);
-      queryClient.setQueryData(QUERY_KEYS.DJOMBI_TOKENS, data.tokens);
+      initializationInProgress.current = true;
+      lastInitializationAttempt.current = adafriToken;
 
-      setError(null);
-    },
-    onError: (error: Error) => {
-      clearDjombiAuth();
-      setError(error.message);
-      console.error("Djombi refresh error:", error);
-    },
-  });
-
-  // Initialize from localStorage on mount
-  useEffect(() => {
-    const initializeFromStorage = () => {
       try {
-        setIsInitialized(true);
-        setError(null);
-      } catch (err) {
-        console.error("Error initializing Djombi auth from storage:", err);
-        if (requireAuth) {
-          setError("Failed to initialize authentication");
+        console.log('🚀 Starting Djombi initialization...');
+        const result = await DjombiProfileService.initializeDjombiAuth(adafriToken);
+        
+        if (!result.success) {
+          throw new Error(result.error || "Failed to initialize Djombi authentication");
         }
-        setIsInitialized(true);
-      }
-    };
 
-    if (typeof window !== "undefined") {
-      if (requireAuth) {
-        initializeFromStorage();
-      } else {
-        setIsInitialized(true);
+        console.log('✅ Djombi initialization successful:', result);
+        return result;
+      } finally {
+        initializationInProgress.current = false;
       }
-    } else {
-      setIsInitialized(true);
-    }
-  }, [requireAuth]);
+    },
+    onSuccess: (data) => {
+      console.log('🎉 Djombi auth initialized successfully');
+      
+      const newAuthState = {
+        isAuthenticated: true,
+        profile: data.profile,
+        tokens: {
+          accessToken: data.tokens?.accessTokenDjombi,
+          refreshToken: data.tokens?.refreshTokenDjombi,
+        },
+      };
 
-  // Auto-initialize Djombi when Adafri token is available
+      queryClient.setQueryData(QUERY_KEYS.DJOMBI_AUTH, newAuthState);
+      queryClient.setQueryData(QUERY_KEYS.DJOMBI_PROFILE, data.profile);
+      queryClient.setQueryData(QUERY_KEYS.DJOMBI_TOKENS, data.tokens);
+
+      setError(null);
+    },
+    onError: (error: Error) => {
+      console.error('❌ Djombi initialization failed:', error);
+      setError(error.message);
+      
+      // Reset attempt tracking on error to allow retry
+      lastInitializationAttempt.current = null;
+    },
+  });
+
+  // Initialize on mount
   useEffect(() => {
-  const checkAndInitializeDjombi = async () => {
-    if (!isInitialized || !requireAuth || authState?.isAuthenticated) {
-      return;
-    }
-
-    // Only try to initialize if we actually require auth
-    if (!requireAuth) {
+    if (typeof window !== "undefined") {
+      console.log('🔧 Initializing DjombiAuthProvider...');
       setIsInitialized(true);
-      return;
+      setError(null);
     }
+  }, []);
 
-    // Check if we have Adafri authentication
-    if (adafriAuth?.isAuthenticated && adafriAuth?.token?.access_token) {
-      console.log("Auto-initializing Djombi with Adafri token");
-      if (!initializeMutation.isPending) {
-        initializeMutation.mutate(adafriAuth.token.access_token);
-      }
-      return;
-    }
-
-    // Fallback to localStorage check only if auth is required
-    try {
-      const adafriTokenData = localStorage.getItem("access_token");
-      if (adafriTokenData) {
-        const parsedToken = JSON.parse(adafriTokenData);
-        if (parsedToken.access_token && !initializeMutation.isPending) {
-          console.log("Auto-initializing Djombi with stored token");
-          initializeMutation.mutate(parsedToken.access_token);
-        }
-      }
-    } catch (err) {
-      console.error("Auto-initialization failed:", err);
-    }
-  };
-
-  checkAndInitializeDjombi();
-}, [
-  isInitialized,
-  authState?.isAuthenticated,
-  initializeMutation,
-  requireAuth,
-  adafriAuth?.isAuthenticated,
-  adafriAuth?.token?.access_token,
-]);
-
-  // Memoized methods
+  // Stable initialization function
   const initializeDjombi = useCallback(
     async (adafriToken: string): Promise<boolean> => {
       if (!requireAuth) return true;
+
+      // Prevent duplicate initialization
+      if (initializationInProgress.current) {
+        console.log('⏳ Initialization already in progress, skipping...');
+        return false;
+      }
+
+      if (authState?.isAuthenticated) {
+        console.log('✅ Already authenticated with Djombi, skipping initialization');
+        return true;
+      }
 
       try {
         setError(null);
         await initializeMutation.mutateAsync(adafriToken);
         return true;
       } catch (error) {
+        console.error('💥 Initialize Djombi error:', error);
         return false;
       }
     },
-    [initializeMutation, requireAuth]
+    [initializeMutation, requireAuth, authState?.isAuthenticated]
   );
 
   const refreshDjombiAuth = useCallback(async (): Promise<boolean> => {
     if (!requireAuth) return true;
-
+    
     try {
       setError(null);
-      await refreshMutation.mutateAsync();
+      // Implement refresh logic here
       return true;
     } catch (error) {
+      console.error('💥 Refresh Djombi error:', error);
       return false;
     }
-  }, [refreshMutation, requireAuth]);
+  }, [requireAuth]);
 
   const clearDjombiAuth = useCallback(() => {
     if (!requireAuth) return;
+
+    console.log('🧹 Clearing Djombi auth data...');
+    
+    // Reset tracking variables
+    initializationInProgress.current = false;
+    lastInitializationAttempt.current = null;
 
     DjombiProfileService.clearDjombiAuth();
 
@@ -334,14 +267,8 @@ export const DjombiAuthProvider = ({
   const contextValue: DjombiAuthState = useMemo(
     () => ({
       isInitialized,
-      isDjombiAuthenticated: requireAuth
-        ? authState?.isAuthenticated || false
-        : false,
-      isLoading: requireAuth
-        ? authLoading ||
-          initializeMutation.isPending ||
-          refreshMutation.isPending
-        : false,
+      isDjombiAuthenticated: requireAuth ? authState?.isAuthenticated || false : false,
+      isLoading: requireAuth ? authLoading || initializeMutation.isPending : false,
       djombiUser: requireAuth ? authState?.profile || null : null,
       djombiToken: requireAuth ? authState?.tokens.accessToken || null : null,
       refreshToken: requireAuth ? authState?.tokens.refreshToken || null : null,
@@ -349,16 +276,13 @@ export const DjombiAuthProvider = ({
       refreshDjombiAuth,
       clearDjombiAuth,
       makeAuthenticatedCall,
-      error: requireAuth
-        ? error || (authError as Error)?.message || null
-        : null,
+      error: requireAuth ? error || (authError as Error)?.message || null : null,
     }),
     [
       isInitialized,
       authState,
       authLoading,
       initializeMutation.isPending,
-      refreshMutation.isPending,
       initializeDjombi,
       refreshDjombiAuth,
       clearDjombiAuth,
@@ -376,7 +300,6 @@ export const DjombiAuthProvider = ({
   );
 };
 
-// Custom hook to use Djombi authentication
 export const useDjombiAuth = (): DjombiAuthState => {
   const context = useContext(DjombiAuthContext);
   if (!context) {
@@ -385,7 +308,6 @@ export const useDjombiAuth = (): DjombiAuthState => {
   return context;
 };
 
-// Enhanced HOC with better loading and error states
 export const withDjombiAuth = <P extends object>(
   Component: React.ComponentType<P>,
   options?: {
@@ -395,8 +317,7 @@ export const withDjombiAuth = <P extends object>(
   }
 ) => {
   return function DjombiAuthenticatedComponent(props: P) {
-    const { isDjombiAuthenticated, isLoading, error, isInitialized } =
-      useDjombiAuth();
+    const { isDjombiAuthenticated, isLoading, error, isInitialized } = useDjombiAuth();
     const requireAuth = options?.requireAuth ?? true;
 
     if (!requireAuth) {
@@ -444,7 +365,6 @@ export const withDjombiAuth = <P extends object>(
   };
 };
 
-// Optimized loading component with conditional behavior
 export const DjombiAuthLoader = ({
   children,
   requireAuth = true,

@@ -11,6 +11,7 @@ import { TaskActionButtons } from "../buttons/TaskActionButtons";
 import { useAuthAwareTaskManagerApi } from "@/lib/hooks/useAuthAwareTaskManagerApi";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
 import { getFileUrl } from "@/lib/api/task-manager/fileApi";
+import ShareButton from "../buttons/ShareButton";
 
 interface StandardTaskCardProps {
   task: StandardTask;
@@ -29,7 +30,6 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
   const { projectId } = useProjectContext();
   const { useTaskFilesQuery } = useAuthAwareTaskManagerApi();
 
-  
   // Fetch task files to show image previews
   const { data: taskFiles = [] } = useTaskFilesQuery(
     projectId || "",
@@ -37,8 +37,8 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
   );
 
   // Filter for image files only
-  const imageFiles = taskFiles.filter(file => 
-    file.mimetype && file.mimetype.startsWith('image/')
+  const imageFiles = taskFiles.filter(
+    (file) => file.mimetype && file.mimetype.startsWith("image/")
   );
 
   // Dynamic styling based on progress
@@ -60,13 +60,13 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
   // Get priority-based badge styling
   const getPriorityBadgeStyle = (tag: string) => {
     const lowerTag = tag.toLowerCase();
-    if (lowerTag.includes('high')) {
+    if (lowerTag.includes("high")) {
       return "bg-gradient-to-r from-red-100 to-red-50 border-red-200 text-red-800 hover:from-red-50 hover:to-red-25";
     }
-    if (lowerTag.includes('medium')) {
+    if (lowerTag.includes("medium")) {
       return "bg-gradient-to-r from-amber-100 to-amber-50 border-amber-200 text-amber-800 hover:from-amber-50 hover:to-amber-25";
     }
-    if (lowerTag.includes('low')) {
+    if (lowerTag.includes("low")) {
       return "bg-gradient-to-r from-green-100 to-green-50 border-green-200 text-green-800 hover:from-green-50 hover:to-green-25";
     }
     return "bg-gradient-to-r from-gray-100 to-gray-50 border-gray-200/70 text-gray-700 hover:from-gray-50 hover:to-white";
@@ -75,7 +75,9 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
   // Get text colors based on cover
   const getTextColor = (baseClass: string) => {
     if (hasCustomCover) {
-      return baseClass.replace('text-gray-', 'text-white/').replace('text-slate-', 'text-white/');
+      return baseClass
+        .replace("text-gray-", "text-white/")
+        .replace("text-slate-", "text-white/");
     }
     return baseClass;
   };
@@ -93,7 +95,7 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
       <Card
         className={`group relative overflow-hidden transition-all duration-300 ease-out
           hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1 
-          ${hasCustomCover ? 'bg-transparent border-transparent' : `border-l-4 ${getCardAccent(task.progress)} bg-gradient-to-br from-white via-white to-gray-50/30`}
+          ${hasCustomCover ? "bg-transparent border-transparent" : `border-l-4 ${getCardAccent(task.progress)} bg-gradient-to-br from-white via-white to-gray-50/30`}
           backdrop-blur-sm border border-gray-200/60 cursor-pointer ${className}`}
         draggable
         onClick={() => setShowDetailsModal(true)}
@@ -103,24 +105,40 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
         {!hasCustomCover && (
           <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/[0.02] pointer-events-none" />
         )}
-        
+
         {/* Animated border gradient on hover - only show if no custom cover */}
         {!hasCustomCover && (
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent 
-            -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+          <div
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent 
+            -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none"
+          />
         )}
 
         <CardContent className="relative p-4 space-y-2">
           {/* Header with title and actions */}
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className={`font-semibold line-clamp-2 text-base leading-tight
+            <h3
+              className={`font-semibold line-clamp-2 text-base leading-tight
               group-hover:opacity-90 transition-colors duration-200 ${
-                hasCustomCover ? 'text-white' : 'text-gray-900 group-hover:text-gray-800'
-              }`}>
+                hasCustomCover
+                  ? "text-white"
+                  : "text-gray-900 group-hover:text-gray-800"
+              }`}
+            >
               {task.title}
             </h3>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                 onClick={(e) => e.stopPropagation()}>
+            <div
+              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ShareButton
+                type="task"
+                projectId={projectId || ""}
+                taskId={task.id as string}
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600 rounded-full"
+              />
               <TaskActionButtons
                 task={task}
                 onEdit={() => {
@@ -132,9 +150,11 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
           </div>
 
           {/* Description with enhanced styling */}
-          <p className={`line-clamp-1 leading-relaxed text-xs mb-2 ${
-            hasCustomCover ? 'text-white/90' : 'text-gray-600'
-          }`}>
+          <p
+            className={`line-clamp-1 leading-relaxed text-xs mb-2 ${
+              hasCustomCover ? "text-white/90" : "text-gray-600"
+            }`}
+          >
             {task.description}
           </p>
 
@@ -142,11 +162,15 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
           {imageFiles.length > 0 && (
             <div className="mb-3">
               <div className="flex items-center gap-1 mb-2">
-                <Paperclip className={`h-3 w-3 ${hasCustomCover ? 'text-white/70' : 'text-gray-400'}`} />
-                <span className={`text-xs font-medium ${
-                  hasCustomCover ? 'text-white/80' : 'text-gray-500'
-                }`}>
-                  {imageFiles.length} image{imageFiles.length > 1 ? 's' : ''}
+                <Paperclip
+                  className={`h-3 w-3 ${hasCustomCover ? "text-white/70" : "text-gray-400"}`}
+                />
+                <span
+                  className={`text-xs font-medium ${
+                    hasCustomCover ? "text-white/80" : "text-gray-500"
+                  }`}
+                >
+                  {imageFiles.length} image{imageFiles.length > 1 ? "s" : ""}
                 </span>
               </div>
               <div className="space-y-2">
@@ -154,9 +178,9 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
                   <div
                     key={file.id}
                     className={`relative w-full h-40 rounded-lg overflow-hidden border transition-colors duration-200 ${
-                      hasCustomCover 
-                        ? 'bg-white/10 border-white/20 hover:border-white/40' 
-                        : 'bg-gray-100 border-gray-200 hover:border-gray-300'
+                      hasCustomCover
+                        ? "bg-white/10 border-white/20 hover:border-white/40"
+                        : "bg-gray-100 border-gray-200 hover:border-gray-300"
                     }`}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -183,12 +207,18 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
           {/* Enhanced progress section */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className={`text-xs font-medium ${
-                hasCustomCover ? 'text-white/90' : 'text-gray-700'
-              }`}>Progress</span>
+              <span
+                className={`text-xs font-medium ${
+                  hasCustomCover ? "text-white/90" : "text-gray-700"
+                }`}
+              >
+                Progress
+              </span>
               <div className="flex items-center gap-1">
-                <span className={`text-xs font-bold bg-gradient-to-r ${getProgressGradient(task.progress)} 
-                  bg-clip-text ${hasCustomCover ? 'text-white' : 'text-transparent'}`}>
+                <span
+                  className={`text-xs font-bold bg-gradient-to-r ${getProgressGradient(task.progress)} 
+                  bg-clip-text ${hasCustomCover ? "text-white" : "text-transparent"}`}
+                >
                   {task.progress}%
                 </span>
                 {task.progress === 100 && (
@@ -197,15 +227,16 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
               </div>
             </div>
             <div className="relative">
-              <Progress 
-                value={task.progress} 
+              <Progress
+                value={task.progress}
                 className={`h-2 border shadow-inner ${
-                  hasCustomCover 
-                    ? 'bg-white/20 border-white/30' 
-                    : 'bg-gray-100 border-gray-200/50'
+                  hasCustomCover
+                    ? "bg-white/20 border-white/30"
+                    : "bg-gray-100 border-gray-200/50"
                 }`}
               />
-              <div className={`absolute inset-0 bg-gradient-to-r ${getProgressGradient(task.progress)} 
+              <div
+                className={`absolute inset-0 bg-gradient-to-r ${getProgressGradient(task.progress)} 
                 rounded-full transition-all duration-500 ease-out opacity-90`}
                 style={{ width: `${task.progress}%` }}
               />
@@ -220,8 +251,8 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
                 variant="secondary"
                 className={`flex items-center gap-1 px-2 py-1 font-medium
                   hover:shadow-sm transition-all duration-200 text-xs ${
-                    hasCustomCover 
-                      ? 'bg-white/20 border-white/30 text-white hover:bg-white/30' 
+                    hasCustomCover
+                      ? "bg-white/20 border-white/30 text-white hover:bg-white/30"
                       : getPriorityBadgeStyle(tag)
                   }`}
               >
@@ -232,35 +263,45 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
           </div>
 
           {/* Enhanced footer */}
-          <div className={`flex items-center justify-between pt-3 border-t transition-colors duration-200 ${
-            hasCustomCover ? 'border-white/20' : 'border-gray-100/80'
-          }`}>
-            <div className={`flex items-center text-sm font-medium ${
-              hasCustomCover ? 'text-white/90' : 'text-gray-500'
-            }`}>
+          <div
+            className={`flex items-center justify-between pt-3 border-t transition-colors duration-200 ${
+              hasCustomCover ? "border-white/20" : "border-gray-100/80"
+            }`}
+          >
+            <div
+              className={`flex items-center text-sm font-medium ${
+                hasCustomCover ? "text-white/90" : "text-gray-500"
+              }`}
+            >
               {task.date}
             </div>
-            
+
             <div className="flex items-center gap-2">
-              <span className={`text-xs font-medium ${
-                hasCustomCover ? 'text-white/70' : 'text-gray-400'
-              }`}>Team</span>
+              <span
+                className={`text-xs font-medium ${
+                  hasCustomCover ? "text-white/70" : "text-gray-400"
+                }`}
+              >
+                Team
+              </span>
               <div className="flex -space-x-2">
                 {task.assignees.map((assignee, index) => (
-                  <Avatar 
-                    key={index} 
+                  <Avatar
+                    key={index}
                     className={`h-8 w-8 border-2 shadow-sm transition-all duration-200 hover:scale-110 ${
-                      hasCustomCover 
-                        ? 'border-white/30 ring-2 ring-white/20 hover:ring-white/40' 
-                        : 'border-white ring-2 ring-gray-100 hover:ring-gray-200'
+                      hasCustomCover
+                        ? "border-white/30 ring-2 ring-white/20 hover:ring-white/40"
+                        : "border-white ring-2 ring-gray-100 hover:ring-gray-200"
                     }`}
                   >
                     <AvatarImage src={assignee} />
-                    <AvatarFallback className={`text-xs font-semibold ${
-                      hasCustomCover 
-                        ? 'bg-white/20 text-white' 
-                        : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600'
-                    }`}>
+                    <AvatarFallback
+                      className={`text-xs font-semibold ${
+                        hasCustomCover
+                          ? "bg-white/20 text-white"
+                          : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600"
+                      }`}
+                    >
                       {`U${index + 1}`}
                     </AvatarFallback>
                   </Avatar>
@@ -278,83 +319,9 @@ const StandardTaskCard: React.FC<StandardTaskCardProps> = ({
       />
     </>
   );
-}
+};
 
 export default StandardTaskCard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // "use client";
 // import React, { useState } from "react";
@@ -382,7 +349,7 @@ export default StandardTaskCard;
 //   const [showDetailsModal, setShowDetailsModal] = useState(false);
 //   const { projectId } = useProjectContext();
 //   const { useTaskFilesQuery } = useAuthAwareTaskManagerApi();
-  
+
 //   // Fetch task files to show image previews
 //   const { data: taskFiles = [] } = useTaskFilesQuery(
 //     projectId || "",
@@ -390,7 +357,7 @@ export default StandardTaskCard;
 //   );
 
 //   // Filter for image files only
-//   const imageFiles = taskFiles.filter(file => 
+//   const imageFiles = taskFiles.filter(file =>
 //     file.mimetype && file.mimetype.startsWith('image/')
 //   );
 
@@ -428,7 +395,7 @@ export default StandardTaskCard;
 //     <>
 //       <Card
 //         className={`group relative overflow-hidden transition-all duration-300 ease-out
-//           hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1 
+//           hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1
 //           border-l-4 ${getCardAccent(task.progress)}
 //           bg-gradient-to-br from-white via-white to-gray-50/30
 //           backdrop-blur-sm border border-gray-200/60 cursor-pointer ${className}`}
@@ -437,9 +404,9 @@ export default StandardTaskCard;
 //       >
 //         {/* Subtle background pattern */}
 //         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/[0.02] pointer-events-none" />
-        
+
 //         {/* Animated border gradient on hover */}
-//         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent 
+//         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent
 //           -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
 
 //         <CardContent className="relative p-4 space-y-2">
@@ -508,7 +475,7 @@ export default StandardTaskCard;
 //             <div className="flex justify-between items-center">
 //               <span className="text-xs font-medium text-gray-700">Progress</span>
 //               <div className="flex items-center gap-1">
-//                 <span className={`text-xs font-bold bg-gradient-to-r ${getProgressGradient(task.progress)} 
+//                 <span className={`text-xs font-bold bg-gradient-to-r ${getProgressGradient(task.progress)}
 //                   bg-clip-text text-transparent`}>
 //                   {task.progress}%
 //                 </span>
@@ -518,11 +485,11 @@ export default StandardTaskCard;
 //               </div>
 //             </div>
 //             <div className="relative">
-//               <Progress 
-//                 value={task.progress} 
-//                 className="h-2 bg-gray-100 border border-gray-200/50 shadow-inner" 
+//               <Progress
+//                 value={task.progress}
+//                 className="h-2 bg-gray-100 border border-gray-200/50 shadow-inner"
 //               />
-//               <div className={`absolute inset-0 bg-gradient-to-r ${getProgressGradient(task.progress)} 
+//               <div className={`absolute inset-0 bg-gradient-to-r ${getProgressGradient(task.progress)}
 //                 rounded-full transition-all duration-500 ease-out opacity-90`}
 //                 style={{ width: `${task.progress}%` }}
 //               />
@@ -535,7 +502,7 @@ export default StandardTaskCard;
 //               <Badge
 //                 key={index}
 //                 variant="secondary"
-//                 className={`flex items-center gap-1 px-2 py-1 
+//                 className={`flex items-center gap-1 px-2 py-1
 //                   ${getPriorityBadgeStyle(tag)} font-medium
 //                   hover:shadow-sm transition-all duration-200 text-xs`}
 //               >
@@ -550,19 +517,19 @@ export default StandardTaskCard;
 //             <div className="flex items-center text-gray-500 text-sm font-medium">
 //               {task.date}
 //             </div>
-            
+
 //             <div className="flex items-center gap-2">
 //               <span className="text-xs text-gray-400 font-medium">Team</span>
 //               <div className="flex -space-x-2">
 //                 {task.assignees.map((assignee, index) => (
-//                   <Avatar 
-//                     key={index} 
+//                   <Avatar
+//                     key={index}
 //                     className="h-8 w-8 border-2 border-white shadow-sm
-//                       ring-2 ring-gray-100 hover:ring-gray-200 
+//                       ring-2 ring-gray-100 hover:ring-gray-200
 //                       transition-all duration-200 hover:scale-110"
 //                   >
 //                     <AvatarImage src={assignee} />
-//                     <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200 
+//                     <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200
 //                       text-gray-600 text-xs font-semibold">
 //                       {`U${index + 1}`}
 //                     </AvatarFallback>
@@ -584,62 +551,6 @@ export default StandardTaskCard;
 // };
 
 // export default StandardTaskCard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // "use client";
 // import React, { useState } from "react";
@@ -697,7 +608,7 @@ export default StandardTaskCard;
 //     <>
 //       <Card
 //         className={`group relative overflow-hidden transition-all duration-300 ease-out
-//           hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1 
+//           hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1
 //           border-l-4 ${getCardAccent(task.progress)}
 //           bg-gradient-to-br from-white via-white to-gray-50/30
 //           backdrop-blur-sm border border-gray-200/60 ${className}`}
@@ -705,9 +616,9 @@ export default StandardTaskCard;
 //       >
 //         {/* Subtle background pattern */}
 //         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/[0.02] pointer-events-none" />
-        
+
 //         {/* Animated border gradient on hover */}
-//         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent 
+//         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent
 //           -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
 
 //         <CardContent className="relative p-4 space-y-2">
@@ -739,7 +650,7 @@ export default StandardTaskCard;
 //             <div className="flex justify-between items-center">
 //               <span className="text-xs font-medium text-gray-700">Progress</span>
 //               <div className="flex items-center gap-1">
-//                 <span className={`text-xs font-bold bg-gradient-to-r ${getProgressGradient(task.progress)} 
+//                 <span className={`text-xs font-bold bg-gradient-to-r ${getProgressGradient(task.progress)}
 //                   bg-clip-text text-transparent`}>
 //                   {task.progress}%
 //                 </span>
@@ -749,11 +660,11 @@ export default StandardTaskCard;
 //               </div>
 //             </div>
 //             <div className="relative">
-//               <Progress 
-//                 value={task.progress} 
-//                 className="h-2 bg-gray-100 border border-gray-200/50 shadow-inner" 
+//               <Progress
+//                 value={task.progress}
+//                 className="h-2 bg-gray-100 border border-gray-200/50 shadow-inner"
 //               />
-//               <div className={`absolute inset-0 bg-gradient-to-r ${getProgressGradient(task.progress)} 
+//               <div className={`absolute inset-0 bg-gradient-to-r ${getProgressGradient(task.progress)}
 //                 rounded-full transition-all duration-500 ease-out opacity-90`}
 //                 style={{ width: `${task.progress}%` }}
 //               />
@@ -766,7 +677,7 @@ export default StandardTaskCard;
 //               <Badge
 //                 key={index}
 //                 variant="secondary"
-//                 className={`flex items-center gap-1 px-2 py-1 
+//                 className={`flex items-center gap-1 px-2 py-1
 //                   ${getPriorityBadgeStyle(tag)} font-medium
 //                   hover:shadow-sm transition-all duration-200 text-xs`}
 //               >
@@ -781,19 +692,19 @@ export default StandardTaskCard;
 //             <div className="flex items-center text-gray-500 text-sm font-medium">
 //               {task.date}
 //             </div>
-            
+
 //             <div className="flex items-center gap-2">
 //               <span className="text-xs text-gray-400 font-medium">Team</span>
 //               <div className="flex -space-x-2">
 //                 {task.assignees.map((assignee, index) => (
-//                   <Avatar 
-//                     key={index} 
+//                   <Avatar
+//                     key={index}
 //                     className="h-8 w-8 border-2 border-white shadow-sm
-//                       ring-2 ring-gray-100 hover:ring-gray-200 
+//                       ring-2 ring-gray-100 hover:ring-gray-200
 //                       transition-all duration-200 hover:scale-110"
 //                   >
 //                     <AvatarImage src={assignee} />
-//                     <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200 
+//                     <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200
 //                       text-gray-600 text-xs font-semibold">
 //                       {`U${index + 1}`}
 //                     </AvatarFallback>
@@ -815,45 +726,6 @@ export default StandardTaskCard;
 // };
 
 // export default StandardTaskCard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // "use state";
 // import React, { useState } from "react";

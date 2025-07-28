@@ -53,6 +53,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useProjectContext } from "@/lib/context/task-manager/ProjectContext";
+import ShareButton from "../buttons/ShareButton";
 
 interface TaskDetailsModalProps {
   task: Task;
@@ -524,6 +525,14 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
               </DialogTitle>
 
               <div className="flex items-center gap-2 justify-start ">
+                <ShareButton
+                  type="task"
+                  projectId={projectId || ""}
+                  taskId={task.id as string}
+                  size="sm"
+                  variant="outline"
+                  className="bg-purple-600 text-white hover:bg-purple-700 border-purple-600"
+                />
                 {isEditMode && (
                   <Button
                     variant="outline"

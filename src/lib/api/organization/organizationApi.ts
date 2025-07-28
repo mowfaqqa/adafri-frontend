@@ -61,7 +61,7 @@ export interface SwitchOrganizationData {
 export interface InviteMemberData {
   organizationId: string;
   email: string;
-  role: "ADMIN" | "MEMBER" | "GUEST";
+  role: "ADMIN" | "MEMBER" | "GUEST" | "OWNER";
 }
 
 export interface UpdateMemberRoleData {

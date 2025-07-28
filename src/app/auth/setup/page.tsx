@@ -10,14 +10,35 @@ import CreateOrganizationModal from '@/components/modals/CreateOrganizationModal
 const OrganizationSetupPage: React.FC = () => {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
-  const { hasOrganizations, loadOrganizations } = useOrganization();
   
+  // Add mounted state to prevent hydration issues
+  const [isMounted, setIsMounted] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [setupStep, setSetupStep] = useState<'welcome' | 'choose' | 'create'>('welcome');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Only use organization hook after component is mounted
+  let hasOrganizations = false;
+  let loadOrganizations = async () => {};
+  
+  try {
+    const orgContext = useOrganization();
+    hasOrganizations = orgContext.hasOrganizations;
+    loadOrganizations = orgContext.loadOrganizations;
+  } catch (error) {
+    // Context not available yet - will be handled by mounted check
+    console.warn('Organization context not available during SSR');
+  }
+
+  // Set mounted state
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Check authentication and organization status
   useEffect(() => {
+    if (!isMounted) return;
+
     const checkStatus = async () => {
       if (!isAuthenticated) {
         router.push('/auth/login');
@@ -36,7 +57,7 @@ const OrganizationSetupPage: React.FC = () => {
     };
 
     checkStatus();
-  }, [isAuthenticated, hasOrganizations, router, loadOrganizations]);
+  }, [isMounted, isAuthenticated, hasOrganizations, router, loadOrganizations]);
 
   // Handle create organization success
   const handleCreateSuccess = () => {
@@ -54,7 +75,8 @@ const OrganizationSetupPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  // Show loading until mounted and ready
+  if (!isMounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

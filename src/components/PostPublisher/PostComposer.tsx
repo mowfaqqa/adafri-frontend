@@ -62,73 +62,168 @@ const PostComposer: React.FC<PostComposerProps> = ({
   const characterLimit = getCharacterLimit();
 
   return (
-    <div className="space-y-6">
-      {/* Text Composer */}
-      <div className="relative">
-        <textarea
-          value={content}
-          onChange={handleContentChange}
-          placeholder={getPlaceholderText()}
-          className="w-full p-6 border-2 border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder-gray-400 transition-all duration-200 bg-white shadow-sm"
-          rows={postType === 'story' ? 4 : 8}
-          style={{ minHeight: postType === 'story' ? '120px' : '200px' }}
-        />
-        <div className={`absolute bottom-4 right-4 text-sm font-medium ${
-          charCount > characterLimit 
-            ? 'text-red-500' 
-            : charCount > characterLimit * 0.8 
-              ? 'text-yellow-500' 
-              : 'text-gray-500'
-        }`}>
-          {charCount}/{characterLimit}
-        </div>
-      </div>
-
-      {/* Media Upload Area */}
-      <div className="space-y-4">
-        {/* Upload Buttons */}
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 rounded-xl hover:from-blue-100 hover:to-blue-200 transition-all duration-200 border border-blue-200 shadow-sm hover:shadow-md transform hover:scale-105"
-          >
-            <Image size={18} />
-            <span className="font-medium">Photo</span>
-          </button>
-          
-          <button className="flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-50 to-green-100 text-green-700 rounded-xl hover:from-green-100 hover:to-green-200 transition-all duration-200 border border-green-200 shadow-sm hover:shadow-md transform hover:scale-105">
-            <Video size={18} />
-            <span className="font-medium">Video</span>
-          </button>
-          
-          <button className="flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 rounded-xl hover:from-purple-100 hover:to-purple-200 transition-all duration-200 border border-purple-200 shadow-sm hover:shadow-md transform hover:scale-105">
-            <Link size={18} />
-            <span className="font-medium">Link</span>
-          </button>
-          
-          <button className="flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-700 rounded-xl hover:from-yellow-100 hover:to-yellow-200 transition-all duration-200 border border-yellow-200 shadow-sm hover:shadow-md transform hover:scale-105">
-            <Smile size={18} />
-            <span className="font-medium">Emoji</span>
-          </button>
-        </div>
-
-        {/* Drag and Drop Area */}
-        <div 
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer group"
-        >
-          <div className="space-y-3">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-blue-100 transition-colors">
-              <Upload size={24} className="text-gray-400 group-hover:text-blue-500" />
-            </div>
-            <div>
-              <p className="text-gray-600 font-medium">Drag & drop media here</p>
-              <p className="text-sm text-gray-400">or click to browse</p>
-            </div>
+    <div className="space-y-4">
+      {/* Text Composer - Hide for Story */}
+      {postType !== 'story' && (
+        <div className="relative">
+          <textarea
+            value={content}
+            onChange={handleContentChange}
+            placeholder={getPlaceholderText()}
+            className="w-full p-4 border-2 border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder-gray-400 transition-all duration-200 bg-white shadow-sm"
+            rows={postType === 'reel' ? 4 : 6}
+            style={{ minHeight: postType === 'reel' ? '100px' : '150px' }}
+          />
+          <div className={`absolute bottom-3 right-3 text-sm font-medium ${
+            charCount > characterLimit 
+              ? 'text-red-500' 
+              : charCount > characterLimit * 0.8 
+                ? 'text-yellow-500' 
+                : 'text-gray-500'
+          }`}>
+            {charCount}/{characterLimit}
           </div>
         </div>
+      )}
+
+      {/* Media Upload Section */}
+      <div className="space-y-3">
+        {/* Upload Buttons - Only show for Post type */}
+        {postType === 'post' && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md text-sm"
+            >
+              <Image size={16} />
+              <span>Photo</span>
+            </button>
+            
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md text-sm"
+            >
+              <Video size={16} />
+              <span>Video</span>
+            </button>
+            
+            <button className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md text-sm">
+              <Link size={16} />
+              <span>Link</span>
+            </button>
+            
+            <button className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md text-sm">
+              <Smile size={16} />
+              <span>Emoji</span>
+            </button>
+          </div>
+        )}
+
+        {/* Media Grid - Show uploaded media */}
+        {media.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {media.map((file, index) => (
+                <div key={index} className="relative group">
+                  <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50 w-[120px] h-[120px]">
+                    {file.type.startsWith('video/') ? (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                        <Video className="text-gray-400" size={20} />
+                      </div>
+                    ) : (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="Upload preview"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                    
+                    {/* Remove button */}
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
+                      <button
+                        onClick={() => removeMedia(index)}
+                        className="w-6 h-6 bg-gray-800 bg-opacity-70 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-opacity-90"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Add More Button */}
+              {media.length < 10 && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-[120px] h-[120px] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 group"
+                >
+                  <div className="text-center">
+                    <Plus size={16} className="text-gray-400 group-hover:text-gray-600 mx-auto mb-1" />
+                    <p className="text-xs text-gray-500 group-hover:text-gray-700">Add</p>
+                  </div>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Drag and Drop Area - Only show when no media uploaded */}
+        {media.length === 0 && (
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 cursor-pointer group ${
+              postType === 'story' ? 'p-16' : 'p-6'
+            }`}
+          >
+            <div className="space-y-2">
+              <div className={`${postType === 'story' ? 'w-16 h-16' : 'w-10 h-10'} bg-gray-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-gray-200 transition-colors`}>
+                <Upload size={postType === 'story' ? 28 : 20} className="text-gray-400 group-hover:text-gray-600" />
+              </div>
+              <div>
+                <p className="text-gray-600 font-medium">
+                  {postType === 'story' ? 'Drag & drop' : 'Drag & drop'}
+                </p>
+                <p className="text-sm text-gray-400">
+                  {postType === 'story' ? 'or select a file' : 'or click to browse'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Story specific controls */}
+        {postType === 'story' && (
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-2">
+              <button className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <Image size={18} className="text-gray-600" />
+              </button>
+            </div>
+            
+            <div className="flex space-x-2">
+              <span className="text-sm text-gray-500">Add Stickers</span>
+              <button className="px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                Aa Text
+              </button>
+              <button className="px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                🔗 Link
+              </button>
+              <button className="px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                🎵 Music
+              </button>
+              <button className="px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                + Other
+              </button>
+              <button className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1">
+                <span>⚡ Automatic</span>
+                <span className="text-xs">▼</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -138,72 +233,15 @@ const PostComposer: React.FC<PostComposerProps> = ({
         className="hidden"
       />
 
-      {/* Media Preview Grid */}
-      {media.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-800 flex items-center space-x-2">
-            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">{media.length}</span>
-            </div>
-            <span>Uploaded Media</span>
-          </h4>
-          
-          <div className={`grid gap-4 ${
-            media.length === 1 ? 'grid-cols-1' : 
-            media.length === 2 ? 'grid-cols-2' : 
-            'grid-cols-2 md:grid-cols-3'
-          }`}>
-            {media.map((file, index) => (
-              <div key={index} className="relative group">
-                <div className="relative overflow-hidden rounded-xl shadow-md">
-                  {file.type.startsWith('video/') ? (
-                    <div className="aspect-square bg-gray-900 flex items-center justify-center">
-                      <Video className="text-white" size={32} />
-                    </div>
-                  ) : (
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt="Upload preview"
-                      className="w-full aspect-square object-cover"
-                    />
-                  )}
-                  
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
-                    <button
-                      onClick={() => removeMedia(index)}
-                      className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 transform hover:scale-110"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                </div>
-                
-                {/* File Info */}
-                <div className="mt-2 px-2">
-                  <p className="text-xs text-gray-500 truncate font-medium">
-                    {file.name}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {(file.size / 1024 / 1024).toFixed(1)} MB
-                  </p>
-                </div>
-              </div>
-            ))}
-            
-            {/* Add More Button */}
-            {media.length < 10 && (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="aspect-square border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 group"
-              >
-                <div className="text-center">
-                  <Plus size={24} className="text-gray-400 group-hover:text-blue-500 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500 group-hover:text-blue-600">Add More</p>
-                </div>
-              </button>
-            )}
+      {/* Info message for posts */}
+      {postType === 'post' && (
+        <div className="flex items-start space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-white text-xs font-bold">i</span>
           </div>
+          <p className="text-sm text-blue-700">
+            For best results on your Instagram Grid and Feed, we recommend uploading images with a 4:5 aspect ratio.
+          </p>
         </div>
       )}
     </div>

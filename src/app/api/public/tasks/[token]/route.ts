@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  context: { params: Promise<{ token: string }> }
 ) {
   try {
-    const param = await params;
-    const token = param.token;
-    
+     const params = await context.params;
+    const token = params.token;
+
     // Make request to your backend
     const backendUrl = process.env.TASK_MANAGER_API_URL!
     const response = await fetch(`${backendUrl}/public/tasks/${token}`, {

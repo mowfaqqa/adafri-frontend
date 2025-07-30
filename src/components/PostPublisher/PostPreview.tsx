@@ -217,12 +217,7 @@ const PostPreview: React.FC<PostPreviewProps> = ({
         </div>
       </div>
 
-      {/* Post Content */}
-      {content && (
-        <div className="px-4 py-3">
-          <p className="text-sm text-gray-800 leading-relaxed">{content}</p>
-        </div>
-      )}
+      
 
       {/* Post Media */}
       {media.length > 0 ? (
@@ -242,6 +237,13 @@ const PostPreview: React.FC<PostPreviewProps> = ({
             <p className="text-gray-500 text-sm">Post Preview</p>
             <p className="text-gray-400 text-xs">Add content to see preview</p>
           </div>
+        </div>
+      )}
+
+      {/* Post Content */}
+      {content && (
+        <div className="px-4 py-3">
+          <p className="text-sm text-gray-800 leading-relaxed">{content}</p>
         </div>
       )}
 

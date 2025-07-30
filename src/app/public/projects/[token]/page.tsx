@@ -1,3 +1,4 @@
+// app/public/projects/[token]/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -28,6 +29,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { PublicTaskDetailsModal } from "@/components/PublicTaskDetailsModal";
+import { PublicKanbanBoard } from "@/components/TaskManager/PublicKanbanBoard";
 
 interface PublicTaskData {
   id: string;
@@ -121,7 +123,7 @@ const PublicProjectPage: React.FC = () => {
   if (error || !data) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <Card className="max-w-md mx-auto">
+        <Card className="max-w-[1300px] mx-auto">
           <CardContent className="text-center py-8">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -184,7 +186,7 @@ const PublicProjectPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/50 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="max-w-[1300px] mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <FolderOpen className="h-6 w-6 text-blue-600" />
@@ -206,12 +208,16 @@ const PublicProjectPage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-[1300px] mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-2 mb-8 bg-white/60 backdrop-blur-sm rounded-xl p-1 border border-slate-200/50">
+          <TabsList className="grid grid-cols-3 mb-8 bg-white/60 backdrop-blur-sm rounded-xl p-1 border border-slate-200/50">
             <TabsTrigger value="overview" className="rounded-lg font-medium">
               <Target className="h-4 w-4 mr-2" />
               Overview
+            </TabsTrigger>
+            <TabsTrigger value="board" className="rounded-lg font-medium">
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Board View
             </TabsTrigger>
             <TabsTrigger value="tasks" className="rounded-lg font-medium">
               <Zap className="h-4 w-4 mr-2" />
@@ -314,6 +320,14 @@ const PublicProjectPage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="board" className="mt-0">
+            <PublicKanbanBoard
+              tasks={tasks}
+              onTaskClick={handleTaskClick}
+              projectName={project.name}
+            />
           </TabsContent>
 
           <TabsContent value="tasks" className="space-y-6">

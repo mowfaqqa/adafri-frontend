@@ -165,18 +165,18 @@ const Dashboard: React.FC = () => {
       "professional-mail": ["dashboard", "tools"].includes(activeTab),
       "task-manager": ["dashboard", "tools"].includes(activeTab),
       "google-ads": ["dashboard", "advertising"].includes(activeTab),
-      "sms": ["dashboard", "advertising"].includes(activeTab),
       "dashboard-overview": activeTab === "dashboard",
+      "post-publisher": activeTab === "marketing",
+      "crm": true,
+      "invoice": true,
+      "note": true,
+      "sms": ["dashboard", "advertising"].includes(activeTab),
       "website-builder": false,
       "mass-mailing": ["dashboard", "advertising"].includes(activeTab),
-      "post-publisher": activeTab === "marketing",
       "intern-messages": false,
       "analytics": false,
       "facebook-ads": false,
       "linkedin-ads": false,
-      "crm": true,
-      "invoice": true,
-      "note": true,
       "whatsapp-messaging": activeTab === "whatsapp",
       "chatgpt-assistant": activeTab === "chatgpt",
       "telegram-messaging": activeTab === "telegram"
@@ -297,20 +297,20 @@ const exampleData: Tab[] = [
         isActive: true
       },
       {
-        id: "social-listening",
-        title: "Social Listening",
-        subtitle: "Boost Connections, Drive Sales!",
-        imageUrl: "/icons/social.png",
-        link: "/dashboard/social-listening",
-        isActive: false
-      },
-      {
         id: "post-publisher",
         title: "Post Publisher",
         subtitle: "Boost Connections, Drive Sales!",
         imageUrl: "/icons/post-publisher.png",
         link: "/dashboard/post-publisher",
         isActive: true
+      },
+      {
+        id: "social-listening",
+        title: "Social Listening",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/social.png",
+        link: "/dashboard/social-listening",
+        isActive: false
       },
       {
         id: "ai-calling",
@@ -340,6 +340,22 @@ const exampleData: Tab[] = [
         subtitle: "Boost Connections, Drive Sales!",
         imageUrl: "/icons/task-manager.png",
         link: "/dashboard/task-manager",
+        isActive: true
+      },
+      {
+        id: "invoice",
+        title: "Invoice",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/invoice.png",
+        link: "/dashboard/invoices",
+        isActive: true
+      },
+      {
+        id: "note",
+        title: "Note",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/note.png",
+        link: "/dashboard/notes",
         isActive: true
       },
       {
@@ -381,22 +397,6 @@ const exampleData: Tab[] = [
         imageUrl: "/icons/image-editor.png",
         link: "/dashboard/image-editor",
         isActive: false
-      },
-      {
-        id: "invoice",
-        title: "Invoice",
-        subtitle: "Boost Connections, Drive Sales!",
-        imageUrl: "/icons/invoice.png",
-        link: "/dashboard/invoices",
-        isActive: true
-      },
-      {
-        id: "note",
-        title: "Note",
-        subtitle: "Boost Connections, Drive Sales!",
-        imageUrl: "/icons/note.png",
-        link: "/dashboard/notes",
-        isActive: true
       },
     ],
   },

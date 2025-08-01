@@ -308,10 +308,10 @@ export const PublicKanbanBoard: React.FC<PublicKanbanBoardProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="max-w-[1800px] mx-auto px-4 py-8">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/50 sticky top-0 z-10 mb-6">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/50 sticky top-0 z-10 mb-6 rounded-lg">
+        <div className="mx-auto px-4 py-8">
           <div className="flex flex-col gap-4">
             {/* Title */}
             <div>
@@ -364,7 +364,7 @@ export const PublicKanbanBoard: React.FC<PublicKanbanBoardProps> = ({
       </div>
 
       {/* Kanban Board */}
-      <div className="max-w-[1300px] mx-auto px-4">
+      <div className="max-w-[1800px] mx-auto px-4">
         <div className="flex gap-4 overflow-x-auto pb-6">
           {tasksByColumn.map((column) => (
             <KanbanColumn

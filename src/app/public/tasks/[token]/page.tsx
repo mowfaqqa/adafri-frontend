@@ -19,11 +19,14 @@ import {
   ExternalLink,
   Eye,
   AlertCircle,
-  Loader2
+  Loader2,
+  ChevronDown
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
+import Link from "next/link";
+import Image from "next/image";
 
 interface PublicTask {
   id: string;
@@ -53,6 +56,21 @@ interface PublicTaskData {
   project: PublicProject;
 }
 
+interface Feature {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  link: string;
+  isActive: boolean;
+}
+
+interface Tab {
+  id: string;
+  label: string;
+  features: Feature[];
+}
+
 const PublicTaskPage: React.FC = () => {
   const params = useParams();
   const router = useRouter();
@@ -61,6 +79,15 @@ const PublicTaskPage: React.FC = () => {
   const [data, setData] = useState<PublicTaskData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  
+    const toggleDropdown = (tabId: string) => {
+      setOpenDropdown(openDropdown === tabId ? null : tabId);
+    };
+  
+    const closeDropdown = () => {
+      setOpenDropdown(null);
+    };
 
   useEffect(() => {
     const fetchPublicTask = async () => {
@@ -157,9 +184,131 @@ const PublicTaskPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header */}
+      {/* Logo and Button */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/50 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-[1800px] mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* logo and Navigation */}
+            <div className="flex items-center gap-8">
+              {/* Logo */}
+              <div className="p-2 flex items-center justify-center">
+                <Link
+                  href="https://djombi.tech"
+                  className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center">
+                    <Image
+                      src="/icons/icon-main.png"
+                      width={32}
+                      height={32}
+                      alt="icon"
+                    />
+                  </div>
+                
+                    <Image
+                      src="/icons/djombi-icon.png"
+                      width={120}
+                      height={32}
+                      alt="icon"
+                      className="ml-2"
+                    />
+                </Link>
+              </div>
+
+              {/* Navigation Tabs */}
+              <div className="flex items-center gap-6">
+                {tabsData.map((tab) => (
+                  <div key={tab.id} className="relative">
+                    <button
+                      onClick={() => toggleDropdown(tab.id)}
+                      className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all duration-200"
+                    >
+                      <span className="font-medium">{tab.label}</span>
+                      <ChevronDown 
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          openDropdown === tab.id ? 'rotate-180' : ''
+                        }`} 
+                      />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {openDropdown === tab.id && (
+                      <>
+                        {/* Backdrop */}
+                        <div 
+                          className="fixed inset-0 z-10"
+                          onClick={closeDropdown}
+                        />
+                        
+                        {/* Dropdown Content */}
+                        <div className={`absolute top-full left-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 z-20 overflow-hidden ${
+                            tab.features.length > 4 ? 'w-96' : 'w-80'
+                          }`}>
+                            <div className="p-4">
+                              <div className={`grid gap-3 ${
+                                tab.features.length > 4 ? 'grid-cols-2' : 'grid-cols-1'
+                              }`}>
+                              {tab.features.map((feature) => (
+                                <Link
+                                  key={feature.id}
+                                  href={feature.link}
+                                  onClick={closeDropdown}
+                                  className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 hover:bg-slate-50 ${
+                                    !feature.isActive ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm'
+                                  }`}
+                                >
+                                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Image
+                                      src={feature.imageUrl}
+                                      width={24}
+                                      height={24}
+                                      alt={feature.title}
+                                      className="w-6 h-6"
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-medium text-slate-900 text-sm">
+                                      {feature.title}
+                                    </h3>
+                                    <p className="text-xs text-slate-500 truncate">
+                                      {feature.subtitle}
+                                    </p>
+                                  </div>
+                                  {/* {!feature.isActive && (
+                                    <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">
+                                      Soon
+                                    </span>
+                                  )} */}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Signup Button */}
+           <Link
+           
+            href="https://djombi.tech/auth/login" target="_blank">
+               <button
+                className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm"
+              >
+                Signup
+            </button>
+           </Link>
+          </div>
+        </div>
+      </div>
+
+
+      {/* Header */}
+      <div className="backdrop-blur-sm">
+        <div className="max-w-[1800px] mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Eye className="h-6 w-6 text-blue-600" />
@@ -181,7 +330,7 @@ const PublicTaskPage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-[1800px] mx-auto px-4 py-8">
         <div className="space-y-6">
           {/* Task Header */}
           <Card className="bg-white/80 backdrop-blur-sm border-slate-200/50 shadow-lg">
@@ -370,5 +519,194 @@ const PublicTaskPage: React.FC = () => {
     </div>
   );
 };
+
+const tabsData: Tab[] = [
+  {
+    id: "marketing",
+    label: "Marketing", 
+    features: [
+      {
+        id: "crm",
+        title: "CRM",
+        subtitle: "Manage customer relationships efficiently",
+        imageUrl: "/icons/crm.png",
+        link: "/dashboard/crm",
+        isActive: true
+      },
+      {
+        id: "post-publisher",
+        title: "Post Publisher",
+        subtitle: "Schedule and publish social content",
+        imageUrl: "/icons/post-publisher.png",
+        link: "/dashboard/post-publisher",
+        isActive: true
+      },
+      {
+        id: "social-listening",
+        title: "Social Listening",
+        subtitle: "Schedule and publish social content",
+        imageUrl: "/icons/social.png",
+        link: "/dashboard/social-listening",
+        isActive: false
+      },
+      {
+        id: "ai-calling",
+        title: "AI Calling",
+        subtitle: "Automated voice customer outreach",
+        imageUrl: "/icons/ai-calling.png",
+        link: "/dashboard/ai-calling",
+        isActive: false
+      },
+    ]
+  },
+  {
+    id: "tools",
+    label: "Tools",
+    features: [
+      {
+        id: "professional-mail",
+        title: "Professional Mail",
+        subtitle: "Send branded emails with ease",
+        imageUrl: "/icons/online-meeting.png",
+        link: "/dashboard/professional-mail",
+        isActive: true
+      },
+      {
+        id: "task-manager",
+        title: "Task Manager",
+        subtitle: "Organize and track your projects",
+        imageUrl: "/icons/task-manager.png",
+        link: "/dashboard/task-manager",
+        isActive: true
+      },
+      {
+        id: "invoice",
+        title: "Invoice",
+        subtitle: "Create and manage invoices",
+        imageUrl: "/icons/invoice.png",
+        link: "/dashboard/invoices",
+        isActive: true
+      },
+      {
+        id: "note",
+        title: "Note",
+        subtitle: "Capture and organize your ideas",
+        imageUrl: "/icons/note.png",
+        link: "/dashboard/notes",
+        isActive: true
+      },
+      {
+        id: "internal-message",
+        title: "Internal Message",
+        subtitle: "Team communication platform",
+        imageUrl: "/icons/internal-message.png",
+        link: "/dashboard/messaging",
+        isActive: true
+      },
+      {
+        id: "website-builder",
+        title: "Website Builder",
+        subtitle: "Build stunning websites easily",
+        imageUrl: "/icons/website-builder.png",
+        link: "/dashboard/website-builder",
+        isActive: false
+      },
+      {
+        id: "online-meeting",
+        title: "Online Meeting",
+        subtitle: "Host virtual meetings and calls",
+        imageUrl: "/icons/online-meeting2.png",
+        link: "/dashboard/online-message",
+        isActive: false
+      },
+      {
+        id: "e-sign",
+        title: "E-Sign",
+        subtitle: "Digital document signing",
+        imageUrl: "/icons/e-sign.png",
+        link: "/dashboard/e-sign",
+        isActive: false
+      },
+      {
+        id: "image-editor",
+        title: "Image Editor",
+        subtitle: "Edit and enhance your images",
+        imageUrl: "/icons/image-editor.png",
+        link: "/dashboard/image-editor",
+        isActive: false
+      },
+    ],
+  },
+  {
+    id: "advertising",
+    label: "Advertising",
+    features: [
+      {
+        id: "google-ads",
+        title: "Google Ads",
+        subtitle: "Run targeted Google advertising",
+        imageUrl: "/icons/google-ads.png",
+        link: "/dashboard/google-ads",
+        isActive: true
+      },
+      {
+        id: "sms",
+        title: "SMS",
+        subtitle: "Send bulk SMS campaigns",
+        imageUrl: "/icons/sms.png",
+        link: "/dashboard/google-ads",
+        isActive: true
+      },
+      {
+        id: "mass-mailing",
+        title: "Mass Mailing",
+        subtitle: "Email marketing at scale",
+        imageUrl: "/icons/mass-mailing.png",
+        link: "/dashboard/google-ads",
+        isActive: true
+      },
+      {
+        id: "Meta",
+        title: "Meta",
+        subtitle: "Facebook and Instagram ads",
+        imageUrl: "/icons/meta.png",
+        link: "/dashboard/meta",
+        isActive: false
+      },
+      {
+        id: "twitter",
+        title: "Twitter",
+        subtitle: "Promote on Twitter platform",
+        imageUrl: "/icons/twitter.png",
+        link: "/dashboard/twitter",
+        isActive: false
+      },
+      {
+        id: "tiktok",
+        title: "Tiktok",
+        subtitle: "Reach younger audiences",
+        imageUrl: "/icons/tiktok.png",
+        link: "/dashboard/tiktok",
+        isActive: false
+      },
+      {
+        id: "linkedIn",
+        title: "LinkedIn",
+        subtitle: "Professional network advertising",
+        imageUrl: "/icons/linkedin.png",
+        link: "/dashboard/linkedin",
+        isActive: false
+      },
+      {
+        id: "spotify",
+        title: "Spotify",
+        subtitle: "Audio advertising campaigns",
+        imageUrl: "/icons/spotify.png",
+        link: "/dashboard/spotify",
+        isActive: false
+      },
+    ],
+  }
+];
 
 export default PublicTaskPage;

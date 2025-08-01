@@ -170,6 +170,7 @@ const Dashboard: React.FC = () => {
       "crm": true,
       "invoice": true,
       "note": true,
+      "internal-message": ["tools"].includes(activeTab),
       "sms": ["dashboard", "advertising"].includes(activeTab),
       "website-builder": false,
       "mass-mailing": ["dashboard", "advertising"].includes(activeTab),
@@ -359,19 +360,19 @@ const exampleData: Tab[] = [
         isActive: true
       },
       {
-        id: "website-builder",
-        title: "Website Builder",
-        subtitle: "Boost Connections, Drive Sales!",
-        imageUrl: "/icons/website-builder.png",
-        link: "/dashboard/website-builder",
-        isActive: false
-      },
-      {
         id: "internal-message",
         title: "Internal Message",
         subtitle: "Boost Connections, Drive Sales!",
         imageUrl: "/icons/internal-message.png",
         link: "/dashboard/messaging",
+        isActive: true
+      },
+      {
+        id: "website-builder",
+        title: "Website Builder",
+        subtitle: "Boost Connections, Drive Sales!",
+        imageUrl: "/icons/website-builder.png",
+        link: "/dashboard/website-builder",
         isActive: false
       },
       {
@@ -426,7 +427,7 @@ const exampleData: Tab[] = [
         subtitle: "Boost Connections, Drive Sales!",
         imageUrl: "/icons/mass-mailing.png",
         link: "/dashboard/google-ads",
-        isActive: false
+        isActive: true
       },
       {
         id: "Meta",
